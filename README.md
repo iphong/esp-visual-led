@@ -1,2 +1,3 @@
-# esp-led-poi
-Visual LED POI implementation for ESP32 and ESP8266 
+# Visual LED Application for ESP32/ESP8266 Micro Controller
+
+1. LED POI
