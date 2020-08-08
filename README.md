@@ -6,13 +6,11 @@
 ## Basics
 
 
-## Data Store
+## Data Stores
 
-Due to limited memory on these micro controllers, control loop and data buffering need to work synchronously.
+File Systems: SDFS, LittleFS, SPIFFS
 
-Partition SDFS, LittleFS, SPIFFS
-
-Image file naming (1000 max)
+Image files naming (1000 max):
     
     * img/000
     * img/001
@@ -20,14 +18,13 @@ Image file naming (1000 max)
     * img/998
     * img/999
 
-Sequence file naming (10 max)
+Sequence files naming (10 max):
 
     * seq/0
     * seq/1
     * ...
     * seq/8
     * seq/9
-
 
 
 ## Image Data
