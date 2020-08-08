@@ -2,7 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <FastLED.h>
 #include <LittleFS.h>
-#include <esp_rc.h>
+#include <EspRC.h.h>
 #include <button.h>
 
 #define COLOR_ORDER GRB
