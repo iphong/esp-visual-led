@@ -1,6 +1,34 @@
 # Visual LED Application for ESP32/ESP8266 Micro Controller
 
 1. LED POI
+2. LED FAN
+
+## Basics
+
+
+## Data Store
+
+Due to limited memory on these micro controllers, control loop and data buffering need to work synchronously.
+
+Partition SDFS, LittleFS, SPIFFS
+
+Image file naming (1000 max)
+    
+    * img/000
+    * img/001
+    * ...
+    * img/998
+    * img/999
+
+Sequence file naming (10 max)
+
+    * seq/0
+    * seq/1
+    * ...
+    * seq/8
+    * seq/9
+
+
 
 ## Image Data
 
