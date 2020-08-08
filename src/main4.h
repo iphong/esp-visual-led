@@ -196,7 +196,7 @@ void setup() {
 	Serial.begin(921600);
 
 	WiFi.mode(WIFI_AP_STA);
-	EspRC.begin(10);
+	EspRC.begin();
 	LittleFS.begin();
 
 	getAssets();

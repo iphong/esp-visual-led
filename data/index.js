@@ -8,16 +8,30 @@ window.addEventListener('dragover', e => {
 window.addEventListener('drop', e => {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
-		uploadFile(file)
+		parseXML(file)
 	}
 })
 
 document.getElementById('upload').addEventListener('change', e => {
 	for (let file of e.target.files) {
-		uploadFile(file)
+		parseXML(file)
 	}
 	e.target.value = ''
 })
+
+function parseXML(file) {
+	const frame = document.getElementById('xml')
+	const reader = new FileReader()
+	reader.readAsText(file)
+	reader.addEventListener('loadend', () => {
+		const doc = frame.contentDocument
+		doc.write(reader.result)
+		doc.querySelectorAll('Item').forEach(item => {
+			window.a = atob(item.childNodes[0].nodeValue.replace(/\[CDATA\[(.*)\]\]/, '$1'))
+			console.log(item.getAttribute('index'), a)
+		})
+	})
+}
 
 function uploadFile(file) {
 	const reader = new FileReader()
