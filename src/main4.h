@@ -2,8 +2,8 @@
 #include <ESP8266WiFi.h>
 #include <FastLED.h>
 #include <LittleFS.h>
-#include <EspRC.h.h>
-#include <button.h>
+#include <EspRC.h>
+#include <Button.h>
 
 #define COLOR_ORDER GRB
 #define CHIPSET WS2812B
