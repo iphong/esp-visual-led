@@ -35,7 +35,7 @@ function parseXML(file) {
 				switch (type) {
 					case 'Img':
 						const data = item.childNodes[0].nodeValue.replace(/\[CDATA\[(.*)\]\]/, '$1')
-						const uploadPath = `/assets/${index}`
+						const uploadPath = `/img/${index}`
 						let img = output.images[index] = new Image()
 						img.src = `data:img/png;base64,${data}`
 						img.onload = () => {
