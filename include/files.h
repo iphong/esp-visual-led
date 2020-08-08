@@ -151,14 +151,14 @@ void handleFileList()
     output.reserve(64);
     while (dir.next())
     {
-#ifdef USE_SPIFFS
+        #ifdef USE_SPIFFS
         String error = checkForUnsupportedPath(dir.fileName());
         if (error.length() > 0)
         {
             DBG_OUTPUT_PORT.println(String("Ignoring ") + error + dir.fileName());
             continue;
         }
-#endif
+        #endif
         if (output.length())
         {
             // send string from previous iteration
@@ -293,12 +293,12 @@ void handleFileCreate()
         return replyBadRequest(F("PATH ARG MISSING"));
     }
 
-#ifdef USE_SPIFFS
+    #ifdef USE_SPIFFS
     if (checkForUnsupportedPath(path).length() > 0)
     {
         return replyServerError(F("INVALID FILENAME"));
     }
-#endif
+    #endif
 
     if (path == "/")
     {
@@ -542,17 +542,17 @@ void handleNotFound()
 */
 void handleGetEdit()
 {
-    if (handleFileRead(F("/edit/index.htm")))
+    if (handleFileRead(F("/edit.htm")))
     {
         return;
     }
 
-#ifdef INCLUDE_FALLBACK_INDEX_HTM
+    #ifdef INCLUDE_FALLBACK_INDEX_HTM
     server.sendHeader(F("Content-Encoding"), "gzip");
     server.send(200, "text/html", index_htm_gz, index_htm_gz_len);
-#else
+    #else
     replyNotFound(FPSTR(FILE_NOT_FOUND));
-#endif
+    #endif
 }
 
 void server_setup(void)
@@ -570,13 +570,13 @@ void server_setup(void)
 
     server.on("/generate_204", []() {
         handleFileRead("/");
-    });  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
-    
+        });  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
+
     server.on("/fwlink", []() {
         handleFileRead("/");
-    });  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+        });  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
 
-    // Filesystem status
+        // Filesystem status
     server.on("/status", HTTP_GET, handleStatus);
 
     // List directory

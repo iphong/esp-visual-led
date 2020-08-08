@@ -4,23 +4,16 @@
 #include <LittleFS.h>
 #include <EspRC.h>
 #include <Button.h>
-
-#define COLOR_ORDER GRB
-#define CHIPSET WS2812B
-
-#ifndef NUM_LEDS
-#define NUM_LEDS 36
-#endif
-#ifndef IMG_SIZE
-#define IMG_SIZE 36
-#endif
+#include "files.h"
 
 CRGB leds[NUM_LEDS];
 
-String imageName;
-String images[256];
+String curAsset;
+String assets[256];
 
-uint8_t imageCount = 0;
+bool isUploading = false;
+
+uint8_t assetCount = 0;
 uint8_t brightness = 200;
 uint8_t channel = 1;
 uint8_t isMaster = 1;
@@ -33,24 +26,24 @@ Button b1(0);
 void show_end() {
 	if (!img)
 		return;
-	imageName = "";
+	curAsset = "";
 	img.close();
 }
 
 void show_setup() {
-	FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+	FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
 	FastLED.setBrightness(brightness);
 }
 
 void show_start(String path) {
-	if (path != imageName) {
+	if (path != curAsset) {
 		if (LittleFS.exists("/assets/" + path)) {
-			imageName = path;
+			curAsset = path;
 			if (img) {
 				img.close();
 			}
 			if (isMaster) {
-				EspRC.send("#", imageName);
+				EspRC.send("#", curAsset);
 			}
 			img = LittleFS.open("/assets/" + path, "r");
 		} else {
@@ -63,7 +56,7 @@ void show_seek(uint16_t _row) {
 	if (!img)
 		return;
 	row = _row;
-	uint16_t pos = sizeof(CRGB) * IMG_SIZE * row;
+	uint16_t pos = sizeof(CRGB) * NUM_LEDS * row;
 	img.seek(pos);
 }
 
@@ -72,14 +65,14 @@ void show_loop() {
 		return;
 	if (img.available() < 3) {
 		if (isMaster) {
-			EspRC.send("#", imageName);
+			EspRC.send("#", curAsset);
 		}
 		img.seek(0);
 		row = 0;
 		return;
 	}
-	while (img.available() >= 3 && col < IMG_SIZE) {
-		if (col < IMG_SIZE)
+	while (img.available() >= 3 && col < NUM_LEDS) {
+		if (col < NUM_LEDS)
 			leds[col] = CRGB(img.read(), img.read(), img.read());
 		col++;
 	}
@@ -90,16 +83,16 @@ void show_loop() {
 
 void getAssets() {
 	Dir d = LittleFS.openDir("/assets");
-	imageCount = 0;
+	assetCount = 0;
 	while (d.next()) {
-		images[imageCount++] = d.fileName();
+		assets[assetCount++] = d.fileName();
 		Serial.println(d.fileName());
 	}
 }
 
 void saveShow() {
 	File store = LittleFS.open("/show", "w+");
-	store.print(imageName);
+	store.print(curAsset);
 	store.close();
 }
 
@@ -110,8 +103,8 @@ void loadShow() {
 		path.concat((char)store.read());
 	}
 	store.close();
-	if ((path =="" || !LittleFS.exists("/assets/" + path)) && imageCount) {
-		path = images[0];
+	if ((path =="" || !LittleFS.exists("/assets/" + path)) && assetCount) {
+		path = assets[0];
 	}
 	show_start(path);
 }
@@ -141,6 +134,7 @@ void loadSettings() {
 }
 
 void rc_setup() {
+	EspRC.begin();
 	EspRC.on("#", [](String path) {
 		if (!isMaster) {
 			show_start(path);
@@ -154,16 +148,16 @@ void rc_setup() {
 }
 
 void show_skip(int step) {
-	for (auto i=0; i<imageCount; i++) {
-		if (images[i] == imageName) {
+	for (auto i=0; i<assetCount; i++) {
+		if (assets[i] == curAsset) {
 			int toIndex = (i + step);
-			if (step > 0 && toIndex >= imageCount) {
+			if (step > 0 && toIndex >= assetCount) {
 				toIndex = 0;
 			}
 			if (step < 0 && toIndex < 0) {
-				toIndex = imageCount - 1;
+				toIndex = assetCount - 1;
 			}
-			String newPath = images[toIndex];
+			String newPath = assets[toIndex];
 			show_start(newPath);
 			saveShow();
 			break;
@@ -182,6 +176,13 @@ void btn_setup() {
 				break;
 
 			default:
+				if (repeat > 5) {
+					isUploading = !isUploading;
+					if (!isUploading) {
+						getAssets();
+					}
+					Serial.printf("Change uploading mode to %s \n", isUploading ? "ON" : "OFF");
+				}
 				break;
 			}
 	});
@@ -196,8 +197,9 @@ void setup() {
 	Serial.begin(921600);
 
 	WiFi.mode(WIFI_AP_STA);
-	EspRC.begin();
 	LittleFS.begin();
+
+	WiFi.disconnect();
 
 	getAssets();
 	loadSettings();
@@ -205,11 +207,16 @@ void setup() {
 	rc_setup();
 	btn_setup();
 	show_setup();
+	server_setup();
 
 	loadShow();
 }
 
 void loop() {
 	b1.update();
-	show_loop();
+	if (isUploading) {
+		server_loop();
+	} else {
+		show_loop();
+	}
 }
