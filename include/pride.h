@@ -1,5 +1,3 @@
-#include "config.h"
-
 void pride()
 {
 	static uint16_t sPseudotime = 0;
