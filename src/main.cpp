@@ -24,6 +24,14 @@ uint16_t row, col;
 
 Button b1(0);
 
+
+void fillColor(CRGB color) {
+	for (auto i=0; i<NUM_LEDS; i++) {
+		leds[i] = color;
+	}
+	FastLED.show();
+}
+
 void show_end() {
 	if (!img)
 		return;
@@ -34,6 +42,7 @@ void show_end() {
 void show_setup() {
 	FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
 	FastLED.setBrightness(brightness);
+	fillColor(CRGB(0,0,0));
 }
 
 void show_start(String path) {
@@ -101,10 +110,10 @@ void loadShow() {
 	File store = LittleFS.open("/show", "r+");
 	String path = "";
 	while (store.available()) {
-		path.concat((char)store.read());
+		path.concat((char) store.read());
 	}
 	store.close();
-	if ((path =="" || !LittleFS.exists("/img/" + path)) && imageCount) {
+	if ((path == "" || !LittleFS.exists("/img/" + path)) && imageCount) {
 		path = images[0];
 	}
 	show_start(path);
@@ -125,8 +134,7 @@ void loadSettings() {
 		channel = store.read();
 		brightness = _max(store.read(), 50);
 		store.close();
-	}
-	else {
+	} else {
 		isMaster = 1;
 		channel = 1;
 		brightness = 100;
@@ -149,7 +157,7 @@ void rc_setup() {
 }
 
 void show_skip(int step) {
-	for (auto i=0; i<imageCount; i++) {
+	for (auto i = 0; i < imageCount; i++) {
 		if (images[i] == curImage) {
 			int toIndex = (i + step);
 			if (step > 0 && toIndex >= imageCount) {
@@ -178,18 +186,21 @@ void btn_setup() {
 
 			default:
 				if (repeat > 5) {
-					isUploading = !isUploading;
-					if (!isUploading) {
-						getImages();
-					}
-					Serial.printf("Change uploading mode to %s \n", isUploading ? "ON" : "OFF");
+					isMaster = !isMaster;
+					saveSettings();
 				}
 				break;
 		}
 	});
 	b1.onPressHold([]() {
-		isMaster = !isMaster;
-		saveSettings();
+		isUploading = !isUploading;
+		if (!isUploading) {
+			fillColor(CRGB(0, 255, 0));
+			getImages();
+		} else {
+			fillColor(CRGB(255, 0, 0));
+		}
+		Serial.printf("Change uploading mode to %s \n", isUploading ? "ON" : "OFF");
 	});
 	b1.begin();
 }
