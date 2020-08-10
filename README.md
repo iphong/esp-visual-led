@@ -17,6 +17,14 @@ frequency. In order to synchronize multiple devices, it need to maintain
 a communication channel among peer devices, without causing delay to the
 LED control loop.
 
+## Work in progress
+
+Perfect sync in action demo video: https://youtu.be/U7mEyWGtELM
+
+![ledpoi04](https://raw.githubusercontent.com/iphong/esp-visual-led/master/docs/photos/ledpoi04.JPG "Led POI 04")
+
+View more photos at https://github.com/iphong/esp-visual-led/tree/master/docs/photos
+
 ## Data Stores
 
 File Systems: SDFS, LittleFS, SPIFFS
