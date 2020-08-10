@@ -11,6 +11,11 @@
 
 Using just a single ESP8266 micro controller.
 
+While driving an addressable led array alone is a very CPU intensive
+task and the micro controller need to execute a control loop at maximum
+frequency. In order to synchronize multiple devices, it need to maintain
+a communication channel among peer devices, without causing delay to the
+LED control loop.
 
 ## Data Stores
 
