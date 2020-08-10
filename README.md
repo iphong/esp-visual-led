@@ -3,7 +3,13 @@
 1. LED POI
 2. LED FAN
 
-## Basics
+## The Challenges
+
+1. Control an array of 36 WS2812B leds for display visual graphics
+2. Serving a web application for uploading & managing visual content
+3. Multiple devices must be in perfect synchronized playback
+
+Using just a single ESP8266 micro controller.
 
 
 ## Data Stores
