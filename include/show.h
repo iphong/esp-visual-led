@@ -22,7 +22,7 @@ public:
     }
     void begin() {
         FastLED.addLeds<WS2812B, DAT_PIN, GRB>(_leds, _led_nums);
-        FastLED.setBrightness(100);
+        FastLED.setBrightness(255);
         
         EspRC.begin(255);
         EspRC.on("#TIMESYNC#", [this]() {
