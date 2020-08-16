@@ -8,7 +8,7 @@ protected:
     u8 _led_nums;
 
 public:
-    VisualPOI(u8 num, u8 brightness) {
+    VisualPOI(u8 num) {
         _led_nums = num;
     }
     void begin() {
