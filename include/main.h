@@ -22,7 +22,7 @@ uint8_t isMaster = 1;
 File img;
 uint16_t row, col;
 
-Button b1(0);
+Button b1(BTN_PIN);
 
 
 void fillColor(CRGB color) {
@@ -40,9 +40,9 @@ void show_end() {
 }
 
 void show_setup() {
-	FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
+	FastLED.addLeds<WS2812B, DAT_PIN, GRB>(leds, NUM_LEDS);
 	FastLED.setBrightness(brightness);
-	fillColor(CRGB(0,0,0));
+	fillColor(CRGB(255,0,0));
 }
 
 void show_start(String path) {
@@ -144,14 +144,14 @@ void loadSettings() {
 
 void rc_setup() {
 	EspRC.begin();
-	EspRC.on("#", [](String path) {
+	EspRC.on("#", []() {
 		if (!isMaster) {
-			show_start(path);
+			show_start(EspRC.getValue());
 		}
 	});
-	EspRC.on("*", [](String value) {
+	EspRC.on("*", []() {
 		if (!isMaster) {
-			FastLED.setBrightness(value.toInt());
+			FastLED.setBrightness(EspRC.getValue().toInt());
 		}
 	});
 }
@@ -192,7 +192,7 @@ void btn_setup() {
 				break;
 		}
 	});
-	b1.onPressHold([]() {
+	b1.onHold([]() {
 		isUploading = !isUploading;
 		if (!isUploading) {
 			fillColor(CRGB(0, 255, 0));
@@ -209,6 +209,7 @@ void setup() {
 	Serial.begin(921600);
 
 	WiFi.mode(WIFI_AP_STA);
+	WiFi.softAP("led_poi");
 	LittleFS.begin();
 
 	WiFi.disconnect();
@@ -225,7 +226,6 @@ void setup() {
 }
 
 void loop() {
-	b1.update();
 	if (isUploading) {
 		server_loop();
 	} else {

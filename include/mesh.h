@@ -5,9 +5,12 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include "espnow.h"
-#include "lcd.h"
+#include "lcd2.h"
 
-#define log tft.printf
+#define log Serial.printf
+
+#define FRAME_TIME 0x01
+#define FRAME_CRGB 0x02
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(15, 16);
 
@@ -35,16 +38,18 @@ esp_now_recv_cb_t recv_cb = [](u8 *mac, u8 *buf, u8 len) {
     if (buf[0] != 0xFF || buf[1] != 0x81)
         return;
     u32 id = buf[2] << 24 | buf[3] << 16 | buf[4] << 8 | buf[5];
-    u8 size = buf[6];
+    
+    // u8 type = buf[7]; // Frame type
+    u8 size = buf[8];
     if (size + 10 > len)
         return;
-    u8 crc = buf[7];
+    u8 crc = buf[9];
     for (auto i = 0; i < size; i++)
     {
         recv_buffer[i] = buf[10 + i];
         crc -= recv_buffer[i];
     }
-    // log("received -->%u %u %u %u\n", crc, sum, id, size);
+    // log("received -->%u %u %u\n", crc, id, size);
     if (0xff != crc)
         return;
     // if (id <= last_message_id)
@@ -54,16 +59,15 @@ esp_now_recv_cb_t recv_cb = [](u8 *mac, u8 *buf, u8 len) {
     // }
     last_message_id = id;
     received++;
-    // log("received data --> (%u) %u bytes\n", id, size);
-    // relay
+    log("received data --> (%u) %u bytes\n", id, size);
     // esp_now_send(cast, buf, len);
 };
 esp_now_send_cb_t send_cb = [](u8 *mac, u8 err) {
     send_duration = micros() - last_send_time;
-    // log("sent data --> (%s) %u us\n", err ? "FAIL" : "SUCCESS", send_duration);
+    log("sent data --> (%s) %u us\n", err ? "FAIL" : "SUCCESS", send_duration);
 };
 
-void send(u8 *data, u8 size)
+void send(u8 type, u8 *data, u8 size)
 {
     last_send_time = micros();
     last_message_id++;
@@ -76,18 +80,17 @@ void send(u8 *data, u8 size)
     send_buffer[4] = (0x0000ffff & last_message_id) >> 8;
     send_buffer[5] = 0x000000ff & last_message_id;
 
-    send_buffer[6] = size;
-    send_buffer[7] = 0xFF; // CRC byte
+
+    // send_buffer[6] = NOT USE
+    send_buffer[7] = type; // Frame type
+    send_buffer[8] = size; // Data size
+    send_buffer[9] = 0xFF; // CRC byte
     for (auto i = 0; i < size; i++)
     {
         send_buffer[10 + i] = data[i];
-        send_buffer[7] += data[i];
+        send_buffer[9] += data[i];
     }
     esp_now_send(cast, send_buffer, size + 10);
-}
-
-void display()
-{
 }
 
 void setup()
@@ -97,7 +100,6 @@ void setup()
     WiFi.disconnect();
     WiFi.softAPdisconnect();
     tft.begin(80000000UL);
-    tft.setRotation(3);
     tft.fillScreen(ILI9341_BLACK);
     esp_now_init();
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
@@ -105,16 +107,13 @@ void setup()
     esp_now_register_recv_cb(recv_cb);
     esp_now_register_send_cb(send_cb);
 #ifdef MASTER
-    logger.attach_ms_scheduled_accurate(10, []() {
-        send((u8 *)"Hello", 5);
+    logger.attach_ms_scheduled_accurate(100 , []() {
+        send(FRAME_CRGB, (u8 *)"Hello", 5);
     });
 #else
-    logger.attach(1, []() {
-        draw = true;
-        // scrollTop+=8;
-        // if (scrollTop > 320) scrollTop = 0;
-        // tft.scrollTo(scrollTop);
-        // log("received %03u messages.\n", received);
+    logger.attach_ms_scheduled_accurate(100, []() {
+        log("received %03u messages.\n", received);
+        received = 0;
     });
 
 #endif
@@ -123,17 +122,6 @@ void loop()
 {
     if (draw)
     {
-        tft.fillRect(48, 28, 108, 32, ILI9341_BLACK);
-        tft.setTextColor(ILI9341_RED);
-        tft.setCursor(50, 30);
-        tft.setTextSize(4);
-        tft.printf("%3u", received);
-
-        tft.setCursor(122, 40);
-        tft.setTextColor(ILI9341_GREEN);
-        tft.setTextSize(2);
-        tft.printf("FPS");
-        draw = false;
-        received = 0;
+       
     }
 }

@@ -70,3 +70,42 @@ For example an `36x36` image has total byte length of `3888 bytes`
 ID   DURATION   ID   DURATION
 SEQUENCE   01   SEQUENCE   02
 ```
+
+## Control Protocol
+
+Based on data payload received using esp-now which is a bytes array of maximum 250 bytes.
+
+```
+HEADER      FRAME TYPE      FRAME VALUE
+ 23 3E      00 00 00 ..     00 00 00 00 ..
+```
+
+### 1. HEADER
+
+* First byte is the sync word which is always the hash character (# or 0x23)
+* Second byte indicate the direction of the data using '<' and '>' (0x3C or 0x3E)
+* The third byte onward is the actual payload
+* Due to the nature of remote control, data payload needs to be as compact as possible.
+
+### 3. FRAMES
+
+* Different data frame can be defined as type/value pair if desired
+* types and values can be at any length and use ascii characters for easier
+to read and implementation. An example of a 9 bytes telling the receiver that i am sending an RGB array containing 2 channels with red color.
+```
+R  G  B  CHANNEL1 CHANNEL2 ..
+52 47 42 FF 00 00 FF 00 00 ..
+```
+
+### 4. DATA HANDLING
+
+* Since this protocol is focusing on controlling visual effect devices. The data does not need to be encrypted.
+* To maximize data transfer to multiple targets, we just broadcast the payload with no acknowledgement. It's OK for the receiver ends to miss a few packets or doesn't receive anything at all (when out of range).
+* Since there is no acknowledgement involves, data sending time can be fixed and recur at much faster rate. if one or more receiver is not present at the moment, the sender doesn't need to wait for its reply.
+* Frame can be implemented using simple pub/sub paradism in your application layer. For example:
+```c++
+
+on("RGB", [](char *colors, int len) {
+    // Handling your data here
+})
+```
