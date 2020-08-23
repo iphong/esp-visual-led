@@ -1,0 +1,31 @@
+Track 1
+0: fork A
+0: fork B
+67476ms: end
+
+@A
+
+0ms: setrgb A 0ms > 255, 0, 0
+
+# pulse
+28270ms: loop 39137ms
+	0ms: setrgb A 0ms > 0, 0, 0
+	10ms: setrgb A 0ms > 255, 255, 255
+	12ms: setrgb A 0ms > 0, 0, 0
+	22ms: setrgb A 0ms > 255, 255, 0
+	30ms: end 
+67407ms: setrgb A 0ms > 0, 0, 0
+67476ms: end
+
+@B
+
+# pulse
+0ms: loop 40804ms
+	0ms: setrgb B 0ms > 0, 0, 0
+	10ms: setrgb B 0ms > 255, 255, 255
+	12ms: setrgb B 0ms > 0, 0, 0
+	22ms: setrgb B 0ms > 255, 0, 145
+	30ms: end 
+
+40804ms: setrgb B 0ms > 255, 0, 0
+67476ms: end

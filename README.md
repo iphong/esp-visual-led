@@ -70,10 +70,15 @@ For example an `36x36` image has total byte length of `3888 bytes`
 ID   DURATION   ID   DURATION
 SEQUENCE   01   SEQUENCE   02
 ```
+# Control Protocol for Visual LED peripherals
 
-## Control Protocol
+Based on data payload received using esp-now which is a sequence of no more than 250 bytes.
 
-Based on data payload received using esp-now which is a bytes array of maximum 250 bytes.
+Since this protocol is focusing on controlling visual effect devices. The data does not need to be encrypted and is readable by anyone within range.
+
+To maximize data transmision to multiple targets, we just broadcast the payload with no acknowledgement. It's OK for the receiver ends to miss a few packets or doesn't receive anything at all (when out of range).
+
+Since there is no acknowledgement involves, data sending time can be fixed and recur at much faster rate. if one or more receiver is not present at the moment, the sender doesn't need to wait for its reply.
 
 ```
 HEADER      FRAME TYPE      FRAME VALUE
@@ -99,9 +104,6 @@ R  G  B  CHANNEL1 CHANNEL2 ..
 
 ### 4. DATA HANDLING
 
-* Since this protocol is focusing on controlling visual effect devices. The data does not need to be encrypted.
-* To maximize data transfer to multiple targets, we just broadcast the payload with no acknowledgement. It's OK for the receiver ends to miss a few packets or doesn't receive anything at all (when out of range).
-* Since there is no acknowledgement involves, data sending time can be fixed and recur at much faster rate. if one or more receiver is not present at the moment, the sender doesn't need to wait for its reply.
 * Frame can be implemented using simple pub/sub paradism in your application layer. For example:
 ```c++
 
