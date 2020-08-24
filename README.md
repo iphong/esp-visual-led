@@ -1,13 +1,13 @@
 # Visual LED Implementation for ESP32/ESP8266 Micro Controller
 
-1. LED POI
-2. LED FAN
+* LED RGB
+* LED POI
 
 ## The Challenges
 
-1. Control an array of 36 WS2812B leds for display visual graphics
-2. Serving a web application for uploading & managing visual content
-3. Multiple devices must be in perfect synchronized playback
+* Control an array of 36 WS2812B leds for display visual graphics
+* Serving a web application for uploading & managing visual content
+* Multiple devices must be in perfect synchronized playback
 
 Using just a single ESP8266 micro controller.
 
