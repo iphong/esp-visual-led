@@ -1,4 +1,4 @@
-# Visual LED Application for ESP32/ESP8266 Micro Controller
+# Visual LED Implementation for ESP32/ESP8266 Micro Controller
 
 1. LED POI
 2. LED FAN
