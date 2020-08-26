@@ -31,7 +31,23 @@ Button::onHoldHandler btn1 = btn.onPressHold([](u8 repeats) {
 });
 
 Button::onClickHandler btn2 = btn.onClick([](u8 repeats) {
-	Serial.println("Button pressed.");
+	Serial.printf("Button pressed.");
+	switch (repeats) {
+		case 1:
+			Config::data.channel++;
+			if (Config::data.channel > 4)
+				Config::data.channel = 1;
+			Light::A.begin();
+			Light::B.begin();
+			break;
+		case 2:
+			Config::data.channel--;
+			if (Config::data.channel == 0)
+				Config::data.channel = 4;
+			Light::A.begin();
+			Light::B.begin();
+			break;
+	}
 });
 
 namespace Input {

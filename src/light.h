@@ -35,14 +35,15 @@ namespace Light {
 		Ticker tmr;
 		File file;
 		
-		Frame frame;
 		u8 lastColor[3];
-		u32 playTime;
-		u32 lapsed;
+		bool paused;
+
+		Frame frame; // Active frame
+		u32 playTime; // Current playing time
+		u32 lapsed; // 
 
 		Frame loopFrame;
 		u32 loopTime;
-		u32 loopPosition;
 		u32 loopStart;
 		u32 loopEnd;
 		String line;
@@ -108,18 +109,30 @@ namespace Light {
 			analogWrite(b_pin, 255 - map(b, 0, 255, 0, Config::data.brightness));
 		}
 		void end() {
+			tmr.detach();
 			if (file) file.close();
 			playTime = 0;
 			loopTime = 0;
+			analogWrite(r_pin, 255);
+			analogWrite(g_pin, 255);
+			analogWrite(b_pin, 255);
+		}
+		void pause() {
+			paused = true;
+		}
+		void resume() {
+			paused = false;
+		}
+		void toogle() {
+			if (paused) resume(); 
+			else pause();
 		}
 		void begin() {
 			pinMode(r_pin, OUTPUT);
 			pinMode(g_pin, OUTPUT);
 			pinMode(b_pin, OUTPUT);
 
-			analogWrite(r_pin, 255);
-			analogWrite(g_pin, 255);
-			analogWrite(b_pin, 255);
+			end();
 
 			String path = "/seq/" + String(Config::data.channel);
 			if (!Config::fs->exists(path)) {
@@ -131,6 +144,9 @@ namespace Light {
 			frame = next();
 
 			tmr.attach_ms_scheduled_accurate(1, [this]() {
+				
+				if (paused) return;
+
 				switch (frame.type) {
 					case 1:
 						setColor(&frame);

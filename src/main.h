@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "config.h"
 #include "transport.h"
-#include "input.h"
 #include "light.h"
+#include "input.h"
 #include "api.h"
 // #include "display.h"
 
@@ -22,9 +22,9 @@ void setup() {
     WiFi.printDiag(Serial);
 
     Config::setup();
+    Input::setup();
     Light::setup();
     Transport::setup();
-    Input::setup();
     API::setup();
     // Display::setup();
 
