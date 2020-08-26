@@ -3,9 +3,6 @@
 #include "espnow.h"
 #include "Ticker.h"
 
-// #define R1_PIN 12
-// #define G1_PIN 14
-// #define B1_PIN 13
 #define R1_PIN D6
 #define G1_PIN D7
 #define B1_PIN D8
@@ -48,6 +45,7 @@ namespace Light {
 		u32 loopPosition;
 		u32 loopStart;
 		u32 loopEnd;
+		String line;
 		
 	public:
 		Show(u8 r_pin, u8 g_pin, u8 b_pin): 
@@ -56,12 +54,11 @@ namespace Light {
 		Frame next() {
 			Frame frame;
 			if (file.available()) {
-				String line = file.readStringUntil('\n');
+				line = file.readStringUntil('\n');
 				line.trim();
 				u32 start;
 				u32 duration;
 				u32 transition;
-				u32 size;
 				u32 r;
 				u32 g;
 				u32 b;
@@ -77,11 +74,10 @@ namespace Light {
 					frame.b = b;
 				}
 				else if (line.startsWith("loop")) {
-					sscanf(line.c_str(), "%*s %u %u %u", &start, &duration, &size);
+					sscanf(line.c_str(), "%*s %u %u", &start, &duration);
 					frame.type = 2;
 					frame.start = start;
 					frame.duration = duration;
-					frame.size = size;
 				}
 				else if (line.startsWith("end")) {
 					sscanf(line.c_str(), "%*s %u", &start);
@@ -91,16 +87,6 @@ namespace Light {
 			}
 			return frame;
 		}
-		void setColor(u8 r, u8 g, u8 b) {
-			analogWrite(r_pin, 255 - map(r, 0, 255, 0, Config::data.brightness));
-			analogWrite(g_pin, 255 - map(g, 0, 255, 0, Config::data.brightness));
-			analogWrite(b_pin, 255 - map(b, 0, 255, 0, Config::data.brightness));
-		}
-		// void setColor(Frame *frame) {
-		// 	analogWrite(r_pin, 255 - map(frame->r, 0, 255, 0, Config::data.brightness));
-		// 	analogWrite(g_pin, 255 - map(frame->g, 0, 255, 0, Config::data.brightness));
-		// 	analogWrite(b_pin, 255 - map(frame->b, 0, 255, 0, Config::data.brightness));
-		// }
 		void setColor(Frame *frame) {
 			lapsed = playTime - frame->start;
 			u8 r = frame->r;
@@ -108,6 +94,7 @@ namespace Light {
 			u8 b = frame->b;
 
 			if (lapsed < frame->transition) {
+				// Compute color value during transition
 				float ratio = (float)lapsed / frame->transition;
 				r = (float)lastColor[0] + (frame->r - lastColor[0]) * ratio;
 				g = (float)lastColor[1] + (frame->g - lastColor[1]) * ratio;
@@ -120,6 +107,11 @@ namespace Light {
 			analogWrite(g_pin, 255 - map(g, 0, 255, 0, Config::data.brightness));
 			analogWrite(b_pin, 255 - map(b, 0, 255, 0, Config::data.brightness));
 		}
+		void end() {
+			if (file) file.close();
+			playTime = 0;
+			loopTime = 0;
+		}
 		void begin() {
 			pinMode(r_pin, OUTPUT);
 			pinMode(g_pin, OUTPUT);
@@ -129,7 +121,12 @@ namespace Light {
 			analogWrite(g_pin, 255);
 			analogWrite(b_pin, 255);
 
-			file = Config::fs->open("/seq/3.txt", "r");
+			String path = "/seq/" + String(Config::data.channel);
+			if (!Config::fs->exists(path)) {
+				Serial.printf("Sequence file not found: %s\n", path.c_str());
+				return;
+			}
+			file = Config::fs->open(path, "r");
 			file.setTimeout(0);
 			frame = next();
 
@@ -140,7 +137,7 @@ namespace Light {
 						break;
 					case 2:
 						if (loopTime == 0) {
-							// Serial.println("loop start");
+							Serial.print("\nloop ");
 							loopStart = file.position();
 							loopFrame = next();
 						}
@@ -148,7 +145,7 @@ namespace Light {
 							setColor(&loopFrame);
 						}
 						if (++loopTime > loopFrame.start + loopFrame.duration) {
-							// Serial.println("loop next");
+							Serial.print(" * ");
 							if (loopFrame.type == 1) {
 								lastColor[0] = loopFrame.r;
 								lastColor[1] = loopFrame.g;
@@ -163,7 +160,7 @@ namespace Light {
 						}
 						break;
 					case 3:
-						// Serial.println("ended.");
+						Serial.print("\nended.");
 						loopTime = 0;
 						playTime = 0;
 						file.seek(0);
@@ -176,8 +173,7 @@ namespace Light {
 						loopTime = 0;
 						file.seek(loopEnd);
 					}
-					// Serial.printf("%d %u -- ", frame.type, frame.start);
-					// Serial.println("next");
+					Serial.print("\nframe");
 					if (frame.type == 1) {
 						lastColor[0] = frame.r;
 						lastColor[1] = frame.g;
@@ -189,15 +185,11 @@ namespace Light {
 		}
 	};
 
-	Light::Show outputA(R1_PIN, G1_PIN, B1_PIN);
+	Light::Show A(R1_PIN, G1_PIN, B1_PIN);
+	Light::Show B(R2_PIN, G2_PIN, B2_PIN);
 
 	void setup() {
-		analogWriteFreq(40000);
+		analogWriteFreq(10000);
 		analogWriteRange(255);
-		outputA.begin();
-	}
-
-	void loop() {
-
 	}
 }

@@ -1,12 +1,32 @@
 <!DOCTYPE html>
 <title>Parcel Sandbox</title>
 <meta charset="UTF-8"/>
-<ol id="link"></ol>
-<div>
-	PixelUtility XML Files: <input id="upload" type="file" multiple/>
-</div>
-<div>
-	LtComposer3 LSF Files:<input id="upload-track" type="file" multiple/>
-</div>
-<script src="js/components.js"></script>
-<script src="js/index.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="LEDRC">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0">
+<form>
+	<h3>PixelUtility2 IPX Import</h3>
+	<ol id="link"></ol>
+	<div>
+		Select files: <input id="upload" type="file" multiple/>
+	</div>
+</form>
+<form>
+	<h3>LtComposer3 LSF Import</h3>
+	<div>
+		<label>Select file:<input id="upload-track" type="file" multiple/></label>
+	</div>
+	<div>
+		<label>Memory Slot:
+			<select id="select-channel">
+				<option>1</option>
+				<option>2</option>
+				<option>3</option>
+				<option>4</option>
+			</select>
+		</label>
+	</div>
+</form>
+<script src="index.js"></script>

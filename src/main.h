@@ -1,38 +1,42 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include "config.h"
 #include "transport.h"
 #include "input.h"
 #include "light.h"
-#include "display.h"
 #include "api.h"
+// #include "display.h"
 
-ADC_MODE(ADC_VCC);
+// ADC_MODE(ADC_VCC);
 
 void setup() {
     Serial.begin(921600);
     
+    sprintf(Config::chipID, "%06x", system_get_chip_id());
+
     #ifdef MASTER
-    Serial.printf("\n\nMASTER %X %d\n\n", system_get_chip_id(),  ESP.getVcc());
+    Serial.printf("\n\nMASTER %s\n\n", Config::chipID);
     #else
-    Serial.printf("\n\nSLAVE %X %d\n\n", system_get_chip_id(),  ESP.getVcc());
+    Serial.printf("\n\nSLAVE %s\n\n", Config::chipID);
     #endif
 
     WiFi.printDiag(Serial);
 
     Config::setup();
-    Transport::setup();
-    Display::setup();
     Light::setup();
+    Transport::setup();
     Input::setup();
     API::setup();
+    // Display::setup();
+
+    Light::A.begin();
+    Light::B.begin();
 }
 
 void loop() {
     Config::loop();
     Transport::loop();
-    Display::loop();
-    Light::loop();
     Input::loop();
     API::loop();
+    // Display::loop();
 }
 

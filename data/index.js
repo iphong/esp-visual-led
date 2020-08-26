@@ -83,9 +83,10 @@ function parseLSF(file) {
 		}
 		convert(frames)
 
+		const channel = document.getElementById('select-channel').value;
 		console.log(data.join('\n'))
 		const form = new FormData();
-		form.append("filename", "seq/3");
+		form.append("filename", "seq/" + channel);
 		form.append("file", new Blob([data.join('\n')]));
 		const req = new XMLHttpRequest();
 		req.open("POST", "edit", true);

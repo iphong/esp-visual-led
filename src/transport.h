@@ -1,14 +1,9 @@
-#include "Arduino.h"
-#include "ESP8266WiFi.h"
-#include "MeshRC.h"
-#include "ArduinoOTA.h"
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <ArduinoOTA.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
-#ifdef ESP8266
-extern "C" {
-#include "user_interface.h"
-}
-#endif
+#include <MeshRC.h>
 
 #ifndef __TRANSPORT_H_
 #define __TRANSPORT_H__
@@ -22,11 +17,18 @@ namespace Transport {
 	u8 crc = 0x00;
 
 	void setup() {
+		Config::SSID = "SDC_" + String(Config::chipID);
+    	Config::SSID.toUpperCase();
+		
 		WiFi.mode(WIFI_AP_STA);
 		WiFi.begin("nest", "khongbiet");
-		WiFi.softAP("node_" + String(Config::chipID), "");
+		WiFi.softAP(Config::SSID, "");
 
+		ArduinoOTA.setHostname("ledrc");
 		ArduinoOTA.begin();
+
+		MDNS.begin("ledrc");
+		MDNS.addService("http", "tcp", 80);
 
 		#ifdef SLAVE
 		MeshRC::on("#>FILE^", [](u8* filename, u8 size) {
@@ -96,7 +98,9 @@ namespace Transport {
 	}
 
 	void loop() {
+  		MDNS.update();
 		ArduinoOTA.handle();
+		
 		#ifdef MASTER
 		if (sendFile) {
 			dir = Config::fs->openDir("/seq");

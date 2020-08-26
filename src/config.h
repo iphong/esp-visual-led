@@ -8,7 +8,7 @@
 #define __CONFIG_H__
 
 #define HEADER '$'
-#define VERSION 3
+#define VERSION 1
 
 #define IS_PAIRED !MeshRC::equals(data.master, MeshRC::broadcast, 6)
 #define IS_PAIRING Config::mode == Config::BIND
@@ -16,6 +16,7 @@
 namespace Config {
 	
 	char chipID[6];
+	String SSID = "";
 
     FS *fs = &LittleFS;
     LittleFSConfig fsConfig = LittleFSConfig();
@@ -39,7 +40,7 @@ namespace Config {
 		u8 version = VERSION;
 		u8 master[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 		u8 channel = 1;
-		u8 brightness = 64;
+		u8 brightness = 255;
 	} data;
 
 	void _save() {
