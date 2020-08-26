@@ -13,14 +13,19 @@
 #include "Fonts/FreeMonoBold18pt7b.h"
 #include "SPI.h"
 
+#ifndef __DISPLAY_H__
+#define __DISPLAY_H__
+
+
 #define TFT_CS 0
 #define TFT_RST -1
 #define TFT_DC 15
 
-Adafruit_ILI9341 tft = Adafruit_ILI9341(15, 16);
-// Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-
 namespace Display {
+
+	// Adafruit_ILI9341 tft = Adafruit_ILI9341(15, 16);
+	Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
 	void drawHeader() {
 		tft.fillScreen(ST77XX_BLACK);
 
@@ -49,11 +54,17 @@ namespace Display {
 		tft.setCursor(tft.width() - w, top + h);
 		tft.print(str);
 	}
-	void begin() {
-		tft.begin(80000000UL);
-		// tft.init(240, 240);
+	void setup() {
+		// tft.begin(80000000UL);
+		tft.init(240, 240);
 		tft.setRotation(0);
 		tft.setTextWrap(false);
 		drawHeader();
 	}
+	void loop() {
+		
+	}
 }
+
+
+#endif

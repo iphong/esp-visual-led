@@ -2,13 +2,25 @@
 #include "EEPROM.h"
 #include "Ticker.h"
 #include "MeshRC.h"
+#include "LittleFS.h"
+
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
 
 #define HEADER '$'
-#define VERSION 9
+#define VERSION 3
 
-Ticker delaySave;
+#define IS_PAIRED !MeshRC::equals(data.master, MeshRC::broadcast, 6)
+#define IS_PAIRING Config::mode == Config::BIND
 
 namespace Config {
+	
+	char chipID[6];
+
+    FS *fs = &LittleFS;
+    LittleFSConfig fsConfig = LittleFSConfig();
+	bool fsOK;
+	const char *fsName = "LittleFS";
 
 	u32 lastChanged;
 	bool shouldSave;
@@ -20,19 +32,14 @@ namespace Config {
 		BRIGHT,
 	};
 
-	mode_t mode = IDLE;
-	bool modeChanged;
-	bool pairing;
-	bool sendFile = false;
+	mode_t mode = PLAY;
 
 	struct data_t {
-		const char header = HEADER;
-		const char version = VERSION;
-		uint8_t master[6];
-		bool paired = false;
-		uint8_t channel = 0;
-		uint8_t color[3] = {0xFF, 0xFF, 0xFF};
-		uint8_t color2[3] = {0x00, 0x00, 0x00};
+		u8 header = HEADER;
+		u8 version = VERSION;
+		u8 master[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+		u8 channel = 1;
+		u8 brightness = 64;
 	} data;
 
 	void _save() {
@@ -40,11 +47,11 @@ namespace Config {
 		shouldSave = true;
 	}
 
-	void saveColor(u8 r, u8 g, u8 b) {
-		data.color[0] = r;
-		data.color[1] = g;
-		data.color[2] = b;
-		_save();
+	bool isPaired() {
+		return IS_PAIRED;
+	}
+	bool isPairing() {
+		return IS_PAIRING;
 	}
 	void saveChannel(u8 num) {
 		data.channel = num;
@@ -54,17 +61,12 @@ namespace Config {
 		memcpy(data.master, addr, 6);
 		_save();
 	}
-	void saveBinding(bool state) {
-		data.paired = state;
-		_save();
-	}
 	void setMode(mode_t newMode) {
 		mode = newMode;
-		modeChanged = true;
         Serial.printf("mode = %i\n", Config::mode);
 		if (mode == IDLE) {
 			#ifdef SLAVE
-            if (Config::data.paired)
+            if (IS_PAIRED)
 				digitalWrite(LED_BUILTIN, LOW);
 			else setMode(BIND);
 			#endif
@@ -107,13 +109,7 @@ namespace Config {
 			memcpy(&data, &tmp, sizeof(tmp));
 			Serial.println("] - OK");
 		}
-		delaySave.attach(1, []() {
-			if (shouldSave && millis() - 1000 > lastChanged) {
-				save();
-				shouldSave = false;
-			}
-		});
-		if (data.paired) {
+		if (IS_PAIRED) {
 			MeshRC::setMaster(data.master);
 		} else {
 			#ifdef SLAVE
@@ -121,6 +117,27 @@ namespace Config {
 			#endif
 		}
 	}
-
-	
+	void setup() {
+		load();
+        fsConfig.setAutoFormat(false);
+        fs->setConfig(fsConfig);
+        fsOK = fs->begin();
+        Serial.println(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
+	}
+	void loop() {
+		#ifdef SLAVE
+		static u32 tmr;
+		while (IS_PAIRING) {
+			digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+			tmr = millis();
+			while (millis() - tmr < 500) yield();
+		}
+		#endif
+		if (shouldSave && millis() - 1000 > lastChanged) {
+			save();
+			shouldSave = false;
+		}
+	}
 }
+
+#endif

@@ -5,6 +5,19 @@ Track 1
 
 @A
 
+type	start	dur		trans	color
+01 		0000 	0000 	0000 	000000
+
+type	start	dur		size
+02		0000	0000	00
+
+types
+01: setrgb
+02: loop
+
+0 28270 0 255 0 0
+28270
+
 0ms: setrgb A 0ms > 255, 0, 0
 
 # pulse

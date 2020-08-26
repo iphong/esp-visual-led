@@ -1,248 +1,44 @@
 Track 1
-0: fork A
-0: fork B
-67476ms: end
 
-@A
+# gradient
+0ms: setrgb AB 0ms > 0, 171, 255
+0ms: setrgb AB 8401ms > 255, 0, 145
 
-0ms: setrgb A 0ms > 255, 0, 0
+# rainbow
+8401ms: setrgb AB 0ms > 0, 171, 255
+8401ms: setrgb AB 115ms > 0, 0, 255
+8516ms: loop 7875ms
+	0ms: setrgb AB 187ms > 255, 0, 255
+	187ms: setrgb AB 187ms > 255, 0, 0
+	375ms: setrgb AB 187ms > 255, 255, 0
+	562ms: setrgb AB 187ms > 0, 255, 0
+	750ms: setrgb AB 187ms > 0, 255, 255
+	937ms: setrgb AB 187ms > 0, 0, 255
+	1125ms: end 
+16391ms: setrgb AB 187ms > 255, 0, 255
+16578ms: setrgb AB 187ms > 255, 0, 0
+16765ms: setrgb AB 187ms > 255, 255, 0
+16952ms: setrgb AB 187ms > 0, 255, 0
 
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
+# flash
+17133ms: loop 7000ms
+	0ms: setrgb AB 0ms > 0, 171, 255
+	44ms: setrgb AB 0ms > 0, 0, 0
+	200ms: end 
+24133ms: setrgb AB 0ms > 0, 171, 255
+24177ms: setrgb AB 0ms > 0, 0, 0
 
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
+# dots
+24238ms: loop 7233ms
+	0ms: setrgb AB 0ms > 0, 171, 255
+	1ms: setrgb AB 0ms > 0, 0, 0
+	18ms: end 
 
 # pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
-Track 1
-0: fork A
-0: fork B
-67476ms: end
-
-@A
-
-0ms: setrgb A 0ms > 255, 0, 0
-
-# pulse
-28270ms: loop 39137ms
-	0ms: setrgb A 0ms > 0, 0, 0
-	10ms: setrgb A 0ms > 255, 255, 255
-	12ms: setrgb A 0ms > 0, 0, 0
-	22ms: setrgb A 0ms > 255, 255, 0
-	30ms: end 
-67407ms: setrgb A 0ms > 0, 0, 0
-67476ms: end
-
-@B
-
-# pulse
-0ms: loop 40804ms
-	0ms: setrgb B 0ms > 0, 0, 0
-	10ms: setrgb B 0ms > 255, 255, 255
-	12ms: setrgb B 0ms > 0, 0, 0
-	22ms: setrgb B 0ms > 255, 0, 145
-	30ms: end 
-
-40804ms: setrgb B 0ms > 255, 0, 0
-67476ms: end
+31471ms: loop 7422ms
+	0ms: setrgb AB 0ms > 0, 0, 0
+	10ms: setrgb AB 0ms > 255, 255, 255
+	12ms: setrgb AB 0ms > 0, 0, 0
+	22ms: setrgb AB 0ms > 0, 171, 255
+	42ms: end 
+38893ms: end

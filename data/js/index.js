@@ -17,6 +17,163 @@ document.getElementById('upload').addEventListener('change', e => {
 	e.target.value = ''
 })
 
+document.getElementById('upload-track').addEventListener('change', e => {
+	for (let file of e.target.files) {
+		parseLSF(file)
+	}
+	e.target.value = ''
+})
+
+
+const setFrameRegex = /(\t)?([0-9]+)ms: setrgb AB ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
+const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
+const endFrameRegex = /(\t)?([0-9]+)ms: end/i
+function parseLSF(file) {
+	const reader = new FileReader()
+	reader.readAsText(file)
+	reader.onload = () => {
+		const frames = []
+		let frame, lastFrame;
+		const lines = reader.result.split('\n')
+		lines.forEach(line => {
+			if (line.match(setFrameRegex)) {
+				let [ ,tab, start, transition, r, g, b] = line.match(setFrameRegex)
+				frame = { type: 'set', start, duration: 0, transition, r, g, b }
+				if (!tab) {
+					frames.push(frame)
+					lastFrame = frame
+				} else {
+					lastFrame.frames.push(frame)
+				}
+			}
+			if (line.match(endFrameRegex)) {
+				let [ ,tab, start] = line.match(endFrameRegex)
+				frame = { type: 'end', start }
+				if (!tab) {
+					frames.push(frame)
+					lastFrame = frame
+				} else {
+					lastFrame.frames.push(frame)
+				}
+			}
+			if (line.match(loopFrameRegex)) {
+				let [,start, duration] = line.match(loopFrameRegex)
+				frame = { type: 'loop', start, duration, frames: [] }
+				lastFrame = frame
+				frames.push(frame)
+			}
+		})
+		const data = []
+		function convert(frames, tab) {
+			frames.forEach((frame, index) => {
+				switch (frame.type) {
+					case 'set':
+						frame.duration = frames[index + 1].start - frame.start
+						data.push([tab ? "	rgb" : "rgb", frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(" "))
+						break
+					case 'end':
+						data.push([tab ? "	end" : "end", frame.start].join(" "))
+						break
+					case 'loop':
+						data.push(["loop", frame.start, frame.duration, frame.frames.length].join(" "))
+						convert(frame.frames, true)
+						break
+				}
+			})
+		}
+		convert(frames)
+
+		console.log(data.join('\n'))
+		const form = new FormData();
+		form.append("filename", "seq/3");
+		form.append("file", new Blob([data.join('\n')]));
+		const req = new XMLHttpRequest();
+		req.open("POST", "edit", true);
+		req.send(form);
+		req.onloadend =  (e) => {
+			console.log('Upload completed.')
+		};
+	}
+}
+function parseLSF2(file) {
+	const reader = new FileReader()
+	reader.readAsText(file)
+	reader.onload = () => {
+		const frames = []
+		let frame, lastFrame;
+		const lines = reader.result.split('\n')
+		lines.forEach(line => {
+			if (line.match(setFrameRegex)) {
+				let [ ,tab, start, transition, r, g, b] = line.match(setFrameRegex)
+				frame = { type: 'set', start, transition, r, g, b }
+				if (!tab) {
+					frames.push(frame)
+					lastFrame = frame
+				} else {
+					lastFrame.frames.push(frame)
+				}
+			}
+			if (line.match(endFrameRegex)) {
+				let [ ,tab, start] = line.match(endFrameRegex)
+				frame = { type: 'end', start }
+				if (!tab) {
+					frames.push(frame)
+					lastFrame = frame
+				} else {
+					lastFrame.frames.push(frame)
+				}
+			}
+			if (line.match(loopFrameRegex)) {
+				let [,start, duration] = line.match(loopFrameRegex)
+				frame = { type: 'loop', start, duration, frames: [] }
+				lastFrame = frame
+				frames.push(frame)
+			}
+		})
+		const data = []
+		function convert(frames) {
+			frames.forEach((frame, index) => {
+				const bytes = new Uint8Array(16)
+				const view = new DataView(bytes.buffer)
+				data.push(bytes)
+				switch (frame.type) {
+					case 'set':
+						frame.duration = frames[index + 1].start - frame.start
+						view.setUint8(0, 0x01)
+						view.setUint32(1, parseInt(frame.start))
+						view.setUint32(5, parseInt(frame.duration))
+						view.setUint32(9, parseInt(frame.transition))
+						view.setUint8(13, parseInt(frame.r))
+						view.setUint8(14, parseInt(frame.g))
+						view.setUint8(15, parseInt(frame.b))
+						break
+					case 'loop':
+						view.setUint8(0, 0x02)
+						view.setUint32(1, parseInt(frame.start))
+						view.setUint32(5, parseInt(frame.duration))
+						convert(frame.frames)
+						break
+					case 'end':
+						view.setUint8(0, 0x03)
+						view.setUint32(1, parseInt(frame.start))
+						break
+				}
+			})
+		}
+		convert(frames)
+		const payload = new Blob(data)
+		const form = new FormData();
+		form.append("filename", "seq/3");
+		form.append("file", payload);
+		const req = new XMLHttpRequest();
+		req.open("POST", "edit", true);
+		req.send(form);
+		req.onloadend =  (e) => {
+			console.log('Upload completed.')
+		};
+	}
+}
+
 function parseXML(file) {
 	const output = {
 		images: [],
