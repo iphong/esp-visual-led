@@ -17,17 +17,24 @@ namespace Transport {
 	u8 crc = 0x00;
 
 	void setup() {
+
+		static IPAddress addr = {1,1,1,1};
+		static IPAddress mask = {255,255,255,0};
+
 		Config::SSID = "SDC_" + String(Config::chipID);
-    	Config::SSID.toUpperCase();
 		
 		WiFi.mode(WIFI_AP_STA);
 		WiFi.begin("nest", "khongbiet");
-		WiFi.softAP(Config::SSID, "");
+		WiFi.softAP(Config::SSID, "00000000");
+		WiFi.softAPConfig(addr, addr, mask);
+		WiFi.setAutoConnect(true);
+		WiFi.setAutoReconnect(true);
 
-		ArduinoOTA.setHostname("ledrc");
+
+		ArduinoOTA.setHostname(String(Config::SSID).c_str());
 		ArduinoOTA.begin();
 
-		MDNS.begin("ledrc");
+		MDNS.begin(Config::SSID);
 		MDNS.addService("http", "tcp", 80);
 
 		#ifdef SLAVE

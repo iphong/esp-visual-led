@@ -11,7 +11,7 @@
 void setup() {
     Serial.begin(921600);
     
-    sprintf(Config::chipID, "%06x", system_get_chip_id());
+    sprintf(Config::chipID, "%06X", system_get_chip_id());
 
     #ifdef MASTER
     Serial.printf("\n\nMASTER %s\n\n", Config::chipID);
