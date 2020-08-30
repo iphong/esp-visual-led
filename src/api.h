@@ -2,7 +2,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <SPI.h>
 
 namespace API {
     #define DBG_OUTPUT_PORT Serial
@@ -47,6 +46,40 @@ namespace API {
         server.send(500, FPSTR(TEXT_PLAIN), msg + "\r\n");
     }
 
+
+        /** Is this an IP? */
+    boolean isIp(String str) {
+        for (size_t i = 0; i < str.length(); i++) {
+            int c = str.charAt(i);
+            if (c != '.' && (c < '0' || c > '9')) {
+            return false;
+            }
+        }
+        return true;
+    }
+
+    /** IP to String? */
+    String toStringIp(IPAddress ip) {
+        String res = "";
+        for (int i = 0; i < 3; i++) {
+            res += String((ip >> (8 * i)) & 0xFF) + ".";
+        }
+        res += String(((ip >> 8 * 3)) & 0xFF);
+        return res;
+    }
+
+
+    boolean captivePortal() {
+        if (!isIp(server.hostHeader()) && server.hostHeader() != (String(Config::hostname) + ".local")) {
+            Serial.println("Request redirected to captive portal");
+            server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
+            server.send(302, "text/plain", "");   // Empty content inhibits Content-length header so we have to close the socket ourselves.
+            server.client().stop(); // Stop is needed because we sent no content length
+            return true;
+        }
+        return false;
+    }
+
     ////////////////////////////////
     // Request handlers
 
@@ -62,7 +95,50 @@ namespace API {
             Config::data.channel = server.arg("channel").toInt();
             Config::_save();
         }
+        if (server.hasArg("show")) {
+            Config::data.show = server.arg("show").toInt();
+            Config::_save();
+        }
         server.send(200, "text/plain", "OK");
+    }
+    /*
+    Commands
+    */
+    void handleCommand() {
+        if (server.hasArg("command")) {
+            if (server.arg("command") == "pair") {
+                if (server.hasArg("channel")) {
+                    Transport::sendPair(server.arg("channel").toInt());
+                } else {
+                    Transport::sendPair();
+                }
+                replyOK();
+            } else if (server.arg("command") == "start") {
+                Light::begin();
+                Transport::sendSync();
+                replyOK();
+            } else if (server.arg("command") == "toggle") {
+                Light::toggle();
+                Transport::sendSync();
+                replyOK();
+            } else if (server.arg("command") == "pause") {
+                Light::pause();
+                Transport::sendSync();
+                replyOK();
+            } else if (server.arg("command") == "resume") {
+                Light::resume();
+                Transport::sendSync();
+                replyOK();
+            } else if (server.arg("command") == "end") {
+                Light::end();
+                Transport::sendSync();
+                replyOK();
+            } else {
+                replyBadRequest("Unknown command: " + server.arg("command"));
+            }
+        } else {
+            replyBadRequest("Missing command argument.");
+        }
     }
     /*
     Return the FS type, status and size info
@@ -480,6 +556,9 @@ namespace API {
     */
     void handleNotFound()
     {
+        if (captivePortal()) { // If caprive portal redirect instead of displaying the error page.
+            return;
+        }
         if (!Config::fsOK)
         {
             return replyServerError(FPSTR(FS_INIT_ERROR));
@@ -545,16 +624,23 @@ namespace API {
         // WEB SERVER INIT
 
         server.on("/generate_204", []() {
+            if (captivePortal()) { // If caprive portal redirect instead of displaying the error page.
+                return;
+            }
             handleFileRead("/");
-            });  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
+        });  //Android captive portal. Maybe not needed. Might be handled by notFound handler.
 
         server.on("/fwlink", []() {
+            if (captivePortal()) { // If caprive portal redirect instead of displaying the error page.
+                return;
+            }
             handleFileRead("/");
-            });  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+        });  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
 
             // Filesystem status
         server.on("/status", HTTP_GET, handleStatus);
         server.on("/config", HTTP_POST, handleConfig);
+        server.on("/command", HTTP_POST, handleCommand);
 
         // List directory
         server.on("/list", HTTP_GET, handleFileList);

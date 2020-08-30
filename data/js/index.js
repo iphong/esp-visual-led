@@ -3,41 +3,114 @@ const led_nums = 36
 window.addEventListener('dragover', e => {
 	e.preventDefault()
 })
+
 window.addEventListener('drop', e => {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
-		parseXML(file)
+		if (file.name.endsWith(".lsf")) {
+			parseLSF(file)
+		}
+		else if (file.name.endsWith(".ipx")) {
+			parseIPX(file)
+		}
+		else {
+			console.warn("Unsupported file format:", file.name);
+		}
 	}
 })
 
-document.getElementById('upload').addEventListener('change', e => {
+document.getElementById('upload-ipx').addEventListener('change', e => {
 	for (let file of e.target.files) {
-		parseXML(file)
+		parseIPX(file)
 	}
 	e.target.value = ''
 })
 
-document.getElementById('upload-track').addEventListener('change', e => {
+document.getElementById('upload-lsf').addEventListener('change', e => {
 	for (let file of e.target.files) {
 		parseLSF(file)
 	}
 	e.target.value = ''
 })
 
+document.getElementById('pair').addEventListener('click', e => {
+	if (confirm(`Put all channel ${getChannel()} devices to pairing mode...`)) {
+		request("POST", "/command", { command: 'pair', channel: getChannel() }).then(() => {
+			alert("Done.");
+		});
+	}
+})
 
-const setFrameRegex = /(\t)?([0-9]+)ms: setrgb AB ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
+function sendCommand(command) {
+	request("POST", "/command", { command }).then(() => {
+		console.log("Done.");
+	});
+}
+
+function request(method = "POST", path = "", args = {}, body = "") {
+	return new Promise((resolve) => {
+		const req = new XMLHttpRequest
+		req.open(method, path + '?' + Object.entries(args).map(([key, value]) => `${key}=${value}`).join('&'), true)
+		req.send(body)
+		req.addEventListener('loadend', () => {
+			console.log(req.status, req.statusText, req.responseText.trim());
+			resolve();
+		})
+	})
+}
+
+function getShow() {
+	return document.getElementById('select-show').value
+}
+function getChannel() {
+	return document.getElementById('select-channel').value
+}
+
+function uploadFile(path, file) {
+	return new Promise((resolve, reject) => {
+		const form = new FormData()
+		form.append('filename', path)
+		form.append('file', file)
+		const req = new XMLHttpRequest()
+		req.open('POST', 'edit', true)
+		req.send(form)
+		req.onloadend = (e) => {
+			if (req.status === 200) resolve()
+			else {
+				reject()
+				console.warn(path, req.status, req.statusText);
+			}
+		}
+	})
+}
+
+const setFrameRegex = /(\t)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
 const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
 const endFrameRegex = /(\t)?([0-9]+)ms: end/i
 function parseLSF(file) {
 	const reader = new FileReader()
 	reader.readAsText(file)
 	reader.onload = () => {
+		const threads = reader.result.split(/@\w+/g)
+		if (threads.length == 1) {
+			parseThread('A', threads[0])
+				.then(() => parseThread('B', threads[0]))
+				.then(() => console.log("Uploaded."))
+		} else if (threads.length == 3) {
+			parseThread('A', threads[1])
+				.then(() => parseThread('B', threads[2]))
+				.then(() => console.log("Uploaded."))
+		} else {
+			console.warn('Unknown data format', reader.result)
+		}
+	}
+	function parseThread(id, content) {
 		const frames = []
-		let frame, lastFrame;
-		const lines = reader.result.split('\n')
+		let frame, lastFrame
+		const lines = content.split('\n')
 		lines.forEach(line => {
 			if (line.match(setFrameRegex)) {
-				let [ ,tab, start, transition, r, g, b] = line.match(setFrameRegex)
+				let [, tab, start, transition, r, g, b] = line.match(setFrameRegex)
 				frame = { type: 'set', start, duration: 0, transition, r, g, b }
 				if (!tab) {
 					frames.push(frame)
@@ -47,7 +120,7 @@ function parseLSF(file) {
 				}
 			}
 			if (line.match(endFrameRegex)) {
-				let [ ,tab, start] = line.match(endFrameRegex)
+				let [, tab, start] = line.match(endFrameRegex)
 				frame = { type: 'end', start }
 				if (!tab) {
 					frames.push(frame)
@@ -57,7 +130,7 @@ function parseLSF(file) {
 				}
 			}
 			if (line.match(loopFrameRegex)) {
-				let [,start, duration] = line.match(loopFrameRegex)
+				let [, start, duration] = line.match(loopFrameRegex)
 				frame = { type: 'loop', start, duration, frames: [] }
 				lastFrame = frame
 				frames.push(frame)
@@ -69,13 +142,13 @@ function parseLSF(file) {
 				switch (frame.type) {
 					case 'set':
 						frame.duration = frames[index + 1].start - frame.start
-						data.push([tab ? "	rgb" : "rgb", frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(" "))
+						data.push([tab ? '	rgb' : 'rgb', frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(' '))
 						break
 					case 'end':
-						data.push([tab ? "	end" : "end", frame.start].join(" "))
+						data.push([tab ? '	end' : 'end', frame.start].join(' '))
 						break
 					case 'loop':
-						data.push(["loop", frame.start, frame.duration, frame.frames.length].join(" "))
+						data.push(['loop', frame.start, frame.duration].join(' '))
 						convert(frame.frames, true)
 						break
 				}
@@ -83,99 +156,14 @@ function parseLSF(file) {
 		}
 		convert(frames)
 
-		const channel = document.getElementById('select-channel').value;
-		console.log(data.join('\n'))
-		const form = new FormData();
-		form.append("filename", "seq/" + channel);
-		form.append("file", new Blob([data.join('\n')]));
-		const req = new XMLHttpRequest();
-		req.open("POST", "edit", true);
-		req.send(form);
-		req.onloadend =  (e) => {
-			console.log('Upload completed.')
-		};
-	}
-}
-function parseLSF2(file) {
-	const reader = new FileReader()
-	reader.readAsText(file)
-	reader.onload = () => {
-		const frames = []
-		let frame, lastFrame;
-		const lines = reader.result.split('\n')
-		lines.forEach(line => {
-			if (line.match(setFrameRegex)) {
-				let [ ,tab, start, transition, r, g, b] = line.match(setFrameRegex)
-				frame = { type: 'set', start, transition, r, g, b }
-				if (!tab) {
-					frames.push(frame)
-					lastFrame = frame
-				} else {
-					lastFrame.frames.push(frame)
-				}
-			}
-			if (line.match(endFrameRegex)) {
-				let [ ,tab, start] = line.match(endFrameRegex)
-				frame = { type: 'end', start }
-				if (!tab) {
-					frames.push(frame)
-					lastFrame = frame
-				} else {
-					lastFrame.frames.push(frame)
-				}
-			}
-			if (line.match(loopFrameRegex)) {
-				let [,start, duration] = line.match(loopFrameRegex)
-				frame = { type: 'loop', start, duration, frames: [] }
-				lastFrame = frame
-				frames.push(frame)
-			}
-		})
-		const data = []
-		function convert(frames) {
-			frames.forEach((frame, index) => {
-				const bytes = new Uint8Array(16)
-				const view = new DataView(bytes.buffer)
-				data.push(bytes)
-				switch (frame.type) {
-					case 'set':
-						frame.duration = frames[index + 1].start - frame.start
-						view.setUint8(0, 0x01)
-						view.setUint32(1, parseInt(frame.start))
-						view.setUint32(5, parseInt(frame.duration))
-						view.setUint32(9, parseInt(frame.transition))
-						view.setUint8(13, parseInt(frame.r))
-						view.setUint8(14, parseInt(frame.g))
-						view.setUint8(15, parseInt(frame.b))
-						break
-					case 'loop':
-						view.setUint8(0, 0x02)
-						view.setUint32(1, parseInt(frame.start))
-						view.setUint32(5, parseInt(frame.duration))
-						convert(frame.frames)
-						break
-					case 'end':
-						view.setUint8(0, 0x03)
-						view.setUint32(1, parseInt(frame.start))
-						break
-				}
-			})
-		}
-		convert(frames)
-		const payload = new Blob(data)
-		const form = new FormData();
-		form.append("filename", "seq/3");
-		form.append("file", payload);
-		const req = new XMLHttpRequest();
-		req.open("POST", "edit", true);
-		req.send(form);
-		req.onloadend =  (e) => {
-			console.log('Upload completed.')
-		};
+		const path = `/show/${getShow()}/${getChannel()}${id}`
+		const blob = new Blob([data.join('\n')])
+
+		return uploadFile(path, blob)
 	}
 }
 
-function parseXML(file) {
+function parseIPX(file) {
 	const output = {
 		images: [],
 		sequences: []
@@ -231,15 +219,15 @@ function parseXML(file) {
 
 								// UPLOAD ASSETS
 
-								const form = new FormData();
-								form.append("filename", uploadPath);
-								form.append("file", blob);
-								const req = new XMLHttpRequest();
-								req.open("POST", "edit", true);
-								req.send(form);
-								req.onloadend =  (e) => {
+								const form = new FormData()
+								form.append('filename', uploadPath)
+								form.append('file', blob)
+								const req = new XMLHttpRequest()
+								req.open('POST', 'edit', true)
+								req.send(form)
+								req.onloadend = (e) => {
 									console.log('Upload completed.')
-								};
+								}
 							}
 							img.src = canvas.toDataURL()
 						}
@@ -261,61 +249,3 @@ function parseXML(file) {
 		document.body.appendChild(frame)
 	}
 }
-
-// function uploadFile(file) {
-// 	const reader = new FileReader()
-// 	reader.readAsDataURL(file)
-// 	reader.addEventListener('loadend', () => {
-// 		let img = new Image()
-// 		img.addEventListener('load', e => {
-// 			const scale = led_nums / img.height
-// 			canvas.width = img.height
-// 			canvas.height = img.width
-// 			ctx.clearRect(0, 0, canvas.width, canvas.height);
-// 			ctx.fillStyle = '#000000'
-// 			ctx.fillRect(0, 0, canvas.width, canvas.height)
-// 			ctx.save()
-// 			ctx.translate(img.height / 2, img.width / 2)
-// 			ctx.rotate((90 * Math.PI) / 180)
-// 			ctx.drawImage(img, -img.width / 2, -img.height / 2)
-// 			ctx.restore()
-//
-// 			img = new Image()
-// 			img.onload = () => {
-// 				const width = (canvas.width = led_nums)
-// 				const height = (canvas.height = canvas.height * scale)
-// 				ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-//
-// 				const link = document.getElementById('link')
-// 				const rgb = new Uint8ClampedArray(
-// 					ctx.getImageData(0, 0, width, height).data.reduce((output, b, i) => {
-// 						if ((i + 1) % 4 !== 0) {
-// 							output.push(b)
-// 						}
-// 						return output
-// 					}, [])
-// 				)
-//
-// 				const blob = new Blob([rgb])
-// 				const url = window.URL.createObjectURL(blob)
-// 				const name = file.name.replace(/(.*)\.\w+$/, '$1')
-// 				const size = rgb.byteLength
-// 				link.innerHTML += `<li>
-//         <a href="${url}" download="${name}">${name}</a> (${width}x${height})[${size}]
-//       </li>`
-//
-// 				const form = new FormData();
-// 				form.append("filename", `/images/${name}`);
-// 				form.append("file", blob);
-// 				const req = new XMLHttpRequest();
-// 				req.open("POST", "edit", true);
-// 				req.send(form);
-// 				req.onloadend =  (e) => {
-// 				  console.log('Upload completed.')
-// 				};
-// 			}
-// 			img.src = canvas.toDataURL()
-// 		})
-// 		img.src = reader.result
-// 	})
-// }

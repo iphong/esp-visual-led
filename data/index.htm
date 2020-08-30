@@ -6,27 +6,90 @@
 <meta name="apple-mobile-web-app-title" content="LEDRC">
 <meta name="viewport" content="width=device-width">
 <meta name="viewport" content="initial-scale=1.0">
-<form>
-	<h3>PixelUtility2 IPX Import</h3>
-	<ol id="link"></ol>
+<style type="text/css">
+	body {
+		font-family: "Helvetica Neue", Verdana, Geneva, Tahoma, sans-serif;
+	}
+	.grid-container {
+		margin: auto;
+		display: grid;
+		width: 100%;
+		grid-gap: 10px;
+		grid-template-columns: 70px 70px 70px 70px;
+		grid-template-rows: 70px 70px 70px 70px 70px;
+	}
+</style>
+<div class="card">
 	<div>
-		Select files: <input id="upload" type="file" multiple/>
+		<h2>PixelUtility2 IPX Import</h2>
+		<ol id="link"></ol>
+		<div>
+			<input id="upload-ipx" type="file" multiple/>
+		</div>
 	</div>
-</form>
-<form>
-	<h3>LtComposer3 LSF Import</h3>
 	<div>
-		<label>Select file:<input id="upload-track" type="file" multiple/></label>
+		<h2>LtComposer3 LSF Import</h2>
+		<div>
+			<input id="upload-lsf" type="file" multiple/>
+		</div>
 	</div>
 	<div>
-		<label>Memory Slot:
-			<select id="select-channel">
+		<label>Show:
+			<select id="select-show">
 				<option>1</option>
 				<option>2</option>
 				<option>3</option>
 				<option>4</option>
 			</select>
 		</label>
+		<label>Channel:
+			<select id="select-channel">
+				<option>1</option>
+				<option>2</option>
+				<option>3</option>
+				<option>4</option>
+				<option>5</option>
+				<option>6</option>
+				<option>7</option>
+				<option>8</option>
+				<option>9</option>
+				<option>10</option>
+			</select>
+		</label>
+		<button id="pair">Pair</button>
 	</div>
-</form>
+	<div>
+		<button onclick="sendCommand('start')">Start</button>
+		<button onclick="sendCommand('toggle')">Toggle</button>
+		<button onclick="sendCommand('pause')">Pause</button>
+		<button onclick="sendCommand('resume')">Resume</button>
+		<button onclick="sendCommand('end')">End</button>
+	</div>
+</div>
+<!--<div class="grid-container">-->
+<!--	<button>Brighter</button>-->
+<!--	<button>Dimmer</button>-->
+<!--	<button>Pair</button>-->
+<!--	<button>ON/OFF</button>-->
+<!--	-->
+<!--	<button>A</button>-->
+<!--	<button>B</button>-->
+<!--	<button>C</button>-->
+<!--	<button>D</button>-->
+
+<!--	<button style="background-color: yellow;"></button>-->
+<!--	<button style="background-color: orange;"></button>-->
+<!--	<button style="background-color: pink;"></button>-->
+<!--	<button style="background-color: black;">Flash</button>-->
+
+<!--	<button style="background-color: blue;"></button>-->
+<!--	<button style="background-color: cyan;"></button>-->
+<!--	<button style="background-color: green;"></button>-->
+<!--	<button style="background-color: black;">Pulse</button>-->
+
+<!--	<button style="background-color: red;"></button>-->
+<!--	<button style="background-color: violet;"></button>-->
+<!--	<button style="background-color: skyblue;"></button>-->
+<!--	<button style="background-color: black;">Strobe</button>-->
+<!--</div>-->
 <script src="js/index.js"></script>

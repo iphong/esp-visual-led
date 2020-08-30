@@ -4,22 +4,20 @@
 #include "MeshRC.h"
 #include "LittleFS.h"
 
+#define LOG(x...) Serial.printf(x)
+
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
 #define HEADER '$'
-#define VERSION 1
-
-#define IS_PAIRED !MeshRC::equals(data.master, MeshRC::broadcast, 6)
-#define IS_PAIRING Config::mode == Config::BIND
+#define VERSION 2
 
 namespace Config {
 	
 	char chipID[6];
-	String SSID = "";
+	const char *hostname = "home";
 
     FS *fs = &LittleFS;
-    LittleFSConfig fsConfig = LittleFSConfig();
 	bool fsOK;
 	const char *fsName = "LittleFS";
 
@@ -40,8 +38,12 @@ namespace Config {
 		u8 version = VERSION;
 		u8 master[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 		u8 channel = 1;
+		u8 show = 1;
 		u8 brightness = 255;
 	} data;
+
+	#define IS_PAIRED !MeshRC::equals(data.master, MeshRC::broadcast, 6)
+	#define IS_PAIRING Config::mode == Config::BIND
 
 	void _save() {
 		lastChanged = millis();
@@ -68,7 +70,7 @@ namespace Config {
 		if (mode == IDLE) {
 			#ifdef SLAVE
             if (IS_PAIRED)
-				digitalWrite(LED_BUILTIN, LOW);
+				digitalWrite(LED_PIN, LOW);
 			else setMode(BIND);
 			#endif
         }
@@ -79,7 +81,7 @@ namespace Config {
 		char buf[sizeof(data)];
 		memcpy(buf, &data, sizeof(data));
 		Serial.print("Saving config ... [ ");
-		for (auto pos=0; pos < sizeof(data); pos++) {
+		for (size_t pos=0; pos < sizeof(data); pos++) {
 			EEPROM.write(pos, buf[pos]);
 			Serial.printf("%02X ", buf[pos]);
 		}
@@ -120,8 +122,8 @@ namespace Config {
 	}
 	void setup() {
 		load();
-        fsConfig.setAutoFormat(false);
-        fs->setConfig(fsConfig);
+        // fsConfig.setAutoFormat(false);
+        // fs->setConfig(fsConfig);
         fsOK = fs->begin();
         Serial.println(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
 	}
@@ -129,7 +131,7 @@ namespace Config {
 		#ifdef SLAVE
 		static u32 tmr;
 		while (IS_PAIRING) {
-			digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+			digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 			tmr = millis();
 			while (millis() - tmr < 500) yield();
 		}

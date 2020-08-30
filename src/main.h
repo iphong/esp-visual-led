@@ -1,12 +1,14 @@
 #include <Arduino.h>
 #include "config.h"
-#include "transport.h"
 #include "light.h"
+#include "transport.h"
 #include "input.h"
 #include "api.h"
 // #include "display.h"
 
 // ADC_MODE(ADC_VCC);
+Ticker app;
+
 
 void setup() {
     Serial.begin(921600);
@@ -14,9 +16,9 @@ void setup() {
     sprintf(Config::chipID, "%06X", system_get_chip_id());
 
     #ifdef MASTER
-    Serial.printf("\n\nMASTER %s\n\n", Config::chipID);
+    LOG("\n\nMASTER %s\n\n", Config::chipID);
     #else
-    Serial.printf("\n\nSLAVE %s\n\n", Config::chipID);
+    LOG("\n\nSLAVE %s\n\n", Config::chipID);
     #endif
 
     WiFi.printDiag(Serial);
@@ -26,10 +28,17 @@ void setup() {
     Light::setup();
     Transport::setup();
     API::setup();
-    // Display::setup();
 
-    Light::A.begin();
-    Light::B.begin();
+    #ifdef MASTER
+    Transport::sendSync();
+    // Light::begin();
+    app.attach_ms_scheduled_accurate(1000, []() {
+        Transport::sendSync();
+    });
+    #endif
+    #ifdef SLAVE
+    Transport::syncRequest();
+    #endif
 }
 
 void loop() {
@@ -37,6 +46,5 @@ void loop() {
     Transport::loop();
     Input::loop();
     API::loop();
-    // Display::loop();
 }
 
