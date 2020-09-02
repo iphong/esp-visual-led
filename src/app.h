@@ -4,22 +4,24 @@
 #include "MeshRC.h"
 #include "LittleFS.h"
 
-#define LOG(x...) Serial.printf(x)
+#ifndef __APP_H__
+#define __APP_H__
 
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#define ENABLE_DEBUG_LOGS
+
+#define LOG(x...) Serial.print(x)
+#define LOGD(x...) Serial.printf(x)
+#define LOGL(x...) Serial.println(x)
 
 #define HEADER '$'
-#define VERSION 2
+#define VERSION 3
 
-namespace Config {
+namespace App {
 	
 	char chipID[6];
-	const char *hostname = "home";
 
     FS *fs = &LittleFS;
 	bool fsOK;
-	const char *fsName = "LittleFS";
 
 	u32 lastChanged;
 	bool shouldSave;
@@ -42,22 +44,32 @@ namespace Config {
 		u8 brightness = 255;
 	} data;
 
-	#define IS_PAIRED !MeshRC::equals(data.master, MeshRC::broadcast, 6)
-	#define IS_PAIRING Config::mode == Config::BIND
-
+	void lED_HIGH() {
+		digitalWrite(LED_PIN, 1);
+	}
+	void lED_LOW() {
+		digitalWrite(LED_PIN, 0);
+	}
+	void lED_BLINK() {
+		digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+	}
 	void _save() {
 		lastChanged = millis();
 		shouldSave = true;
 	}
 
 	bool isPaired() {
-		return IS_PAIRED;
+		return !MeshRC::equals(data.master, MeshRC::broadcast, 6);
 	}
 	bool isPairing() {
-		return IS_PAIRING;
+		return mode == BIND;
 	}
-	void saveChannel(u8 num) {
-		data.channel = num;
+	void saveShow(u8 show) {
+		data.show = show;
+		_save();
+	}
+	void saveChannel(u8 channel) {
+		data.channel = channel;
 		_save();
 	}
 	void saveMaster(u8 *addr) {
@@ -66,13 +78,9 @@ namespace Config {
 	}
 	void setMode(mode_t newMode) {
 		mode = newMode;
-        Serial.printf("mode = %i\n", Config::mode);
+        Serial.printf("mode = %i\n", App::mode);
 		if (mode == IDLE) {
-			#ifdef SLAVE
-            if (IS_PAIRED)
-				digitalWrite(LED_PIN, LOW);
-			else setMode(BIND);
-			#endif
+			digitalWrite(LED_PIN, LOW);
         }
 	}
 
@@ -80,15 +88,15 @@ namespace Config {
 		EEPROM.begin(512);
 		char buf[sizeof(data)];
 		memcpy(buf, &data, sizeof(data));
-		Serial.print("Saving config ... [ ");
+		LOG("Saving config ... [ ");
 		for (size_t pos=0; pos < sizeof(data); pos++) {
 			EEPROM.write(pos, buf[pos]);
 			Serial.printf("%02X ", buf[pos]);
 		}
 		if (EEPROM.commit())
-			Serial.println("] - OK");
+			LOGL("] - OK");
 		else
-			Serial.println("] - FAIL");
+			LOGL("] - FAIL");
 		EEPROM.end();
 	}
 
@@ -97,7 +105,7 @@ namespace Config {
 		data_t tmp;
 		char buf[sizeof(tmp)];
 		EEPROM.begin(512);
-		Serial.print("Loading config ... [ ");
+		LOG("Loading config ... [ ");
 		while (pos < sizeof(tmp)) {
 			buf[pos] = EEPROM.read(pos);
 			Serial.printf("%02X ", buf[pos]);
@@ -106,37 +114,36 @@ namespace Config {
 		EEPROM.end();
 		memcpy(&tmp, buf, sizeof(tmp));
 		if (tmp.header != HEADER || tmp.version != VERSION) {
-			Serial.println("] - INVALID");
+			LOGL("] - INVALID");
 			save();
 		} else {
 			memcpy(&data, &tmp, sizeof(tmp));
-			Serial.println("] - OK");
+			LOGL("] - OK");
 		}
-		if (IS_PAIRED) {
+		if (isPaired()) {
 			MeshRC::setMaster(data.master);
-		} else {
-			#ifdef SLAVE
-			setMode(BIND);
-			#endif
 		}
 	}
 	void setup() {
+
+		pinMode(LED_BUILTIN, OUTPUT);
+		lED_LOW();
+
 		load();
-        // fsConfig.setAutoFormat(false);
-        // fs->setConfig(fsConfig);
+
         fsOK = fs->begin();
-        Serial.println(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
+		
+        LOGL(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
 	}
 	void loop() {
 		#ifdef SLAVE
-		static u32 tmr;
-		while (IS_PAIRING) {
+		static u32 lastBlink;
+		if (isPairing() && millis() - lastBlink > 200) {
 			digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-			tmr = millis();
-			while (millis() - tmr < 500) yield();
+			lastBlink = millis();
 		}
 		#endif
-		if (shouldSave && millis() - 1000 > lastChanged) {
+		if (shouldSave && millis() - lastChanged > 1000) {
 			save();
 			shouldSave = false;
 		}

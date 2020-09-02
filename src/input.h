@@ -14,29 +14,28 @@ namespace Input {
 		switch (repeats) {
 			case 1:
 				Light::end();
-				Config::data.show++;
-				if (Config::data.show > 4)
-					Config::data.show = 1;
-				Config::save();
-				Transport::sendSync();
+				Net::sendSync();
+				App::data.show++;
+				if (App::data.show > 4)
+					App::data.show = 1;
+				App::save();
 				Light::begin();
+				Net::sendSync();
 				break;
 			case 2:
 				Light::end();
-				Config::data.show--;
-				if (Config::data.show == 0)
-					Config::data.show = 4;
-				Config::save();
-				Transport::sendSync();
+				Net::sendSync();
+				App::data.show--;
+				if (App::data.show == 0)
+					App::data.show = 4;
+				App::save();
 				Light::begin();
+				Net::sendSync();
 				break;
 			case 5:
 				Light::end();
-				Dir dir = Config::fs->openDir("/seq");
-				while (dir.next()) {
-					Config::fs->remove(dir.openFile("w").fullName());
-				}
-				Config::saveMaster(NULL);
+				Api::deleteRecursive("/show");
+				App::saveMaster(NULL);
 				break;
 		}
 	});
@@ -45,29 +44,26 @@ namespace Input {
 		switch (repeats) {
 			case 0:
 				#ifdef MASTER
-				Transport::sendPair();
+				Net::sendPair();
 				#endif
 				#ifdef SLAVE
-				if (Config::isPairing()) {
-					Config::setMode(Config::IDLE);
-					MeshRC::setMaster(Config::data.master);
-					Light::begin();
+				if (App::isPairing()) {
+					App::setMode(App::IDLE);
+					MeshRC::setMaster(App::data.master);
 				} else {
-					Config::setMode(Config::BIND);
+					App::setMode(App::BIND);
 					MeshRC::setMaster(NULL);
-					Light::end();
 				}
 				#endif
 			break;
 			case 1:
-				Transport::shouldSendFiles = true;
+				Net::shouldSendFiles = true;
 			break;
 		}
 	});
 
 	void setup() {
 		btn.begin();
-		pinMode(LED_BUILTIN, OUTPUT);
 	}
 	void loop() {
 		

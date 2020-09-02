@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <title>Parcel Sandbox</title>
 <meta charset="UTF-8"/>
@@ -5,91 +6,75 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LEDRC">
 <meta name="viewport" content="width=device-width">
-<meta name="viewport" content="initial-scale=1.0">
-<style type="text/css">
-	body {
-		font-family: "Helvetica Neue", Verdana, Geneva, Tahoma, sans-serif;
-	}
-	.grid-container {
-		margin: auto;
-		display: grid;
-		width: 100%;
-		grid-gap: 10px;
-		grid-template-columns: 70px 70px 70px 70px;
-		grid-template-rows: 70px 70px 70px 70px 70px;
-	}
-</style>
-<div class="card">
-	<div>
-		<h2>PixelUtility2 IPX Import</h2>
-		<ol id="link"></ol>
-		<div>
-			<input id="upload-ipx" type="file" multiple/>
-		</div>
-	</div>
-	<div>
-		<h2>LtComposer3 LSF Import</h2>
-		<div>
-			<input id="upload-lsf" type="file" multiple/>
-		</div>
-	</div>
-	<div>
-		<label>Show:
-			<select id="select-show">
-				<option>1</option>
-				<option>2</option>
-				<option>3</option>
-				<option>4</option>
-			</select>
-		</label>
-		<label>Channel:
-			<select id="select-channel">
-				<option>1</option>
-				<option>2</option>
-				<option>3</option>
-				<option>4</option>
-				<option>5</option>
-				<option>6</option>
-				<option>7</option>
-				<option>8</option>
-				<option>9</option>
-				<option>10</option>
-			</select>
-		</label>
-		<button id="pair">Pair</button>
-	</div>
-	<div>
-		<button onclick="sendCommand('start')">Start</button>
-		<button onclick="sendCommand('toggle')">Toggle</button>
-		<button onclick="sendCommand('pause')">Pause</button>
-		<button onclick="sendCommand('resume')">Resume</button>
-		<button onclick="sendCommand('end')">End</button>
-	</div>
+<meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+<link href="index.css" rel="stylesheet" type="text/css" />
+
+<h1><b>SDC</b> Technology</h1>
+
+<div hidden>
+	<input type="hidden" id="select-show" value="1" />
+	<input type="file" id="select-file" />
 </div>
-<!--<div class="grid-container">-->
-<!--	<button>Brighter</button>-->
-<!--	<button>Dimmer</button>-->
-<!--	<button>Pair</button>-->
-<!--	<button>ON/OFF</button>-->
-<!--	-->
-<!--	<button>A</button>-->
-<!--	<button>B</button>-->
-<!--	<button>C</button>-->
-<!--	<button>D</button>-->
 
-<!--	<button style="background-color: yellow;"></button>-->
-<!--	<button style="background-color: orange;"></button>-->
-<!--	<button style="background-color: pink;"></button>-->
-<!--	<button style="background-color: black;">Flash</button>-->
-
-<!--	<button style="background-color: blue;"></button>-->
-<!--	<button style="background-color: cyan;"></button>-->
-<!--	<button style="background-color: green;"></button>-->
-<!--	<button style="background-color: black;">Pulse</button>-->
-
-<!--	<button style="background-color: red;"></button>-->
-<!--	<button style="background-color: violet;"></button>-->
-<!--	<button style="background-color: skyblue;"></button>-->
-<!--	<button style="background-color: black;">Strobe</button>-->
-<!--</div>-->
-<script src="js/index.js"></script>
+<section>
+	<grid class="five" id="list-show"></grid>
+</section>
+<section>
+	<grid class="three">
+		<!--<button id="pair-button" title="Pair slaves to current channel">PAIR</button>-->
+		<!--<button id="upload-button" title="Cast show data to all slave devices">SYNC</button>-->
+		<button id="file-button" title=""><span>LIGHT</span></button>
+		<button id="music-button" title=""><span>MUSIC</span></button>
+		<button id="start-button" title="Start/Stop show" class=""><span>START</span></button>
+		<!--<button id="ping-button" title="">PING</button>-->
+	</grid>
+</section>
+<section hidden>
+	<audio id="player" controls></audio>
+</section>
+<section>
+	<grid class="three">
+		<button class="medium">A</button>
+		<button class="medium selected">AB</button>
+		<button class="medium">B</button>
+	</grid>
+</section>
+<section>
+	<grid class="item color-slider">
+		<label>R</label>
+		<input type="range" min="0" max="255" step="1" data-channel="r" data-group="rgb" />
+		<span>255</span>
+	</grid>
+	<grid class="item color-slider">
+		<label>G</label>
+		<input type="range" min="0" max="255" step="1" data-channel="g" data-group="rgb" />
+		<span>255</span>
+	</grid>
+	<grid class="item color-slider">
+		<label>B</label>
+		<input type="range" min="0" max="255" step="1" data-channel="b" data-group="rgb" />
+		<span>255</span>
+	</grid>
+</section>
+<section>
+	<grid class="item color-slider">
+		<label>H</label>
+		<input type="range" min="0" max="1" step="0.01" data-channel="h" data-group="hsl" />
+		<span>255</span>
+	</grid>
+	<grid class="item color-slider">
+		<label>S</label>
+		<input type="range" min="0" max="1" step="0.01" data-channel="s" data-group="hsl" />
+		<span>1.00</span>
+	</grid>
+	<grid class="item color-slider">
+		<label>L</label>
+		<input type="range" min="0" max="1" step="0.01" data-channel="l" data-group="hsl" />
+		<span>1.00</span>
+	</grid>
+</section>
+<script src="js/utils.js"></script>
+<script src="js/hsl.js"></script>
+<script src="js/hsv.js"></script>
+<script src="js/color.js"></script>
+<script src="js/ui.js"></script>

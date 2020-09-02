@@ -2,18 +2,18 @@
 #include "espnow.h"
 #include "Ticker.h"
 
-#define R1_PIN D6
-#define G1_PIN D7
-#define B1_PIN D8
+#define R1_PIN 14
+#define G1_PIN 13
+#define B1_PIN 4
 
-#define R2_PIN D1
-#define G2_PIN D2
-#define B2_PIN D4
+#define R2_PIN 5
+#define G2_PIN 12
+#define B2_PIN 15
 
 namespace Light {
 
-	bool paused;
-	bool ended;
+	bool paused = false;
+	bool ended = true;
 
 	void pause() {
 		paused = true;
@@ -24,8 +24,7 @@ namespace Light {
 	}
 
 	void toggle() {
-		if (paused) resume();
-		else pause();
+		paused = !paused;
 	}
 
 	enum FrameType {
@@ -79,10 +78,11 @@ namespace Light {
 		u32 loopTime;
 		u32 loopStart;
 		u32 loopEnd;
+		u32 loopStartTime;
 
-		u32 lapsed;
+		double lapsed;
 		String line;
-		u32 lastColor[3];
+		u8 lastColor[3];
 
 	public:
 		Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin) :
@@ -94,7 +94,7 @@ namespace Light {
 
 		Frame parse(String line) {
 			Frame frame;
-			if (line.startsWith("rgb")) {
+			if (line.startsWith("C")) {
 				frame.type = RGB_FRAME;
 				sscanf(
 						line.c_str(),
@@ -106,7 +106,7 @@ namespace Light {
 						&frame.g,
 						&frame.b
 				);
-			} else if (line.startsWith("loop")) {
+			} else if (line.startsWith("L")) {
 				frame.type = LOOP_FRAME;
 				sscanf(
 						line.c_str(),
@@ -114,7 +114,7 @@ namespace Light {
 						&frame.start,
 						&frame.duration
 				);
-			} else if (line.startsWith("end")) {
+			} else if (line.startsWith("E")) {
 				frame.type = END_FRAME;
 				sscanf(
 						line.c_str(),
@@ -134,25 +134,60 @@ namespace Light {
 			return frame;
 		}
 
-		void setColor(Frame *frame) {
-			lapsed = playTime - frame->start;
-			color.r = frame->r;
-			color.g = frame->g;
-			color.b = frame->b;
+//		u8 buf[16];
+//		u32 readUint32(u8 *data) {
+//			return (u32)data[0] << 24 | (data[1] << 16 | (data[2] << 8 | data[3]));
+//		}
+//		Frame next2() {
+//			Frame frame;
+//			if (file.available()) {
+//				u8 type = file.peek();
+//				switch (type) {
+//					case 0x01:
+//						file.readBytes((char *)buf, 16);
+//						frame.type = RGB_FRAME;
+//						frame.start = readUint32(&buf[1]);
+//						frame.duration = readUint32(&buf[5]);
+//						frame.transition = readUint32(&buf[9]);
+//						frame.r = buf[13];
+//						frame.g = buf[14];
+//						frame.b = buf[15];
+//						break;
+//					case 0x02:
+//						file.readBytes((char *)buf, 9);
+//						frame.type = LOOP_FRAME;
+//						frame.start = readUint32(&buf[1]);
+//						frame.duration = readUint32(&buf[5]);
+//						break;
+//					case 0x03:
+//						file.readBytes((char *)buf, 5);
+//						frame.type = END_FRAME;
+//						frame.start = readUint32(&buf[1]);
+//						break;
+//				}
+//			}
+//			return frame;
+//		}
 
+		void setColor(Frame *frame) {
+			lapsed = playTime - loopStartTime;
 			if (lapsed < frame->transition) {
 				// Compute color value during transition
-				float ratio = (float) lapsed / frame->transition;
-				color.r = (float) lastColor[0] + (frame->r - lastColor[0]) * ratio;
-				color.g = (float) lastColor[1] + (frame->g - lastColor[1]) * ratio;
-				color.b = (float) lastColor[2] + (frame->b - lastColor[2]) * ratio;
-				// Serial.printf("%u %u %u %f\n", lastColor[0], frame->r, r, ratio);
-				// Serial.printf("%u %u %u %f\n", lastColor[1], frame->g, g, ratio);
-				// Serial.printf("%u %u %u %f\n", lastColor[2], frame->b, b, ratio);
+				double ratio = lapsed / frame->transition;
+				color.r = (double) lastColor[0] + (frame->r - lastColor[0]) * ratio;
+				color.g = (double) lastColor[1] + (frame->g - lastColor[1]) * ratio;
+				color.b = (double) lastColor[2] + (frame->b - lastColor[2]) * ratio;
+				// Serial.printf("%3u %3u %4u %02f\n", lastColor[0], frame->r, color.r, ratio);
+				// Serial.printf("%3u %3u %4u %02f\n", lastColor[1], frame->g, color.g, ratio);
+				// Serial.printf("%3u %3u %4u %02f\n", lastColor[2], frame->b, color.b, ratio);
+			} else {
+				color.r = frame->r;
+				color.g = frame->g;
+				color.b = frame->b;
 			}
-			analogWrite(r_pin, 255 - map(color.r, 0, 255, 0, Config::data.brightness));
-			analogWrite(g_pin, 255 - map(color.g, 0, 255, 0, Config::data.brightness));
-			analogWrite(b_pin, 255 - map(color.b, 0, 255, 0, Config::data.brightness));
+			analogWrite(r_pin, map(color.r, 0, 255, 0, App::data.brightness));
+			analogWrite(g_pin, map(color.g, 0, 255, 0, App::data.brightness));
+			analogWrite(b_pin, map(color.b, 0, 255, 0, App::data.brightness));
 		}
 
 		void end() {
@@ -160,29 +195,33 @@ namespace Light {
 			if (file) file.close();
 			playTime = 0;
 			loopTime = 0;
-			analogWrite(r_pin, 255);
-			analogWrite(g_pin, 255);
-			analogWrite(b_pin, 255);
+			analogWrite(r_pin, 0);
+			analogWrite(g_pin, 0);
+			analogWrite(b_pin, 0);
 		}
 
 		void setTime(u32 time) {
-			LOG("Play time: %u, sync time: %u\n", playTime, time);
+			LOGD("Play time: %u, sync time: %u\n", playTime, time);
 			if (!file || !time) begin();
-			if (playTime > time ) {
+			if (playTime > time + 2 ) {
 				holdTime = playTime - time;
-			} else while (playTime < time) {
-				if (!tick(false)) continue;
+			} else if (playTime < time - 2) {
+				while (playTime < time) {
+					if (!tick(false)) continue;
+				}
 			}
 		}
 
 		void begin() {
 			end();
-			String path = "/show/" + String(Config::data.show) + "/" + String(Config::data.channel) + (id);
-			if (!Config::fs->exists(path)) {
-				Serial.printf("Sequence file not found: %s\n", path.c_str());
+			// String path = "/show/" + String(App::data.show) + "/" + String(App::data.channel) + (id);
+			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
+			if (!App::fs->exists(path)) {
+				LOGD("Show not found: %s\n", path.c_str());
 				return;
 			}
-			file = Config::fs->open(path, "r");
+			LOGD("Playing show: %s\n", path.c_str());
+			file = App::fs->open(path, "r");
 			file.setTimeout(0);
 			frame = next();
 
@@ -205,18 +244,20 @@ namespace Light {
 					break;
 				case LOOP_FRAME:
 					if (loopTime == 0) {
-						// LOG("\nloop ");
+						// LOGD("\nloop ");
 						loopStart = file.position();
+						loopStartTime = playTime;
 						loopFrame = next();
 					}
 					if (shouldSetColor && loopFrame.type == RGB_FRAME) {
 						setColor(&loopFrame);
 					}
 					if (++loopTime > loopFrame.start + loopFrame.duration) {
-						// LOG(" * ");
+						// LOGD(" * ");
 						lastColor[0] = loopFrame.r;
 						lastColor[1] = loopFrame.g;
 						lastColor[2] = loopFrame.b;
+						loopStartTime = playTime;
 						loopFrame = next();
 						if (loopFrame.type == END_FRAME) {
 							loopTime = 0;
@@ -226,9 +267,10 @@ namespace Light {
 					}
 					break;
 				case END_FRAME:
-					// LOG("\nended.");
+					// LOGD("\nended.");
 					loopTime = 0;
 					playTime = 0;
+					loopStartTime = 0;
 					file.seek(0);
 					frame = next();
 					// end();
@@ -239,13 +281,14 @@ namespace Light {
 					loopTime = 0;
 					file.seek(loopEnd);
 				}
-				// LOG("\nframe");
+				// LOGD("\nframe");
 				if (frame.type == RGB_FRAME) {
 					lastColor[0] = frame.r;
 					lastColor[1] = frame.g;
 					lastColor[2] = frame.b;
 				}
 				frame = next();
+				loopStartTime = frame.start;
 			}
 			return true;
 		}
@@ -255,9 +298,9 @@ namespace Light {
 			pinMode(g_pin, OUTPUT);
 			pinMode(b_pin, OUTPUT);
 
-			analogWrite(r_pin, 255);
-			analogWrite(g_pin, 255);
-			analogWrite(b_pin, 255);
+			analogWrite(r_pin, 0);
+			analogWrite(g_pin, 0);
+			analogWrite(b_pin, 0);
 		}
 	};
 
@@ -265,7 +308,7 @@ namespace Light {
 	Light::Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 	u32 getTime() {
-		return A.getTime();
+		return _max(A.getTime(), B.getTime());
 	}
 
 	void setTime(u32 time) {

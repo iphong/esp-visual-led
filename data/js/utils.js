@@ -1,60 +1,20 @@
 const led_nums = 36
 
-window.addEventListener('dragover', e => {
-	e.preventDefault()
-})
-
-window.addEventListener('drop', e => {
-	e.preventDefault()
-	for (let file of e.dataTransfer.files) {
-		if (file.name.endsWith(".lsf")) {
-			parseLSF(file)
-		}
-		else if (file.name.endsWith(".ipx")) {
-			parseIPX(file)
-		}
-		else {
-			console.warn("Unsupported file format:", file.name);
-		}
-	}
-})
-
-document.getElementById('upload-ipx').addEventListener('change', e => {
-	for (let file of e.target.files) {
-		parseIPX(file)
-	}
-	e.target.value = ''
-})
-
-document.getElementById('upload-lsf').addEventListener('change', e => {
-	for (let file of e.target.files) {
-		parseLSF(file)
-	}
-	e.target.value = ''
-})
-
-document.getElementById('pair').addEventListener('click', e => {
-	if (confirm(`Put all channel ${getChannel()} devices to pairing mode...`)) {
-		request("POST", "/command", { command: 'pair', channel: getChannel() }).then(() => {
-			alert("Done.");
-		});
-	}
-})
-
 function sendCommand(command) {
-	request("POST", "/command", { command }).then(() => {
-		console.log("Done.");
-	});
+	return request('POST', '/command', { command })
 }
 
-function request(method = "POST", path = "", args = {}, body = "") {
+function request(method = 'POST', path = '', args = {}, body = '') {
 	return new Promise((resolve) => {
 		const req = new XMLHttpRequest
-		req.open(method, path + '?' + Object.entries(args).map(([key, value]) => `${key}=${value}`).join('&'), true)
+		const params = Object.entries(args)
+		req.open(method, path + (params.length ? '?' + params.map(([key, value]) => `${key}=${value}`).join('&') : ''), true)
 		req.send(body)
 		req.addEventListener('loadend', () => {
-			console.log(req.status, req.statusText, req.responseText.trim());
-			resolve();
+			// console.log(req.status, req.statusText, req.responseText.trim())
+			if (req.getResponseHeader('Content-Type') == 'application/json') {
+				resolve(JSON.parse(req.responseText))
+			} else resolve(req.responseText)
 		})
 	})
 }
@@ -62,23 +22,20 @@ function request(method = "POST", path = "", args = {}, body = "") {
 function getShow() {
 	return document.getElementById('select-show').value
 }
-function getChannel() {
-	return document.getElementById('select-channel').value
-}
 
-function uploadFile(path, file) {
+function uploadFile(path, file, addr) {
 	return new Promise((resolve, reject) => {
 		const form = new FormData()
 		form.append('filename', path)
 		form.append('file', file)
 		const req = new XMLHttpRequest()
-		req.open('POST', 'edit', true)
+		req.open('POST', 'edit?target=' + addr, true)
 		req.send(form)
 		req.onloadend = (e) => {
 			if (req.status === 200) resolve()
 			else {
 				reject()
-				console.warn(path, req.status, req.statusText);
+				console.warn(path, req.status, req.statusText)
 			}
 		}
 	})
@@ -95,23 +52,23 @@ function parseLSF(file) {
 		if (threads.length == 1) {
 			parseThread('A', threads[0])
 				.then(() => parseThread('B', threads[0]))
-				.then(() => console.log("Uploaded."))
+				.then(() => console.log('Uploaded.'))
 		} else if (threads.length == 3) {
 			parseThread('A', threads[1])
 				.then(() => parseThread('B', threads[2]))
-				.then(() => console.log("Uploaded."))
+				.then(() => console.log('Uploaded.'))
 		} else {
 			console.warn('Unknown data format', reader.result)
 		}
 	}
 	function parseThread(id, content) {
 		const frames = []
-		let frame, lastFrame
+		let frame, lastFrame, buf, view
 		const lines = content.split('\n')
 		lines.forEach(line => {
 			if (line.match(setFrameRegex)) {
 				let [, tab, start, transition, r, g, b] = line.match(setFrameRegex)
-				frame = { type: 'set', start, duration: 0, transition, r, g, b }
+				frame = { type: 'rgb', start, duration: 0, transition, r, g, b }
 				if (!tab) {
 					frames.push(frame)
 					lastFrame = frame
@@ -137,27 +94,54 @@ function parseLSF(file) {
 			}
 		})
 		const data = []
+		const data2 = []
 		function convert(frames, tab) {
 			frames.forEach((frame, index) => {
 				switch (frame.type) {
-					case 'set':
+					case 'rgb':
 						frame.duration = frames[index + 1].start - frame.start
-						data.push([tab ? '	rgb' : 'rgb', frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(' '))
-						break
-					case 'end':
-						data.push([tab ? '	end' : 'end', frame.start].join(' '))
+						data.push([tab ? '	C' : 'C', frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(' '))
+						// 01  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00
+						buf = new Uint8Array(16)
+						view = new DataView(buf.buffer)
+						view.setUint8(0, 0x01)
+						view.setUint32(1, frame.start)
+						view.setUint32(5, frame.duration)
+						view.setUint32(9, frame.transition)
+						view.setUint8(13, frame.r)
+						view.setUint8(14, frame.g)
+						view.setUint8(15, frame.b)
+						data2.push(buf)
 						break
 					case 'loop':
-						data.push(['loop', frame.start, frame.duration].join(' '))
+						data.push(['L', frame.start, frame.duration].join(' '))
+						// 02   00 00 00 00  00 00 00 00
+						buf = new Uint8Array(9)
+						view = new DataView(buf.buffer)
+						view.setUint8(0, 0x02)
+						view.setUint32(1, frame.start)
+						view.setUint32(5, frame.duration)
 						convert(frame.frames, true)
+						data2.push(buf)
+						break
+					case 'end':
+						data.push([tab ? '	E' : 'E', frame.start].join(' '))
+						// 03   00 00 00 00
+						buf = new Uint8Array(5)
+						view = new DataView(buf.buffer)
+						view.setUint8(0, 0x03)
+						view.setUint32(1, frame.start)
+						data2.push(buf)
 						break
 				}
 			})
 		}
 		convert(frames)
 
-		const path = `/show/${getShow()}/${getChannel()}${id}`
+		const path = `/show/${getShow()}${id}.lsb`
 		const blob = new Blob([data.join('\n')])
+		// const path = `/show/${getShow()}${id}.lsb`
+		// const blob = new Blob(data2)
 
 		return uploadFile(path, blob)
 	}
