@@ -84,9 +84,13 @@ namespace Light {
 		String line;
 		u8 lastColor[3];
 
+		App::Output *data;
+
 	public:
-		Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin) :
-				id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) { }
+		Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin, App::Output *d) :
+				id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) {
+					data = d;
+				}
 
 		u32 getTime() {
 			return playTime;
@@ -185,9 +189,11 @@ namespace Light {
 				color.g = frame->g;
 				color.b = frame->b;
 			}
-			analogWrite(r_pin, map(color.r, 0, 255, 0, App::data.brightness));
-			analogWrite(g_pin, map(color.g, 0, 255, 0, App::data.brightness));
-			analogWrite(b_pin, map(color.b, 0, 255, 0, App::data.brightness));
+			setRGB(
+				map(color.r, 0, 255, 0, App::data.brightness),
+				map(color.g, 0, 255, 0, App::data.brightness),
+				map(color.b, 0, 255, 0, App::data.brightness)
+			);
 		}
 
 		void end() {
@@ -195,9 +201,7 @@ namespace Light {
 			if (file) file.close();
 			playTime = 0;
 			loopTime = 0;
-			analogWrite(r_pin, 0);
-			analogWrite(g_pin, 0);
-			analogWrite(b_pin, 0);
+			setRGB(0, 0, 0);
 		}
 
 		void setTime(u32 time) {
@@ -213,21 +217,28 @@ namespace Light {
 		}
 
 		void begin() {
-			end();
-			// String path = "/show/" + String(App::data.show) + "/" + String(App::data.channel) + (id);
-			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
-			if (!App::fs->exists(path)) {
-				LOGD("Show not found: %s\n", path.c_str());
-				return;
+			if (!ended) end();
+			if (App::data.show != 0) {
+				// String path = "/show/" + String(App::data.show) + "/" + String(App::data.channel) + (id);
+				String path = "/show/" + String(App::data.show) + (id) + ".lsb";
+				if (!App::fs->exists(path)) {
+					LOGD("Show not found: %s\n", path.c_str());
+					return;
+				}
+				LOGD("Playing show: %s\n", path.c_str());
+				file = App::fs->open(path, "r");
+				file.setTimeout(0);
+				frame = next();
+				tmr.attach_ms_scheduled_accurate(1, [this]() {
+					tick(true);
+				});
+			} else {
+				setRGB(
+					data->color.r,
+					data->color.g,
+					data->color.b
+				);
 			}
-			LOGD("Playing show: %s\n", path.c_str());
-			file = App::fs->open(path, "r");
-			file.setTimeout(0);
-			frame = next();
-
-			tmr.attach_ms_scheduled_accurate(1, [this]() {
-				tick(true);
-			});
 		}
 
 		// true = playing
@@ -293,31 +304,37 @@ namespace Light {
 			return true;
 		}
 
+		void setRGB(u8 r, u8 g, u8 b) {
+			analogWrite(r_pin, r);
+			analogWrite(g_pin, g);
+			analogWrite(b_pin, b);
+		}
+
 		void setup() {
 			pinMode(r_pin, OUTPUT);
 			pinMode(g_pin, OUTPUT);
 			pinMode(b_pin, OUTPUT);
 
-			analogWrite(r_pin, 0);
-			analogWrite(g_pin, 0);
-			analogWrite(b_pin, 0);
+			setRGB(0, 0, 0);
 		}
 	};
 
-	Light::Show A('A', R1_PIN, G1_PIN, B1_PIN);
-	Light::Show B('B', R2_PIN, G2_PIN, B2_PIN);
+	Light::Show A('A', R1_PIN, G1_PIN, B1_PIN, &App::data.a);
+	Light::Show B('B', R2_PIN, G2_PIN, B2_PIN, &App::data.b);
 
 	u32 getTime() {
 		return _max(A.getTime(), B.getTime());
 	}
 
 	void setTime(u32 time) {
-		A.setTime(time);
-		B.setTime(time);
+		if (App::data.show) {
+			A.setTime(time);
+			B.setTime(time);
+		}
 	}
 
 	void setup() {
-		analogWriteFreq(1000);
+		analogWriteFreq(App::data.frequency);
 		analogWriteRange(255);
 		A.setup();
 		B.setup();

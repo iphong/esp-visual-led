@@ -1,4 +1,8 @@
 let initialized = false
+const data = {
+	show: 0,
+	segment: "A"
+}
 
 const audio = document.getElementById('player')
 const startBtn = document.getElementById('start-button')
@@ -14,6 +18,24 @@ for (let i = 0 ; i <= 4 ; i++) {
 	button.innerHTML = `<label>${i}</label>`
 	button.dataset.show = `${i}`
 	listShow.appendChild(button)
+}
+
+function renderUI() {
+	document.querySelectorAll('[data-segment]').forEach(el => {
+		if (el.dataset.segment == data.segment) {
+			el.classList.add('selected')
+		} else {
+			el.classList.remove('selected')
+		}
+	})
+	document.querySelectorAll('[data-show]').forEach(el => {
+		if (el.dataset.show == data.show) {
+			el.classList.add('selected')
+		} else {
+			el.classList.remove('selected')
+		}
+	})
+	document.body.classList[data.show == 0 ? 'add' : 'remove']('manual-mode')
 }
 
 function handleFile(file) {
@@ -83,23 +105,15 @@ window.addEventListener('change', e => {
 })
 
 window.addEventListener('click', e => {
-	if (e.target.dataset.show) {
-		document.getElementById('select-show').value = e.target.dataset.show
-		e.target.parentElement.querySelectorAll('[data-show]').forEach(e => e.classList.remove('selected'))
-		e.target.classList.add('selected')
-		if (initialized) {
-			stop()
-			request('POST', '/config', { show: e.target.dataset.show })
-		}
-	} else if (e.target.dataset.channel) {
-		if (!e.target.classList.contains('selected')) {
-			document.getElementById('select-channel').value = e.target.dataset.channel
-			e.target.parentElement.querySelectorAll('[data-channel]').forEach(e => e.classList.remove('selected'))
-			e.target.classList.add('selected')
-			if (initialized) {
-				request('POST', '/config', { channel: e.target.dataset.channel })
-			}
-		}
+	if (e.target.dataset.segment) {
+		data.segment = e.target.dataset.segment
+		renderUI();
+	}
+	else if (e.target.dataset.show) {
+		data.show = e.target.dataset.show;
+		stop();
+		renderUI();
+		request('POST', '/config', { show: e.target.dataset.show })
 	} else {
 		switch (e.target['id']) {
 			case 'pair-button':
@@ -128,10 +142,8 @@ window.addEventListener('click', e => {
 })
 window.onload = e => {
 	request('GET', '/status').then(res => {
-		const show = res.show || 1
-		const channel = res.channel || 1
-		document.querySelector(`*[data-show="${show}"]`).click()
-		// document.querySelector(`*[data-channel="${channel}"]`).click()
-		initialized = true
+		data.show = res.show
+		data.channel = res.channel
+		renderUI();
 	})
 }

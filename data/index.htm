@@ -12,14 +12,13 @@
 <h1><b>SDC</b> Technology</h1>
 
 <div hidden>
-	<input type="hidden" id="select-show" value="1" />
 	<input type="file" id="select-file" />
 </div>
 
 <section>
 	<grid class="five" id="list-show"></grid>
 </section>
-<section>
+<section class="preset-mode">
 	<grid class="three">
 		<!--<button id="pair-button" title="Pair slaves to current channel">PAIR</button>-->
 		<!--<button id="upload-button" title="Cast show data to all slave devices">SYNC</button>-->
@@ -32,14 +31,13 @@
 <section hidden>
 	<audio id="player" controls></audio>
 </section>
-<section>
-	<grid class="three">
-		<button class="medium">A</button>
-		<button class="medium selected">AB</button>
-		<button class="medium">B</button>
+<section class="manual-mode">
+	<grid class="two">
+		<button class="medium" data-segment="A">A</button>
+		<button class="medium" data-segment="B">B</button>
 	</grid>
 </section>
-<section>
+<section class="manual-mode">
 	<grid class="item color-slider">
 		<label>R</label>
 		<input type="range" min="0" max="255" step="1" data-channel="r" data-group="rgb" />
@@ -56,7 +54,7 @@
 		<span>255</span>
 	</grid>
 </section>
-<section>
+<section class="manual-mode">
 	<grid class="item color-slider">
 		<label>H</label>
 		<input type="range" min="0" max="1" step="0.01" data-channel="h" data-group="hsl" />

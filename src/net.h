@@ -56,6 +56,7 @@ namespace Net {
 	}
 
 	void sendSync() {
+		#ifdef MASTER
 		if (App::isPairing()) return;
 		SyncData tmp = {
 			Light::getTime(),
@@ -68,6 +69,7 @@ namespace Net {
 		MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
 		MeshRC::wait();
 		App::lED_BLINK();
+		#endif
 	}
 
 	void syncRequest() {
@@ -139,7 +141,6 @@ namespace Net {
 	}
 
 	void sendDir(String path) {
-
 		LOGD("Send DIR : %s\n", path.c_str());
 		dir = App::fs->openDir(path);
 		while (dir.next()) {
@@ -165,20 +166,6 @@ namespace Net {
 		WiFi.setAutoConnect(false);
 		WiFi.setAutoReconnect(false);
 
-		// WiFi.onEvent([](WiFiEvent e) {
-		// 	if (e == WIFI_EVENT_STAMODE_GOT_IP) {
-		// 		LOGD("%s\n", WiFi.localIP().toString().c_str());
-		// 	}
-		// });
-
-		// dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-		// dnsServer.start(DNS_PORT, "*", addr);
-
-		// Setup MDNS responder
-		// MDNS.begin("led.local");
-		// MDNS.addService("http", "tcp", 80);
-
-		// ArduinoOTA.setHostname("led.local");
 		ArduinoOTA.begin();
 		ArduinoOTA.onStart([]() {
 			Light::end();
@@ -187,14 +174,14 @@ namespace Net {
 		MeshRC::on("#>PAIR*", [](u8* data, u8 size) {
 			if (!App::isPairing()) return;
 			App::saveMaster(MeshRC::sender);
-			App::setMode(App::IDLE);
+			App::setMode(App::SHOW);
 		});
 
 		MeshRC::on("#>PAIR@", [](u8* data, u8 size) {
 			if (!App::isPairing()) return;
 			App::saveChannel(data[0]);
 			App::saveMaster(MeshRC::sender);
-			App::setMode(App::IDLE);
+			App::setMode(App::SHOW);
 		});
 
 		MeshRC::on("#>FILE^", [](u8* data, u8 size) {

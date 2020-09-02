@@ -3,8 +3,7 @@ const led_nums = 36
 function sendCommand(command) {
 	return request('POST', '/command', { command })
 }
-
-function request(method = 'POST', path = '', args = {}, body = '') {
+function request(method = 'POST', path = '', args = {}, body = null) {
 	return new Promise((resolve) => {
 		const req = new XMLHttpRequest
 		const params = Object.entries(args)
@@ -19,24 +18,23 @@ function request(method = 'POST', path = '', args = {}, body = '') {
 	})
 }
 
-function getShow() {
-	return document.getElementById('select-show').value
+function get(path, params) {
+	return request('GET', path, params)
 }
-
+function post(path, params, body) {
+	return request('POST', path, params, body)
+}
 function uploadFile(path, file, addr) {
 	return new Promise((resolve, reject) => {
 		const form = new FormData()
+		const req = new XMLHttpRequest()
 		form.append('filename', path)
 		form.append('file', file)
-		const req = new XMLHttpRequest()
 		req.open('POST', 'edit?target=' + addr, true)
 		req.send(form)
 		req.onloadend = (e) => {
-			if (req.status === 200) resolve()
-			else {
-				reject()
-				console.warn(path, req.status, req.statusText)
-			}
+			if (req.status === 200) resolve(req)
+			else reject(req)
 		}
 	})
 }
@@ -94,7 +92,7 @@ function parseLSF(file) {
 			}
 		})
 		const data = []
-		const data2 = []
+		// const data2 = []
 		function convert(frames, tab) {
 			frames.forEach((frame, index) => {
 				switch (frame.type) {
@@ -102,43 +100,43 @@ function parseLSF(file) {
 						frame.duration = frames[index + 1].start - frame.start
 						data.push([tab ? '	C' : 'C', frame.start, frame.duration, frame.transition, frame.r, frame.g, frame.b].join(' '))
 						// 01  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00
-						buf = new Uint8Array(16)
-						view = new DataView(buf.buffer)
-						view.setUint8(0, 0x01)
-						view.setUint32(1, frame.start)
-						view.setUint32(5, frame.duration)
-						view.setUint32(9, frame.transition)
-						view.setUint8(13, frame.r)
-						view.setUint8(14, frame.g)
-						view.setUint8(15, frame.b)
-						data2.push(buf)
+						// buf = new Uint8Array(16)
+						// view = new DataView(buf.buffer)
+						// view.setUint8(0, 0x01)
+						// view.setUint32(1, frame.start)
+						// view.setUint32(5, frame.duration)
+						// view.setUint32(9, frame.transition)
+						// view.setUint8(13, frame.r)
+						// view.setUint8(14, frame.g)
+						// view.setUint8(15, frame.b)
+						// data2.push(buf)
 						break
 					case 'loop':
 						data.push(['L', frame.start, frame.duration].join(' '))
 						// 02   00 00 00 00  00 00 00 00
-						buf = new Uint8Array(9)
-						view = new DataView(buf.buffer)
-						view.setUint8(0, 0x02)
-						view.setUint32(1, frame.start)
-						view.setUint32(5, frame.duration)
-						convert(frame.frames, true)
-						data2.push(buf)
+						// buf = new Uint8Array(9)
+						// view = new DataView(buf.buffer)
+						// view.setUint8(0, 0x02)
+						// view.setUint32(1, frame.start)
+						// view.setUint32(5, frame.duration)
+						// convert(frame.frames, true)
+						// data2.push(buf)
 						break
 					case 'end':
 						data.push([tab ? '	E' : 'E', frame.start].join(' '))
 						// 03   00 00 00 00
-						buf = new Uint8Array(5)
-						view = new DataView(buf.buffer)
-						view.setUint8(0, 0x03)
-						view.setUint32(1, frame.start)
-						data2.push(buf)
+						// buf = new Uint8Array(5)
+						// view = new DataView(buf.buffer)
+						// view.setUint8(0, 0x03)
+						// view.setUint32(1, frame.start)
+						// data2.push(buf)
 						break
 				}
 			})
 		}
 		convert(frames)
 
-		const path = `/show/${getShow()}${id}.lsb`
+		const path = `/show/${data.show}${id}.lsb`
 		const blob = new Blob([data.join('\n')])
 		// const path = `/show/${getShow()}${id}.lsb`
 		// const blob = new Blob(data2)

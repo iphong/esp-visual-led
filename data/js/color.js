@@ -51,6 +51,9 @@ function handleChange(e) {
 			case 'rgb': updateHSL(); break
 			case 'hsl': updateRGB(); break
 		}
+		if (e.type === 'change') {
+			post('/set_color', Object.assign({ segment: data.segment }, color.rgb))
+		}
 	}
 }
 

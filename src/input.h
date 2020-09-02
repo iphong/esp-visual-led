@@ -16,8 +16,6 @@ namespace Input {
 				Light::end();
 				Net::sendSync();
 				App::data.show++;
-				if (App::data.show > 4)
-					App::data.show = 1;
 				App::save();
 				Light::begin();
 				Net::sendSync();
@@ -26,8 +24,6 @@ namespace Input {
 				Light::end();
 				Net::sendSync();
 				App::data.show--;
-				if (App::data.show == 0)
-					App::data.show = 4;
 				App::save();
 				Light::begin();
 				Net::sendSync();
@@ -48,7 +44,7 @@ namespace Input {
 				#endif
 				#ifdef SLAVE
 				if (App::isPairing()) {
-					App::setMode(App::IDLE);
+					App::setMode(App::SHOW);
 					MeshRC::setMaster(App::data.master);
 				} else {
 					App::setMode(App::BIND);
