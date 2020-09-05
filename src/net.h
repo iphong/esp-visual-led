@@ -154,22 +154,34 @@ namespace Net {
 
 	void setup() {
 		static String ssid = "SDC_" + String(App::chipID);
-		static String psk = "11111111";
-		static IPAddress addr = {10,0,0,1};
-		static IPAddress mask = {255,255,255,0};
+		static String psk = F("11111111");
+
+		static IPAddress softAPAddr = {10,1,1,1};
+		static IPAddress softAPMask = {255,255,255,0};
 
 		WiFi.mode(WIFI_AP_STA);
-		WiFi.disconnect();
+		WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+		WiFi.begin("nest", "khongbiet");
 
-		WiFi.softAP(ssid, psk, 0, 0, 8);
-		WiFi.softAPConfig(addr, addr, mask);
-		WiFi.setAutoConnect(false);
-		WiFi.setAutoReconnect(false);
+		WiFi.softAP(ssid, psk);
+		WiFi.softAPConfig(softAPAddr, softAPAddr, softAPMask);
+		WiFi.setAutoConnect(true);
+		WiFi.setAutoReconnect(true);
 
-		ArduinoOTA.begin();
+		// ArduinoOTA.setRebootOnSuccess(true);
 		ArduinoOTA.onStart([]() {
 			Light::end();
 		});
+		ArduinoOTA.onProgress([](int loaded, int total) {
+			App::lED_BLINK();
+		});
+		ArduinoOTA.onEnd([]() {
+			App::lED_LOW();
+		});
+		ArduinoOTA.onError([](ota_error_t error) {
+			ESP.restart();
+		});
+		ArduinoOTA.begin();
 
 		MeshRC::on("#>PAIR*", [](u8* data, u8 size) {
 			if (!App::isPairing()) return;

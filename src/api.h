@@ -74,7 +74,7 @@ namespace Api {
 		}
 
 		if (path.endsWith("/")) {
-			path += "index.htm";
+			path += "index.html";
 		}
 
 		String contentType;
@@ -164,6 +164,17 @@ namespace Api {
 			server.send(200, "application/json", json);
 		});
 
+		server.on("/color", HTTP_GET, []() {
+			LOGL("handleColor");
+			App::Color *a = &App::data.a.color;
+			App::Color *b = &App::data.b.color;
+			String value1 = String(a->r) + "," + String(a->g) + "," + String(a->b);
+			String value2 = String(b->r) + "," + String(b->g) + "," + String(b->b);
+			String json = "{ \"a\": [" + value1 + "], \"b\": [" + value2 + "] }";
+
+			server.send(200, "application/json", json);
+		});
+
 		server.on("/config", HTTP_POST, []() {
 			if (server.hasArg("brightness")) {
 				App::data.brightness = server.arg("brightness").toInt();
@@ -186,17 +197,17 @@ namespace Api {
 			server.send(200, "text/plain", "OK");
 		});
 
-		server.on("/set_color", HTTP_POST, []() {
+		server.on("/color", HTTP_POST, []() {
 			String segment = server.arg("segment");
 			u8 r = server.arg("r").toInt();
 			u8 g = server.arg("g").toInt();
 			u8 b = server.arg("b").toInt();
-			if (segment == "A" || segment == "AB") {
+			if (segment == "a" || segment == "ab") {
 				App::data.a.color.r = r;
 				App::data.a.color.g = g;
 				App::data.a.color.b = b;
 			}
-			if (segment == "B" || segment == "AB") {
+			if (segment == "b" || segment == "ab") {
 				App::data.b.color.r = r;
 				App::data.b.color.g = g;
 				App::data.b.color.b = b;
@@ -319,7 +330,7 @@ namespace Api {
 
 		// Editor
 		server.on("/edit", HTTP_GET, []() {
-			if (!handleFileRead(F("/edit.htm"))) {
+			if (!handleFileRead(F("/edit.html"))) {
 				replyNotFound(FPSTR(FILE_NOT_FOUND));
 			}
 		});

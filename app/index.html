@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<title>SDC LED TECHNOLOGY</title>
+<meta charset="UTF-8"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="LED">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+
+<link rel="stylesheet" href="css/app.css">
+
+<div hidden>
+	<input type="file" id="select-file"/>
+	<audio id="player"></audio>
+</div>
+<header>
+	<grid class="header">
+		<h3>SDC</h3>
+		<button data-show="0">A/B</button>
+		<grid class="four">
+			<button data-show="1">1</button>
+			<button data-show="2">2</button>
+			<button data-show="3">3</button>
+			<button data-show="4">4</button>
+			<button data-show="5">5</button>
+			<button data-show="6">6</button>
+			<button data-show="7">7</button>
+			<button data-show="8">8</button>
+		</grid>
+	</grid>
+</header>
+<main class="tabs">
+
+	<section class="tab" data-tab="1">
+		<grid class="list">
+			<grid class="two">
+				<button data-segment="a">A</button>
+				<button data-segment="b">B</button>
+			</grid>
+		</grid>
+		<grid class="list">
+			<grid class="item color-slider">
+				<label>R</label>
+				<input type="range" min="0" max="255" step="1" data-key="r" data-group="rgb"/>
+				<span>255</span>
+			</grid>
+			<grid class="item color-slider">
+				<label>G</label>
+				<input type="range" min="0" max="255" step="1" data-key="g" data-group="rgb"/>
+				<span>255</span>
+			</grid>
+			<grid class="item color-slider">
+				<label>B</label>
+				<input type="range" min="0" max="255" step="1" data-key="b" data-group="rgb"/>
+				<span>255</span>
+			</grid>
+		</grid>
+		<grid class="list">
+			<grid class="item color-slider">
+				<label>H</label>
+				<input type="range" min="0" max="1" step="0.01" data-key="h" data-group="hsl"/>
+				<span>255</span>
+			</grid>
+			<grid class="item color-slider">
+				<label>S</label>
+				<input type="range" min="0" max="1" step="0.01" data-key="s" data-group="hsl"/>
+				<span>1.00</span>
+			</grid>
+			<grid class="item color-slider">
+				<label>L</label>
+				<input type="range" min="0" max="1" step="0.01" data-key="l" data-group="hsl"/>
+				<span>1.00</span>
+			</grid>
+		</grid>
+	</section>
+
+	<section class="tab" data-tab="2">
+		<grid class="three">
+			<button data-action="show-file-select-dialog">Music</button>
+<!--			<button data-command="update">Auto</button>-->
+			<button data-action="save-show-data">Save</button>
+		</grid>
+		<grid>
+			<fieldset>
+				<label>Filename:</label>
+				<span id="audio-filename">--</span>
+			</fieldset>
+		</grid>
+		<grid style="grid: auto/auto auto auto">
+			<fieldset>
+				<label>DURATION:</label>
+				<output id="audio-duration">-</output>
+				<sup>SEC</sup>
+			</fieldset>
+			<fieldset>
+				<label>TEMPO:</label>
+				<output id="audio-tempo">-</output>
+				<sup>BPM</sup>
+			</fieldset>
+			<fieldset>
+				<label>BEATS:</label>
+				<output id="audio-beats">-</output>
+			</fieldset>
+		</grid>
+
+		<grid class="four">
+			<button data-command="start">Start</button>
+			<button data-command="pause">pause</button>
+			<button data-command="resume">resume</button>
+			<button data-command="end">Stop</button>
+		</grid>
+
+		<grid class="audio-colors" style="grid: auto/1fr 3fr 1fr">
+
+			<fieldset>
+				<input type="color" id="audio-color1" data-key="color1" data-group="audio" />
+			</fieldset>
+			<fieldset>
+				<input type="range" id="audio-ratio" min="0.05" max="0.95" step="0.05" data-key="ratio" data-group="audio" />
+			</fieldset>
+			<fieldset>
+				<input type="color" id="audio-color2" data-key="color2" data-group="audio" />
+			</fieldset>
+		</grid>
+
+	</section>
+
+</main>
+<script src="js/color.js"></script>
+<script src="js/tempo.js"></script>
+<script src="js/log.js"></script>
+
+<script src="js/data.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/app.js"></script>
+<script src="js/events.js"></script>

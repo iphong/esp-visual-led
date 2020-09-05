@@ -2,13 +2,15 @@
 #include "espnow.h"
 #include "Ticker.h"
 
-#define R1_PIN 14
-#define G1_PIN 13
-#define B1_PIN 4
+// #define R1_PIN D6
+// #define G1_PIN D7
+// #define B1_PIN D8
 
-#define R2_PIN 5
-#define G2_PIN 12
-#define B2_PIN 15
+// #define R2_PIN D1
+// #define G2_PIN D2
+// #define B2_PIN D4
+
+// #define INVERTED_RGB
 
 namespace Light {
 
@@ -80,7 +82,7 @@ namespace Light {
 		u32 loopEnd;
 		u32 loopStartTime;
 
-		double lapsed;
+		u32 lapsed;
 		String line;
 		u8 lastColor[3];
 
@@ -177,10 +179,10 @@ namespace Light {
 			lapsed = playTime - loopStartTime;
 			if (lapsed < frame->transition) {
 				// Compute color value during transition
-				double ratio = lapsed / frame->transition;
-				color.r = (double) lastColor[0] + (frame->r - lastColor[0]) * ratio;
-				color.g = (double) lastColor[1] + (frame->g - lastColor[1]) * ratio;
-				color.b = (double) lastColor[2] + (frame->b - lastColor[2]) * ratio;
+				float ratio = (float)lapsed / frame->transition;
+				color.r = (float) lastColor[0] + (frame->r - lastColor[0]) * ratio;
+				color.g = (float) lastColor[1] + (frame->g - lastColor[1]) * ratio;
+				color.b = (float) lastColor[2] + (frame->b - lastColor[2]) * ratio;
 				// Serial.printf("%3u %3u %4u %02f\n", lastColor[0], frame->r, color.r, ratio);
 				// Serial.printf("%3u %3u %4u %02f\n", lastColor[1], frame->g, color.g, ratio);
 				// Serial.printf("%3u %3u %4u %02f\n", lastColor[2], frame->b, color.b, ratio);
@@ -206,7 +208,7 @@ namespace Light {
 
 		void setTime(u32 time) {
 			LOGD("Play time: %u, sync time: %u\n", playTime, time);
-			if (!file || !time) begin();
+			if (!file || !time || paused) begin();
 			if (playTime > time + 2 ) {
 				holdTime = playTime - time;
 			} else if (playTime < time - 2) {
@@ -244,11 +246,11 @@ namespace Light {
 		// true = playing
 		// false = ended
 		bool tick(bool shouldSetColor = true) {
-			if (holdTime) {
+			if (holdTime && shouldSetColor) {
 				holdTime--;
 				return true;
 			}
-			if (paused) return false;
+			if (paused & shouldSetColor) return false;
 			switch (frame.type) {
 				case RGB_FRAME:
 					if (shouldSetColor) setColor(&frame);
@@ -279,12 +281,12 @@ namespace Light {
 					break;
 				case END_FRAME:
 					// LOGD("\nended.");
-					loopTime = 0;
-					playTime = 0;
-					loopStartTime = 0;
-					file.seek(0);
-					frame = next();
-					// end();
+					// loopTime = 0;
+					// playTime = 0;
+					// loopStartTime = 0;
+					// file.seek(0);
+					// frame = next();
+					end();
 					return false;
 			}
 			if (++playTime - frame.start >= frame.duration && frame.type) {
@@ -305,9 +307,15 @@ namespace Light {
 		}
 
 		void setRGB(u8 r, u8 g, u8 b) {
+			#ifdef INVERTED_RGB
+			analogWrite(r_pin, 255 - r);
+			analogWrite(g_pin, 255 - g);
+			analogWrite(b_pin, 255 - b);
+			#else
 			analogWrite(r_pin, r);
 			analogWrite(g_pin, g);
 			analogWrite(b_pin, b);
+			#endif
 		}
 
 		void setup() {

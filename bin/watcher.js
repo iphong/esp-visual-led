@@ -2,18 +2,24 @@ const path = require('path')
 const exec = require('child_process').exec
 const fs = require('fs')
 
-fs.watch(path.resolve(__dirname, '../data'), { recursive: true, persistent: true }, (action, filename) => {
+const APP_PATH = path.resolve(__dirname, '../app')
+const DATA_PATH = path.resolve(__dirname, '../data')
+// const REMOTE_URL = '10.1.1.1/edit'
+const REMOTE_URL = '10.0.0.131/edit'
+
+fs.watch(APP_PATH, { recursive: true, persistent: true }, (action, filename) => {
+	if (path.basename(filename).startsWith('.')) return
 	if (action == 'change') {
-		const filepath = path.resolve(__dirname, '../data/' + filename)
-		exec(`curl -F "file=@${filepath};filename=${filename}" 10.0.0.1/edit`)
-		console.log(`Uploading "${filename}"`)
+		const src = path.join(APP_PATH, filename)
+		const dst = path.join(DATA_PATH, filename)
+
+		process.stdout.write(`compressing "${filename}" ... `)
+		exec(`mkdir -p ${path.dirname(dst)}`)
+		exec(`gzip -k ${src}`)
+		exec(`mv ${src + '.gz'} ${dst + '.gz'}`)
+
+		process.stdout.write(`uploading "${filename}" ... `)
+		exec(`curl -F "file=@${dst + '.gz'};filename=${filename + '.gz'}" ${REMOTE_URL}`)
+		process.stdout.write(`DONE\n`)
 	}
 })
-//
-// const fwPath = path.resolve(__dirname, '../.pio/build/esp12/firmware.bin')
-// fs.watch(fwPath, {}, (action) => {
-// 	if (action == 'change') {
-// 		console.log('Uploading firmware...')
-// 		exec(`curl -F "file=@${fwPath};filename=/firmware.bin" 10.0.0.1/edit`)
-// 	}
-// })

@@ -14,7 +14,7 @@
 #define LOGL(x...) Serial.println(x)
 
 #define HEADER '$'
-#define VERSION 6
+#define VERSION 1
 
 namespace App {
 	

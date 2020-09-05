@@ -31,7 +31,7 @@ void setup() {
     Net::setup();
     Api::setup();
     
-    Light::begin();
+    // Light::begin();
     #ifdef MASTER
     Net::sendSync();
     app.attach_ms_scheduled_accurate(1000, []() {
