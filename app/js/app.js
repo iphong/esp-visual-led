@@ -40,7 +40,7 @@ function call(selector, method, ...args) {
 function renderColor() {
 	Object.keys(color).forEach(group => {
 		Object.keys(color[group]).forEach(channel => {
-			const el = document.querySelector(`input[data-group="${group}"][data-channel="${channel}"]`)
+			const el = document.querySelector(`input[data-group="${group}"][data-key="${channel}"]`)
 			if (el) {
 				el.value = color[group][channel]
 				const span = el.parentElement.querySelector('span')
@@ -85,6 +85,7 @@ function renderShow() {
 	})
 }
 function renderAudio() {
+	setAttr('#player', 'src', AUDIO.url)
 	setText('#audio-filename', AUDIO.filename)
 	setText('#audio-duration', Math.round(AUDIO.duration))
 	setText('#audio-tempo', AUDIO.tempo)

@@ -75,18 +75,23 @@
 	</section>
 
 	<section class="tab" data-tab="2">
-		<grid class="three">
+		<grid class="two">
 			<button data-action="show-file-select-dialog">Music</button>
-<!--			<button data-command="update">Auto</button>-->
+			<button data-command="update">Visual</button>
+		</grid>
+
+		<grid class="five">
+			<button data-command="start">Start</button>
+			<button data-command="pause">pause</button>
+			<button data-command="resume">resume</button>
+			<button data-command="end">Stop</button>
 			<button data-action="save-show-data">Save</button>
 		</grid>
-		<grid>
-			<fieldset>
-				<label>Filename:</label>
-				<span id="audio-filename">--</span>
-			</fieldset>
-		</grid>
-		<grid style="grid: auto/auto auto auto">
+
+		<hr>
+		<h4><span id="audio-filename">--</span></h4>
+
+		<grid style="grid: auto auto/auto auto auto">
 			<fieldset>
 				<label>DURATION:</label>
 				<output id="audio-duration">-</output>
@@ -103,26 +108,21 @@
 			</fieldset>
 		</grid>
 
-		<grid class="four">
-			<button data-command="start">Start</button>
-			<button data-command="pause">pause</button>
-			<button data-command="resume">resume</button>
-			<button data-command="end">Stop</button>
-		</grid>
+		<hr>
 
-		<grid class="audio-colors" style="grid: auto/1fr 3fr 1fr">
-
+		<grid class="two audio-colors">
 			<fieldset>
 				<input type="color" id="audio-color1" data-key="color1" data-group="audio" />
-			</fieldset>
-			<fieldset>
-				<input type="range" id="audio-ratio" min="0.05" max="0.95" step="0.05" data-key="ratio" data-group="audio" />
 			</fieldset>
 			<fieldset>
 				<input type="color" id="audio-color2" data-key="color2" data-group="audio" />
 			</fieldset>
 		</grid>
-
+		<grid class="item">
+			<label>A</label>
+			<input type="range" id="audio-ratio" min="0.05" max="0.95" step="0.05" data-key="ratio" data-group="audio" />
+			<label>B</label>
+		</grid>
 	</section>
 
 </main>

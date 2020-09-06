@@ -9,9 +9,11 @@ function handleFile(file) {
 		} else if (file.name.endsWith('.ipx')) {
 			// parseIPX(file).then(resolve)
 		} else if (file.type.startsWith('audio')) {
-			call('#player', 'setAttribute', 'src', URL.createObjectURL(file))
-			if (!AUDIO || AUDIO.filename !== file.name)
-				parseAudio(file).then(resolve)
+			const url = URL.createObjectURL(file)
+			if (!AUDIO || AUDIO.url !== url)
+				parseAudio(file)
+					.then(() => saveLightShow())
+					.then(resolve)
 			else resolve()
 		} else {
 			console.error('unsupported file format')
@@ -36,6 +38,7 @@ function handleChange(e) {
 				updateRGB()
 				break
 		}
+		renderColor()
 		if (e.type === 'change') {
 			post('/color', Object.assign({ segment: CONFIG.segment }, color.rgb))
 		}

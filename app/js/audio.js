@@ -1,5 +1,21 @@
 const AudioContext = window['AudioContext'] || window['webkitAudioContext']
-
+let ab
+function getWaveformData(audio) {
+	const data = audio.getChannelData(0)
+	const size = audio.sampleRate / 10
+	const total = audio.duration * 10
+	const array = new Int8Array(total * 2)
+	for (let i = 0 ; i < total ; i++) {
+		let min = 1, max = -1
+		const offset = i * size
+		for (let a = 0 ; a < size ; a++) {
+			min = Math.min(min, data[offset + a])
+			max = Math.max(max, data[offset + a])
+		}
+		array[offset * 2] = min * 127
+		array[offset * 2 + 1] = max * 127
+	}
+}
 function parseAudio(file) {
 	return new Promise(resolve => {
 		const ctx = new AudioContext()
@@ -7,10 +23,12 @@ function parseAudio(file) {
 		reader.readAsArrayBuffer(file)
 		reader.addEventListener('loadend', e => {
 			console.debug(`decoding ${file.type}...`)
-			ctx.decodeAudioData(reader.result).catch(handleError).then(audio => {
-				console.append("OK")
+			const handle = audio => {
+				// getWaveformData(audio)
+				console.append('OK')
 				Object.assign(AUDIO, {
 					id: CONFIG.show,
+					url: URL.createObjectURL(file),
 					filename: file.name,
 					duration: audio.duration,
 					sampleRate: audio.sampleRate,
@@ -28,9 +46,13 @@ function parseAudio(file) {
 				AUDIO.tempo /= audio.numberOfChannels
 				AUDIO.beats /= audio.numberOfChannels
 				renderAudio()
-				saveAudioConfig()
-				resolve(AUDIO)
-			})
+				saveAudioConfig().then(resolve)
+			}
+			if ('chrome' in window) {
+				ctx.decodeAudioData(reader.result).catch(handleError).then(handle)
+			} else {
+				ctx.decodeAudioData(reader.result, handle, handleError)
+			}
 		})
 	})
 }
@@ -61,18 +83,19 @@ function createSequenceFromBeats(beats, channel = 0) {
 			const dur1 = Math.round(dur * AUDIO.ratio)
 			const dur2 = dur - dur1
 			let color, color2
-			if ((index + channel) % 2) {
-				color = hexToIntString(AUDIO.color1)
-				color2 = hexToIntString(AUDIO.color2)
+			if (AUDIO.swap) {
+				if ((index + channel) % 2) {
+					color = hexToIntString(AUDIO.color2)
+				} else {
+					color = hexToIntString(AUDIO.color1)
+				}
+				return `C ${start} ${dur} ${dur} ${color}`
 			} else {
-				color = hexToIntString(AUDIO.color2)
-				color = hexToIntString(AUDIO.color2)
-				color2 = hexToIntString(AUDIO.color1)
+				return [
+					`C ${start} ${dur1} ${dur1} ${hexToIntString(AUDIO.color1)}`,
+					`C ${start + dur1} ${dur2} 0 ${hexToIntString(AUDIO.color2)}`
+				].join('\n')
 			}
-			return [
-				`C ${start} ${dur1} 0 ${color}`,
-				`C ${start + dur1} ${dur2} 0 ${color2}`
-			].join('\n')
 		}
 	}).join('\n')
 	return seq

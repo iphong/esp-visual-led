@@ -89,6 +89,6 @@ function stopShow() {
 function startShow() {
 	return sendCommand('start').then(() => {
 		setProp('#player', 'currentTime', 0)
-		call('#player', 'play')
+		return call('#player', 'play')
 	})
 }
