@@ -1,5 +1,5 @@
 // store hardware configs data
-const CONFIG = {
+global.CONFIG = {
 	mode: 0,
 	show: 0,
 	segment: 'a',
@@ -15,8 +15,9 @@ const CONFIG = {
 	}
 }
 // store audio configs for current show
-let AUDIO = {
+global.AUDIO = {
 	id: 0,
+	url: '',
 	filename: '',
 	duration: 0,
 	channels: 0,
@@ -29,11 +30,14 @@ let AUDIO = {
 	ratio: 0.5,
 	swap: true
 }
+
+global.AUDIO_DEFAULT = Object.assign({}, AUDIO)
+
 // store light sequences for current show
-let SHOWS = []
+global.SHOWS = []
 
 // store color data for current segment
-let color = {
+global.color = {
 	rgb: {
 		r: 255,
 		g: 0,
@@ -45,12 +49,14 @@ let color = {
 		l: 0
 	}
 }
-function updateRGB() {
+global.updateRGB = function updateRGB() {
 	const { h, s, l } = color.hsl
 	color.rgb = hslToRgb(h, s, l)
 }
-function updateHSL() {
+global.updateHSL = function updateHSL() {
 	const { r, g, b } = color.rgb
 	color.hsl = rgbToHsl(r, g, b)
 }
 updateHSL()
+
+window.updateRGB = updateRGB

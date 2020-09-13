@@ -4,8 +4,9 @@ const fs = require('fs')
 
 const APP_PATH = path.resolve(__dirname, '../app')
 const DATA_PATH = path.resolve(__dirname, '../data')
-// const REMOTE_URL = '10.1.1.1/edit'
-const REMOTE_URL = '10.0.0.131/edit'
+const REMOTE_URL = '10.1.1.1/edit'
+// const REMOTE_URL = '10.0.0.131/edit'
+// const REMOTE_URL = '10.0.0.162/edit'
 
 fs.watch(APP_PATH, { recursive: true, persistent: true }, (action, filename) => {
 	if (path.basename(filename).startsWith('.')) return

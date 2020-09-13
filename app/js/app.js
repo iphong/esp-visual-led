@@ -1,34 +1,34 @@
 
-function setText(selector, text) {
+global.setText = function setText(selector, text) {
 	if (typeof text === 'undefined') return
 	document.querySelectorAll(selector).forEach(el => {
 		el.innerText = text
 	})
 }
-function setValue(selector, value) {
+global.setValue = function setValue(selector, value) {
 	if (typeof value === 'undefined') return
 	document.querySelectorAll(selector).forEach(el => {
 		el.value = value
 	})
 }
-function setProp(selector, prop, value) {
+global.setProp = function setProp(selector, prop, value) {
 	if (typeof value === 'undefined') return
 	document.querySelectorAll(selector).forEach(el => {
 		el[prop] = value
 	})
 }
-function setAttr(selector, attr, value) {
+global.setAttr = function setAttr(selector, attr, value) {
 	if (typeof value === 'undefined') return
 	document.querySelectorAll(selector).forEach(el => {
 		el.setAttribute(attr, value)
 	})
 }
-function click(selector) {
+global.click = function click(selector) {
 	document.querySelectorAll(selector).forEach(el => {
 		el.click()
 	})
 }
-function call(selector, method, ...args) {
+global.call = function call(selector, method, ...args) {
 	document.querySelectorAll(selector).forEach(el => {
 		if (typeof el[method] === 'function') {
 			el[method].call(el, ...args)
@@ -37,7 +37,7 @@ function call(selector, method, ...args) {
 }
 
 // render rgb and hsl color input sliders
-function renderColor() {
+global.renderColor = function renderColor() {
 	Object.keys(color).forEach(group => {
 		Object.keys(color[group]).forEach(channel => {
 			const el = document.querySelector(`input[data-group="${group}"][data-key="${channel}"]`)
@@ -59,7 +59,7 @@ function renderColor() {
 }
 
 // render ui components bound to current show
-function renderShow() {
+global.renderShow = function renderShow() {
 	document.querySelectorAll('[data-segment]').forEach(el => {
 		if (el.dataset.segment === CONFIG.segment) {
 			el.classList.add('selected')
@@ -84,7 +84,7 @@ function renderShow() {
 		}
 	})
 }
-function renderAudio() {
+global.renderAudio = function renderAudio() {
 	setAttr('#player', 'src', AUDIO.url)
 	setText('#audio-filename', AUDIO.filename)
 	setText('#audio-duration', Math.round(AUDIO.duration))
@@ -95,8 +95,9 @@ function renderAudio() {
 	setValue('#audio-ratio', AUDIO.ratio)
 }
 
-function render() {
+global.render = function render() {
 	renderShow()
 	renderColor()
 	renderAudio()
 }
+

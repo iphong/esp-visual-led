@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "PlatformIO",
+			"task": "Upload File System image (development)",
+			"problemMatcher": [
+				"$platformio"
+			],
+			"label": "PlatformIO: Upload File System image (development)"
+		}
+	]
+}

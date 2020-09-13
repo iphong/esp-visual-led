@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <SdFat.h>
 
 #define DBG_OUTPUT_PORT Serial
 
@@ -84,17 +85,32 @@ namespace Api {
 			contentType = mime::getContentType(path);
 		}
 
-		if (!App::fs->exists(path)) {
-			// File not found, try gzip version
-			path = path + ".gz";
-		}
-		if (App::fs->exists(path)) {
-			File file = App::fs->open(path, "r");
-			if (server.streamFile(file, contentType) != file.size()) {
-				LOGL("Sent less data than expected!");
+		if (SD::sdOK && path.startsWith("/show/")) {
+			if (SD::fs.exists(path.c_str())) {
+				SD::open(path);
+				while (SD::file.available()) {
+					Serial.write(SD::file.read());
+				}
+				if (server.streamFile(SD::file, contentType) != SD::file.fileSize()) {
+					LOGL("Sent less data than expected!");
+				}
+				SD::close();
+				replyNotFound("{}");
+				return true;
 			}
-			file.close();
-			return true;
+		} else if (App::fsOK) {
+			if (!App::fs->exists(path)) {
+				// File not found, try gzip version
+				path = path + ".gz";
+			}
+			if (App::fs->exists(path)) {
+				File file = App::fs->open(path, "r");
+				if (server.streamFile(file, contentType) != file.size()) {
+					LOGL("Sent less data than expected!");
+				}
+				file.close();
+				return true;
+			}
 		}
 
 		return false;
@@ -437,12 +453,25 @@ namespace Api {
 					filename = "/" + filename;
 				}
 				LOGL(String("handleFileUpload Name: ") + filename);
-				uploadFile = App::fs->open(filename, "w");
-				if (!uploadFile) {
-					return replyServerError(F("CREATE FAILED"));
+				if (SD::sdOK && filename.startsWith("/show/")) {
+					SD::open(filename);
+					// if (!SD::file) {
+					// 	return replyServerError(F("CREATE FAILED"));
+					// }
+				} else if (App::fsOK) {
+					uploadFile = App::fs->open(filename, "w");
+					if (!uploadFile) {
+						return replyServerError(F("CREATE FAILED"));
+					}
 				}
 				LOGL(String("Upload: START, filename: ") + filename);
 			} else if (upload.status == UPLOAD_FILE_WRITE) {
+				if (SD::sdOK) {
+					size_t bytesWritten = SD::write(upload.buf, upload.currentSize);
+					if (bytesWritten != upload.currentSize) {
+						return replyServerError(F("WRITE FAILED"));
+					}
+				}
 				if (uploadFile) {
 					size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
 					if (bytesWritten != upload.currentSize) {
@@ -451,12 +480,15 @@ namespace Api {
 				}
 				LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 			} else if (upload.status == UPLOAD_FILE_END) {
+				if (SD::sdOK) {
+					SD::close();
+				}
 				if (uploadFile) {
 					uploadFile.close();
 				}
 				LOGL(String("Upload: END, Size: ") + upload.totalSize);
 
-				Net::sendFile(upload.filename);
+				// Net::sendFile(uploadFile.filename);
 			}
 		});
 

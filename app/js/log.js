@@ -58,7 +58,7 @@ x-console line.info * {
 	color: skyblue;
 }
 x-console line.warn * {
-	color: lightgoldenrodyellow;
+	color: yellow;
 }
 x-console line.error * {
 	color: orangered;
@@ -113,7 +113,10 @@ class ConsoleElement {
 const logger = new ConsoleElement()
 document.body.appendChild(logger.el)
 
-const { ...original } = console
+const original = {}
+for (let key in console) {
+	original[key] = console[key]
+}
 
 window.console.log = (...args) => {
 	original.log(...args)
@@ -137,6 +140,6 @@ window.console.error = (...args) => {
 }
 window.console.append = (...args) => {
 	if (logger.lastOutput) {
-		logger.lastOutput.innerText = `${logger.lastOutput.innerHTML}${args.join(' ')}`
+		logger.lastOutput.innerHTML = `${logger.lastOutput.innerHTML}${args.join(' ')}`
 	}
 }

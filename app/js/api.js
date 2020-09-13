@@ -1,11 +1,16 @@
-function request(method = 'POST', path = '', args = {}, body = null) {
+global.request = function request(method = 'POST', path = '', args = {}, body = null) {
 	return new Promise((resolve, reject) => {
 		const req = new XMLHttpRequest
 		const params = Object.entries(args)
-		req.open(method, path + (params.length ? '?' + params.map(([key, value]) => `${key}=${value}`).join('&') : ''), true)
+		const uri = path + (params.length ? '?' + params.map(([key, value]) => `${key}=${value}`).join('&') : '')
+		console[method === 'DELETE' ? 'error' : method === 'POST' ? 'info' : 'log'](`${method} `)
+		console.append(uri)
+		console.append(body ? ` [${body.size || body.length} Kb]` : '')
+		console.append(` ... `)
+		req.open(method, uri, true)
 		req.send(body)
-		req.addEventListener('load', () => {
-			// console.log(req.status, req.statusText, req.responseText.trim())
+		req.addEventListener('loadend', () => {
+			console.append(req.status, req.statusText)
 			if (req.status === 200) {
 				if (req.getResponseHeader('Content-Type') === 'application/json') {
 					resolve(JSON.parse(req.responseText))
@@ -17,40 +22,39 @@ function request(method = 'POST', path = '', args = {}, body = null) {
 		req.addEventListener('error', reject)
 	})
 }
-function uploadFile(path, file) {
+global.uploadFile = function uploadFile(path, file) {
 	if (typeof file === 'string') file = new Blob([file])
-	console.debug(`uploading ${file.size} bytes to ${path}...`)
+	console.warn(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
 	return new Promise((resolve, reject) => {
 		const form = new FormData()
 		const req = new XMLHttpRequest()
 		form.append('filename', path)
 		form.append('file', file)
-		req.open('POST', 'edit', true)
+		req.open('POST', 'edit?sync', true)
 		req.send(form)
 		req.onloadend = (e) => {
+			console.append(req.status, req.statusText)
 			if (req.status === 200) {
 				resolve(req)
-				console.append(`OK`)
 			} else {
 				reject(req)
-				console.append(`FAIl`)
 			}
 		}
 	})
 }
 
-function get(path, params) {
+global.get = function get(path, params) {
 	return request('GET', path, params)
 }
-function post(path, params, body) {
+global.post = function post(path, params, body) {
 	return request('POST', path, params, body)
 }
-function sendCommand(command) {
+global.sendCommand = function sendCommand(command) {
 	// console.log('execute ' + command)
 	return request('POST', '/command', { command })
 }
 
-function loadAudioConfig() {
+global.loadAudioConfig = function loadAudioConfig() {
 	return get(`show/${CONFIG.show}.json`).then(res => {
 		Object.assign(AUDIO, res)
 		renderAudio()
@@ -58,37 +62,49 @@ function loadAudioConfig() {
 }
 
 let fetchTime = Date.now()
-function fetchData() {
+global.fetchData = function fetchData() {
 	fetchTime = Date.now()
 	const next = () => setTimeout(fetchData, 5000 - (Date.now() - fetchTime))
-	get('/color').then(res2 => {
-		CONFIG.a = { r: res2.a[0], g: res2.a[1], b: res2.a[2] }
-		CONFIG.b = { r: res2.b[0], g: res2.b[1], b: res2.b[2] }
-		color.rgb = CONFIG[CONFIG.segment]
-		updateHSL()
-		renderColor()
-	})
 	// load hardware configs data
-	console.info("loading device's configurations...")
-	get('/status').then(res => {
-		Object.assign(CONFIG, res)
-		console.append('OK')
-		renderShow()
-		if (CONFIG.show) {
-			return loadAudioConfig()
-		}
-	})
+	get('/status')
+		.then(res => {
+			Object.assign(CONFIG, res)
+			renderShow()
+			get('/color').then(res2 => {
+				CONFIG.a = { r: res2.a[0], g: res2.a[1], b: res2.a[2] }
+				CONFIG.b = { r: res2.b[0], g: res2.b[1], b: res2.b[2] }
+				color.rgb = CONFIG[CONFIG.segment]
+				updateHSL()
+				renderColor()
+				if (CONFIG.show) loadAudioConfig()
+			})
+		})
 }
-
-function stopShow() {
+global.stopShow = function stopShow() {
 	return sendCommand('end').then(() => {
 		call('#player', 'pause')
 		setProp('#player', 'currentTime', 0)
 	})
 }
-function startShow() {
+global.startShow = function startShow() {
 	return sendCommand('start').then(() => {
 		setProp('#player', 'currentTime', 0)
 		return call('#player', 'play')
 	})
+}
+global.resetShow = function resetShow() {
+	console.log(`reset show #${CONFIG.show}`);
+	AUDIO = Object.assign({}, AUDIO_DEFAULT)
+	AUDIO.id = CONFIG.show
+	SHOWS.length = 0
+	render()
+	return stopShow()
+		.then(saveAudioConfig)
+		.then(clearLightShow)
+}
+global.saveShow = function saveShow() {
+	return stopShow()
+		.then(saveAudioConfig)
+		.then(saveLightShow)
+		.then(startShow)
 }

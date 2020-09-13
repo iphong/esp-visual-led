@@ -11,7 +11,7 @@
 
 <div hidden>
 	<input type="file" id="select-file"/>
-	<audio id="player"></audio>
+	<audio id="player" loop></audio>
 </div>
 <header>
 	<grid class="header">
@@ -80,12 +80,11 @@
 			<button data-command="update">Visual</button>
 		</grid>
 
-		<grid class="five">
+		<grid class="four">
 			<button data-command="start">Start</button>
 			<button data-command="pause">pause</button>
 			<button data-command="resume">resume</button>
 			<button data-command="end">Stop</button>
-			<button data-action="save-show-data">Save</button>
 		</grid>
 
 		<hr>
@@ -123,16 +122,13 @@
 			<input type="range" id="audio-ratio" min="0.05" max="0.95" step="0.05" data-key="ratio" data-group="audio" />
 			<label>B</label>
 		</grid>
+		<grid class="">
+			<button data-action="toggle-prop" data-key="swap">Color Swap</button>
+			<button data-action="save-show-data">Update Show</button>
+			<button data-action="reset-show-data">Reset Show</button>
+		</grid>
 	</section>
 
 </main>
-<script src="js/color.js"></script>
 <script src="js/tempo.js"></script>
-<script src="js/log.js"></script>
-
-<script src="js/data.js"></script>
-
-<script src="js/api.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/app.js"></script>
-<script src="js/events.js"></script>
+<script src="dist/bundle.js"></script>

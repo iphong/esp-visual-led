@@ -1,27 +1,32 @@
-function handleError() {
+global.handleError = function handleError() {
 	console.error(...arguments)
 }
-function handleFile(file) {
+global.handleFile = function handleFile(file) {
 	return new Promise((resolve, reject) => {
 		console.debug('select file: ' + file.name)
 		if (file.name.endsWith('.lsf')) {
-			// parseLSF(file).then(resolve)
+			parseLSF(file).then(resolve)
 		} else if (file.name.endsWith('.ipx')) {
 			// parseIPX(file).then(resolve)
 		} else if (file.type.startsWith('audio')) {
-			const url = URL.createObjectURL(file)
-			if (!AUDIO || AUDIO.url !== url)
-				parseAudio(file)
-					.then(() => saveLightShow())
-					.then(resolve)
-			else resolve()
+			stopShow().then(() => {
+				setAttr('#player', 'src', URL.createObjectURL(file))
+				if (!AUDIO || AUDIO.filename !== file.name) {
+					parseAudio(file)
+						.then(saveLightShow)
+						.then(resolve)
+						.then(startShow)
+				} else {
+					startShow().then(resolve)
+				}
+			})
 		} else {
 			console.error('unsupported file format')
 			reject('unsupported file format')
 		}
 	})
 }
-function handleChange(e) {
+global.handleChange = function handleChange(e) {
 	if (e.type === 'change' && e.target.id === 'select-file') {
 		for (let file of e.target.files) {
 			handleFile(file)
@@ -54,14 +59,13 @@ function handleChange(e) {
 				break
 		}
 		if (e.type === 'change') {
-			console.info(`set AUDIO.${key} = ${JSON.stringify(AUDIO[key])}`)
+			console.info(`set ${key} = ${JSON.stringify(AUDIO[key])}`)
 		}
 	}
 }
-function handleClick(e) {
+global.handleClick = function handleClick(e) {
 	if (e.target.dataset.segment) {
 		CONFIG.segment = e.target.dataset.segment
-		console.debug('select segment: ' + CONFIG.segment.toUpperCase())
 		color = { rgb: CONFIG[CONFIG.segment] }
 		updateHSL()
 		render()
@@ -69,10 +73,9 @@ function handleClick(e) {
 	else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
 		render()
-		sendCommand('end').then(() => {
-			console.debug('select show: ' + CONFIG.show)
+		stopShow().then(() => {
 			post('/config', { show: CONFIG.show }).then(() => {
-				if (!CONFIG.show) sendCommand('start')
+				if (!CONFIG.show) startShow()
 				else loadAudioConfig()
 			})
 		})
@@ -83,11 +86,16 @@ function handleClick(e) {
 			case 'show-file-select-dialog':
 				click('#select-file')
 				break
+			case 'reset-show-data':
+				resetShow()
+				break
 			case 'save-show-data':
-				stopShow()
-					.then(saveAudioConfig)
-					.then(saveLightShow)
-					.then(startShow)
+				saveShow()
+				break
+			case 'toggle-prop':
+				const key = e.target.dataset.key
+				AUDIO[key] = !AUDIO[key]
+				console.info(`set ${key} = ${AUDIO[key] ? 'on' : 'off'}`)
 				break
 		}
 	}
@@ -96,7 +104,7 @@ function handleClick(e) {
 		sendCommand(command).then(() => {
 			switch (command) {
 				case 'start':
-					setAttr('#player', 'currentTime', 0)
+					setProp('#player', 'currentTime', 0)
 					call('#player', 'play')
 					break
 				case 'resume':
@@ -104,7 +112,7 @@ function handleClick(e) {
 					break
 				case 'end':
 					call('#player', 'pause')
-					setAttr('#player', 'currentTime', 0)
+					setProp('#player', 'currentTime', 0)
 					break
 				case 'pause':
 					call('#player', 'pause')
@@ -113,20 +121,20 @@ function handleClick(e) {
 		})
 	}
 }
-function handleDragOver(e) {
+global.handleDragOver = function handleDragOver(e) {
 	e.preventDefault()
 }
-function handleDragLeave(e) {
+global.handleDragLeave = function handleDragLeave(e) {
 	e.preventDefault()
 }
-function handleDragDrop(e) {
+global.handleDragDrop = function handleDragDrop(e) {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
 		handleFile(file)
 	}
 }
 
-function handleInit() {
+global.handleInit = function handleInit() {
 	render()
 	fetchData()
 }
@@ -140,8 +148,8 @@ window.addEventListener('input', handleChange, true)
 window.addEventListener('click', handleClick, true)
 window.addEventListener('touchstart', new Function(), true)
 
-window.addEventListener('end', sendCommand.bind(null, 'end'), true)
-window.addEventListener('play', sendCommand.bind(null, 'resume'), true)
-window.addEventListener('pause', sendCommand.bind(null, 'pause'), true)
+// window.addEventListener('end', sendCommand.bind(null, 'end'), true)
+// window.addEventListener('play', sendCommand.bind(null, 'resume'), true)
+// window.addEventListener('pause', sendCommand.bind(null, 'pause'), true)
 
 window.addEventListener('load', handleInit)

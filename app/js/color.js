@@ -9,7 +9,8 @@
  * @param g Number
  * @param b Number
  */
-function rgbToHsl(r, g, b) {
+
+global.rgbToHsl = function rgbToHsl(r, g, b) {
 	r /= 255
 	g /= 255
 	b /= 255
@@ -38,7 +39,7 @@ function rgbToHsl(r, g, b) {
 		h /= 6
 	}
 
-	return {h, s, l}
+	return { h, s, l }
 }
 
 /**
@@ -52,13 +53,13 @@ function rgbToHsl(r, g, b) {
  * @param s
  * @param l
  */
-function hslToRgb(h, s, l) {
+global.hslToRgb = function hslToRgb(h, s, l) {
 	let r, g, b
 
 	if (s === 0) {
 		r = g = b = l // achromatic
 	} else {
-		function hue2rgb(p, q, t) {
+		global.hue2rgb = function hue2rgb(p, q, t) {
 			if (t < 0) t += 1
 			if (t > 1) t -= 1
 			if (t < 1 / 6) return p + (q - p) * 6 * t
@@ -88,7 +89,7 @@ function hslToRgb(h, s, l) {
  * @param g
  * @param b
  */
-function rgbToHsv(r, g, b) {
+global.rgbToHsv = function rgbToHsv(r, g, b) {
 	r /= 255, g /= 255, b /= 255
 
 	let max = Math.max(r, g, b), min = Math.min(r, g, b)
@@ -115,7 +116,7 @@ function rgbToHsv(r, g, b) {
 		h /= 6
 	}
 
-	return {h, s, v}
+	return { h, s, v }
 }
 
 /**
@@ -130,7 +131,7 @@ function rgbToHsv(r, g, b) {
  * @param v
  */
 
-function hsvToRgb(h, s, v) {
+global.hsvToRgb = function hsvToRgb(h, s, v) {
 	let r, g, b
 
 	let i = Math.floor(h * 6)
@@ -174,4 +175,3 @@ function hsvToRgb(h, s, v) {
 
 	return { r: r * 255, g: g * 255, b: b * 255 }
 }
-

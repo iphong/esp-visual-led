@@ -1,6 +1,6 @@
 const AudioContext = window['AudioContext'] || window['webkitAudioContext']
 let ab
-function getWaveformData(audio) {
+global.getWaveformData = function getWaveformData(audio) {
 	const data = audio.getChannelData(0)
 	const size = audio.sampleRate / 10
 	const total = audio.duration * 10
@@ -16,7 +16,9 @@ function getWaveformData(audio) {
 		array[offset * 2 + 1] = max * 127
 	}
 }
-function parseAudio(file) {
+global.parseAudio = function parseAudio(file) {
+	AUDIO.filename = file.name
+	renderAudio()
 	return new Promise(resolve => {
 		const ctx = new AudioContext()
 		const reader = new FileReader()
@@ -30,7 +32,7 @@ function parseAudio(file) {
 					id: CONFIG.show,
 					url: URL.createObjectURL(file),
 					filename: file.name,
-					duration: audio.duration,
+					duration: Math.round(audio.duration * 1000) / 1000,
 					sampleRate: audio.sampleRate,
 					tempo: 0,
 					beats: 0,
@@ -38,7 +40,14 @@ function parseAudio(file) {
 				})
 				for (let i = 0 ; i < audio.numberOfChannels ; i++) {
 					const { tempo, beats } = new MusicTempo(audio.getChannelData(i))
-					AUDIO.channels[i] = { tempo, beats }
+					beats.forEach((t, i, b) => {
+						b[i] = Math.round(t*1000)
+					})
+					AUDIO.channels[i] = { 
+						tempo,
+						delay: beats[0],
+						end: beats[beats.length - 1]
+					}
 					AUDIO.tempo += parseInt((tempo))
 					AUDIO.beats += beats.length
 					console.info(`-- @${i + 1}: ${beats.length} beats, TEMPO: ${tempo} BPM`)
@@ -56,51 +65,91 @@ function parseAudio(file) {
 		})
 	})
 }
-function saveAudioConfig(id = CONFIG.show, data = AUDIO) {
+global.saveAudioConfig = function saveAudioConfig(id = CONFIG.show, data = AUDIO) {
 	return uploadFile(`show/${id}.json`, JSON.stringify(AUDIO))
 }
-function loadAudioConfig(id = CONFIG.show, data = AUDIO) {
-	return get(`show/${id}.json`).then(res => {
-		Object.assign(data, res)
-		renderAudio()
-	})
+global.loadAudioConfig = function loadAudioConfig(id = CONFIG.show, data = AUDIO) {
+	return get(`show/${id}.json`)
+		.then(res => {
+			Object.assign(data, res)
+			renderAudio()
+		})
+		.catch(() => {
+			Object.assign(data, AUDIO_DEFAULT)
+			renderAudio()
+		})
 }
-function saveLightShow(id = CONFIG.show, data = AUDIO) {
+global.saveLightShow = function saveLightShow(id = CONFIG.show, data = AUDIO) {
 	return new Promise(resolve => {
-		SHOWS[0] = createSequenceFromBeats(AUDIO.channels[0].beats, 0)
-		SHOWS[1] = createSequenceFromBeats(AUDIO.channels[1].beats, 1)
-		uploadFile(`show/${CONFIG.show}A.lsb`, SHOWS[0])
+		SHOWS[0] = createLoop(0, AUDIO.channels[0], AUDIO.tempo)
+		SHOWS[1] = createLoop(1, AUDIO.channels[1], AUDIO.tempo)
+		// SHOWS[0] = createSequenceFromBeats(AUDIO.channels[0].beats, 0)
+		// SHOWS[1] = createSequenceFromBeats(AUDIO.channels[1].beats, 1)
+		return uploadFile(`show/${CONFIG.show}A.lsb`, SHOWS[0])
 			.then(() => uploadFile(`show/${CONFIG.show}B.lsb`, SHOWS[1]))
 			.then(() => resolve(SHOWS))
 	})
 }
-function createSequenceFromBeats(beats, channel = 0) {
-	let seq = `C 0 ${Math.round(beats[0] * 1000)} 0 0 0 0\n`
+global.clearLightShow = function clearLightShow(id = CONFIG.show, data = AUDIO) {
+	return new Promise(resolve => {
+		return request('DELETE', `show/${CONFIG.show}A.lsb`)
+			.then(() => request('DELETE', `show/${CONFIG.show}B.lsb`))
+			.then(resolve)
+	})
+}
+
+global.createLoop = function createLoop(index, channel, tempo) {
+	const delay = channel.delay
+	const end = channel.end
+	const dur = Math.ceil(1000 / (tempo / 60))
+	const dur1 = Math.round(dur * AUDIO.ratio)
+	const dur2 = dur - dur1
+	const fade1 = Math.round(dur1 * 1)
+	const fade2 = Math.round(dur2 * 1)
+	let color1 = hexToIntString(AUDIO.color1)
+	let color2 = hexToIntString(AUDIO.color2)
+	if (AUDIO.swap && index % 2) {
+		color1 = hexToIntString(AUDIO.color2)
+		color2 = hexToIntString(AUDIO.color1)
+	}
+	return [
+		`C 0 ${delay} 0 0 0 0`,
+		`L ${delay} ${end - delay}`,
+		`	C 0 ${dur1} ${fade1} ${color1}`,
+		`	C ${dur1} ${dur2} ${fade2} ${color2}`,
+		`	E ${dur}`,
+		`E ${end}`
+	].join('\n')
+}
+global.createSequenceFromBeats = function createSequenceFromBeats(beats, channel = 0) {
+	let seq = `C 0 ${beats[0]} 0 0 0 0\n`
 	seq += beats.map((time, index) => {
 		if (index + 1 < beats.length) {
-			const start = Math.round(time * 1000)
-			const dur = Math.round((beats[index + 1] - time) * 1000)
+			const start = Math.round(time)
+			const dur = Math.round((beats[index + 1] - time))
 			const dur1 = Math.round(dur * AUDIO.ratio)
 			const dur2 = dur - dur1
-			let color, color2
-			if (AUDIO.swap) {
-				if ((index + channel) % 2) {
-					color = hexToIntString(AUDIO.color2)
-				} else {
-					color = hexToIntString(AUDIO.color1)
-				}
-				return `C ${start} ${dur} ${dur} ${color}`
+			const fade1 = Math.round(dur1 * 1)
+			const fade2 = Math.round(dur2 * 1)
+			let color1 = hexToIntString(AUDIO.color1)
+			let color2 = hexToIntString(AUDIO.color2)
+			if (AUDIO.swap && channel % 2) {
+				return [
+					`C ${start} ${dur1} ${fade1} ${color2}`,
+					`C ${start + dur1} ${dur2} ${fade2} ${color1}`
+				].join('\n')
 			} else {
 				return [
-					`C ${start} ${dur1} ${dur1} ${hexToIntString(AUDIO.color1)}`,
-					`C ${start + dur1} ${dur2} 0 ${hexToIntString(AUDIO.color2)}`
+					`C ${start} ${dur1} ${fade1} ${color1}`,
+					`C ${start + dur1} ${dur2} ${fade2} ${color2}`
 				].join('\n')
 			}
 		}
 	}).join('\n')
+	seq += `E ${beats[beats.length-1]}`
 	return seq
 }
-function hexToIntString(hex) {
+global.hexToIntString = function hexToIntString(hex) {
 	hex = hex.replace(/[^0-9a-f]+/gi, '')
 	return [
 		parseInt(hex.slice(0, 2), 16),

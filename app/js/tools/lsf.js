@@ -1,7 +1,7 @@
 const setFrameRegex = /(\t)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
 const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
 const endFrameRegex = /(\t)?([0-9]+)ms: end/i
-function parseLSF(file) {
+global.parseLSF = function parseLSF(file) {
 	const reader = new FileReader()
 	reader.readAsText(file)
 	reader.onload = () => {
@@ -19,7 +19,7 @@ function parseLSF(file) {
 	function parseThread(id, content) {
 		const frames = []
 		let frame, lastFrame, buf, view
-		content.split('\n').forEach(line => {
+		content.split(/\r|\n|\r\n/).forEach(line => {
 			if (line.match(setFrameRegex)) {
 				let [, tab, start, transition, r, g, b] = line.match(setFrameRegex)
 				frame = { type: 'rgb', start, duration: 0, transition, r, g, b }
@@ -75,7 +75,7 @@ function parseLSF(file) {
 						// view.setUint8(0, 0x02)
 						// view.setUint32(1, frame.start)
 						// view.setUint32(5, frame.duration)
-						// convert(frame.frames, true)
+						convert(frame.frames, true)
 						// lines2.push(buf)
 						break
 					case 'end':
@@ -92,6 +92,7 @@ function parseLSF(file) {
 		}
 		convert(frames)
 
+		console.log(lines.join('\n'))
 		const path = `/show/${CONFIG.show}${id}.lsb`
 		const blob = new Blob([lines.join('\n')])
 		// const path = `/show/${getShow()}${id}.lsb`
