@@ -23,6 +23,8 @@ Button::onClickHandler handler1 = btn.onClick([](u8 repeats) {
 				Light::end();
 				Net::sendSync();
 				App::data.show++;
+				if (++App::data.show >= 8)
+					App::data.show = 0;
 				App::save();
 				Light::begin();
 				Net::sendSync();
@@ -34,7 +36,8 @@ Button::onClickHandler handler1 = btn.onClick([](u8 repeats) {
 			else {
 				Light::end();
 				Net::sendSync();
-				App::data.show--;
+				if (--App::data.show == 255)
+					App::data.show = 8;
 				App::save();
 				Light::begin();
 				Net::sendSync();

@@ -285,7 +285,7 @@ class Show {
 	}
 
 	void begin() {
-		if (!ended)
+		// if (!ended)
 			end();
 		if (App::data.show != 0) {
 			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
