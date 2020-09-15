@@ -91,6 +91,7 @@ void setup() {
 					App::setMode(App::SHOW);
 					MeshRC::setMaster(App::data.master);
 				} else {
+					LED::end();
 					App::setMode(App::BIND);
 					MeshRC::setMaster(NULL);
 				}
