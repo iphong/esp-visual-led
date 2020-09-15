@@ -4,7 +4,7 @@
 #include <WiFiClient.h>
 #include "app.h"
 #include "net.h"
-#include "light.h"
+#include "led.h"
 
 
 #ifndef __API_H__
@@ -197,15 +197,15 @@ void setup(void)
 		if (server.hasArg("channel")) {
 			App::data.channel = server.arg("channel").toInt();
 			App::save();
-			if (!Light::ended) {
-				Light::begin();
+			if (!LED::ended) {
+				LED::begin();
 			}
 		}
 		if (server.hasArg("show")) {
 			App::data.show = server.arg("show").toInt();
 			App::save();
-			if (!Light::ended) {
-				Light::begin();
+			if (!LED::ended) {
+				LED::begin();
 			}
 		}
 		server.send(200, "text/plain", "OK");
@@ -227,7 +227,7 @@ void setup(void)
 			App::data.b.color.b = b;
 		}
 		App::save();
-		Light::begin();
+		LED::begin();
 		server.send(200, "text/plain", "OK");
 	});
 
@@ -240,9 +240,9 @@ void setup(void)
 			} else if (cmd == "seek") {
 				if (server.hasArg("time")) {
 					u32 time = server.arg("time").toInt();
-					Light::end();
+					LED::end();
 					Net::sendSync();
-					Light::setTime(time);
+					LED::setTime(time);
 					Net::sendSync();
 					replyOK();
 				} else {
@@ -250,24 +250,24 @@ void setup(void)
 				}
 			} else if (cmd == "start") {
 				replyOK();
-				Light::end();
+				LED::end();
 				Net::sendSync();
-				Light::begin();
+				LED::begin();
 				Net::sendSync();
 			} else if (cmd == "toggle") {
-				Light::toggle();
+				LED::toggle();
 				Net::sendSync();
 				replyOK();
 			} else if (cmd == "pause") {
-				Light::pause();
+				LED::pause();
 				Net::sendSync();
 				replyOK();
 			} else if (cmd == "resume") {
-				Light::resume();
+				LED::resume();
 				Net::sendSync();
 				replyOK();
 			} else if (cmd == "end") {
-				Light::end();
+				LED::end();
 				Net::sendSync();
 				replyOK();
 			} else if (cmd == "probe") {

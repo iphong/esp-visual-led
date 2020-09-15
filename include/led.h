@@ -15,7 +15,7 @@
 #ifndef __LIGHT_H__
 #define __LIGHT_H__
 
-namespace Light {
+namespace LED {
 
 bool paused = false;
 bool ended = true;
@@ -41,9 +41,9 @@ enum FrameType {
 
 class RGB {
    public:
-	u8 r;
-	u8 g;
-	u8 b;
+	unsigned int r;
+	unsigned int g;
+	unsigned int b;
 
 	void set(u8* d) {
 		memcpy(this, d, 3);
@@ -100,9 +100,8 @@ class Show {
 	u32 loopTime;
 	u32 loopStart;
 	u32 loopEnd;
-	u32 loopStartTime;
 
-	u32 lapsed;
+	float ratio;
 
 	App::Output* data;
 
@@ -154,25 +153,24 @@ class Show {
 		return frame;
 	}
 
-	void setColor(Frame* frame, bool isLoop) {
-		if (isLoop) {
-			lapsed = loopTime - frame->start;
-		} else {
-			lapsed = playTime - frame->start;
-		}
+	void setColor(Frame* frame, int lapsed) {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
-			float ratio = (float)lapsed / frame->transition;
-			color.set(
-				((float)lastColor.r + (frame->r - lastColor.r) * ratio),
-				((float)lastColor.g + (frame->g - lastColor.g) * ratio),
-				((float)lastColor.b + (frame->b - lastColor.b) * ratio));
-			// Serial.printf("%3u %3u %4u %02f\n", lastColor[0], frame->r, color.r, ratio);
-			// Serial.printf("%3u %3u %4u %02f\n", lastColor[1], frame->g, color.g, ratio);
-			// Serial.printf("%3u %3u %4u %02f\n", lastColor[2], frame->b, color.b, ratio);
+			ratio = (float)lapsed / frame->transition;
+			
+			if (frame->r > lastColor.r) color.r = lastColor.r + (frame->r - lastColor.r) * ratio;
+			else color.r = lastColor.r - (lastColor.r - frame->r) * ratio;
+			
+			if (frame->g > lastColor.g) color.g = lastColor.g + (frame->g - lastColor.g) * ratio;
+			else color.g = lastColor.g - (lastColor.g - frame->g) * ratio;
+			
+			if (frame->b > lastColor.b) color.b = lastColor.b + (frame->b - lastColor.b) * ratio;
+			else color.b = lastColor.b - (lastColor.b - frame->b) * ratio;
+
+			// LOGD("%f %u %u %u\n", ratio, color.r, color.g, color.b);
+
 		} else {
 			color.set(frame->r, frame->g, frame->b);
-			// lastColor.set(frame->r, frame->g, frame->b);
 		}
 		setRGB(
 			map(color.r, 0, 255, 0, App::data.brightness),
@@ -215,7 +213,7 @@ class Show {
 		switch (frame.type) {
 			case RGB_FRAME:
 				if (shouldSetColor)
-					setColor(&frame, false);
+					setColor(&frame, playTime - frame.start);
 				break;
 			case LOOP_FRAME:
 				if (loopTime == 0) {
@@ -224,17 +222,16 @@ class Show {
 					loopFrame = next();
 				}
 				if (shouldSetColor && loopFrame.type == RGB_FRAME) {
-					setColor(&loopFrame, true);
+					setColor(&loopFrame, loopTime - loopFrame.start);
 				}
 				if (++loopTime >= loopFrame.start + loopFrame.duration) {
 					LOGD(" * ");
+					lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
 					loopFrame = next();
 					if (loopFrame.type == END_FRAME) {
 						loopTime = 0;
 						loopEnd = file.position();
 						file.seek(loopStart);
-					} else {
-						lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
 					}
 				}
 				break;
@@ -286,7 +283,7 @@ class Show {
 
 	void begin() {
 		// if (!ended)
-			end();
+		end();
 		if (App::data.show != 0) {
 			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
 			if (!App::fs->exists(path)) {
@@ -340,6 +337,6 @@ void begin() {
 	A.begin();
 	B.begin();
 }
-}  // namespace Light
+}  // namespace LED
 
 #endif	// __LIGHT_H__

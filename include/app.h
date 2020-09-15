@@ -1,17 +1,23 @@
 #include "Arduino.h"
 #include "EEPROM.h"
-#include "LittleFS.h"
 #include "MeshRC.h"
 #include "Ticker.h"
+#include "LittleFS.h"
 
 #ifndef __APP_H__
 #define __APP_H__
 
 // #define ENABLE_DEBUG_LOGS
 
+#ifdef ENABLE_DEBUG_LOGS
 #define LOG(x...) Serial.print(x)
 #define LOGD(x...) Serial.printf(x)
 #define LOGL(x...) Serial.println(x)
+#else
+#define LOG(x...) Serial.write('.')
+#define LOGL(x...) Serial.write('.')
+#define LOGD(x...) Serial.write('.')
+#endif
 
 #define HEADER '$'
 #define VERSION 9
@@ -36,19 +42,17 @@ struct Color {
 };
 struct Output {
 	Effect type = SOLID;
-	Color color = { 255, 0, 0 };
-	Color color2 = { 0, 0, 255 };
+	Color color = {255, 0, 0};
+	Color color2 = {0, 0, 255};
 	u8 ratio;
 	u32 period;
 	u32 spacing;
 };
-
 struct Data {
 	u8 header = HEADER;
 	u8 version = VERSION;
-	u8 master[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+	u8 master[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 	u8 brightness = 255;
-	u16 frequency = 1000;
 	u8 channel = 0;
 	u8 show = 0;
 	Output a;
@@ -57,6 +61,7 @@ struct Data {
 
 Data data;
 Mode mode;
+Ticker blink;
 
 char chipID[6];
 
@@ -66,56 +71,57 @@ bool sdOK;
 
 u32 lastChanged;
 bool shouldSave;
-
-void lED_HIGH()
-{
+static void lED_HIGH() {
 	digitalWrite(LED_PIN, 1);
 }
-void lED_LOW()
-{
+static void lED_LOW() {
 	digitalWrite(LED_PIN, 0);
 }
-void lED_BLINK()
-{
+static void lED_BLINK() {
 	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 }
-void save()
-{
+
+static void stopBlink() {
+	lED_HIGH();
+	if (blink.active()) blink.detach();
+}
+static void startBlink(u32 time) {
+	stopBlink();
+	lED_LOW();
+	blink.attach_ms_scheduled_accurate(time, lED_BLINK);
+}
+
+void save() {
 	lastChanged = millis();
 	shouldSave = true;
 }
 
-bool isPaired()
-{
+bool isPaired() {
 	return !MeshRC::equals(data.master, MeshRC::broadcast, 6);
 }
-bool isPairing()
-{
+bool isPairing() {
 	return mode == BIND;
 }
-void saveShow(u8 show)
-{
+void saveShow(u8 show) {
 	data.show = show;
 	save();
 }
-void saveChannel(u8 channel)
-{
+void saveChannel(u8 channel) {
 	data.channel = channel;
 	save();
 }
-void saveMaster(u8* addr)
-{
+void saveMaster(u8* addr) {
 	memcpy(data.master, addr, 6);
 	save();
 }
-void setMode(Mode newMode)
-{
+void setMode(Mode newMode) {
 	mode = newMode;
-	Serial.printf("mode = %i\n", App::mode);
+	if (newMode == BIND) startBlink(200);
+	else stopBlink();
+	LOGD("mode = %i\n", App::mode);
 }
 
-void saveData()
-{
+void saveData() {
 	EEPROM.begin(512);
 	char buf[sizeof(data)];
 	memcpy(buf, &data, sizeof(data));
@@ -131,8 +137,7 @@ void saveData()
 	EEPROM.end();
 }
 
-void loadData()
-{
+void loadData() {
 	size_t pos = 0;
 	Data tmp;
 	char buf[sizeof(tmp)];
@@ -156,9 +161,7 @@ void loadData()
 		MeshRC::setMaster(data.master);
 	}
 }
-void setup()
-{
-
+void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 	lED_LOW();
 
@@ -174,20 +177,12 @@ void setup()
 		fs->mkdir("/tmp");
 	}
 }
-void loop()
-{
-#ifdef SLAVE
-	static u32 lastBlink;
-	if (isPairing() && millis() - lastBlink > 200) {
-		lED_BLINK();
-		lastBlink = millis();
-	}
-#endif
+void loop() {
 	if (shouldSave && millis() - lastChanged > 1000) {
 		saveData();
 		shouldSave = false;
 	}
 }
-}
+}  // namespace App
 
 #endif

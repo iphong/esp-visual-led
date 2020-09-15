@@ -1,0 +1,8 @@
+{
+	"C_Cpp.errorSquiggles": "Enabled",
+	"files.associations": {
+		"*.yaml": "yaml",
+		"cstdio": "cpp",
+		"functional": "cpp"
+	}
+}

@@ -6,14 +6,15 @@
 // #include <ESP8266mDNS.h>
 // #include <DNSServer.h>
 // #include <WiFiUdp.h>
-#include "light.h"
+#include "led.h"
 
 #ifndef __NET_H__
 #define __NET_H__
 
 namespace Net {
 
-bool shouldSendFiles;
+bool shouldSendAllShow;
+bool shouldSendCurrentShow;
 bool shouldSendSync;
 bool receivingFiles;
 bool sendingiles;
@@ -49,46 +50,42 @@ struct SyncData {
 };
 u8 syncBuffer[32];
 u32 lastRequestReceived;
-void recvSync(u8* data, u8 size)
-{
+void recvSync(u8* data, u8 size) {
 	lastRequestReceived = millis();
 	if (receivingFiles || App::isPairing())
 		return;
 	SyncData tmp;
 	memcpy(&tmp, data, size);
 	LOGD("Sync received: %u %i %i %u\n", tmp.show, tmp.ended, tmp.paused,
-		tmp.time);
+		 tmp.time);
 	App::data.show = tmp.show;
 	if (tmp.ended) {
-		Light::end();
+		LED::end();
 	} else if (tmp.paused) {
-		Light::pause();
+		LED::pause();
 	} else {
-		Light::resume();
-		Light::setTime(tmp.time);
+		LED::resume();
+		LED::setTime(tmp.time);
 	}
 }
 
-void sendSync()
-{
+void sendSync() {
 #ifdef MASTER
 	if (sendingiles || App::isPairing())
 		return;
 	SyncData tmp = {
-		Light::getTime(),
+		LED::getTime(),
 		App::data.show,
 		App::data.brightness,
-		Light::paused,
-		Light::ended
-	};
+		LED::paused,
+		LED::ended};
 	memcpy(syncBuffer, &tmp, sizeof(tmp));
 	MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
 	MeshRC::wait();
 #endif
 }
 
-void syncRequest()
-{
+void syncRequest() {
 	if (App::isPairing() || millis() < lastRequestReceived + 2000)
 		return;
 
@@ -98,14 +95,12 @@ void syncRequest()
 
 void sendProbe() { MeshRC::send("#>PROBE"); }
 
-void sendNodeInfo()
-{
+void sendNodeInfo() {
 	MeshRC::send("#<INFO" + String(App::chipID) + WiFi.macAddress());
 }
 
 // Master send pair message to pending slaves
-void sendPair(u8 channel = 255)
-{
+void sendPair(u8 channel = 255) {
 	if (channel != 255) {
 		LOGD("Sending pair with channel: %u\n", channel);
 		MeshRC::send("#>PAIR@", &channel, 1);
@@ -116,17 +111,15 @@ void sendPair(u8 channel = 255)
 }
 
 u32 delayUntil;
-void waitDelay(u32 time)
-{
+void waitDelay(u32 time) {
 	while (MeshRC::sending)
-		yield(); // Wait while sending
+		yield();  // Wait while sending
 	delayUntil = millis() + time;
 	while (millis() < delayUntil)
 		yield();
 }
 
-void sendFile(String path, String targetID = "******")
-{
+void sendFile(String path, String targetID = "******") {
 	LOGD("Send file : %s -- ", path.c_str());
 	if (!App::fs->exists(path)) {
 		LOGD("NOT EXISTS\n");
@@ -165,8 +158,7 @@ void sendFile(String path, String targetID = "******")
 	sendingiles = false;
 }
 
-void sendDir(String path)
-{
+void sendDir(String path) {
 	LOGD("Send DIR : %s\n", path.c_str());
 	dir = App::fs->openDir(path);
 	while (dir.next()) {
@@ -179,35 +171,33 @@ void sendDir(String path)
 }
 
 bool IS_WIFI_ON;
-void wifiOn()
-{
+void wifiOn() {
 	IS_WIFI_ON = true;
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
 	// WiFi.begin(staSSID, staPSK);
 }
 
-void wifiOff()
-{
+void wifiOff() {
 	IS_WIFI_ON = false;
 	// WiFi.disconnect();
 	WiFi.softAPdisconnect();
 }
 bool isWifiOn() { return IS_WIFI_ON; }
 
-void setup()
-{
+void setup() {
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.disconnect();
 	WiFi.setAutoConnect(false);
 	WiFi.setAutoReconnect(false);
 
-#ifdef MASTER
 	wifiOn();
-#else
-	wifiOff();
-#endif
-	ArduinoOTA.onStart([]() { Light::end(); });
+	// #ifdef MASTER
+	// 	wifiOn();
+	// #else
+	// 	wifiOff();
+	// #endif
+	ArduinoOTA.onStart([]() { LED::end(); });
 	ArduinoOTA.onProgress([](int loaded, int total) { App::lED_BLINK(); });
 	ArduinoOTA.onEnd([]() { App::lED_HIGH(); });
 	ArduinoOTA.onError([](ota_error_t error) { ESP.restart(); });
@@ -235,7 +225,8 @@ void setup()
 		if (MeshRC::equals(data, (u8*)App::chipID, 6)) {
 			LOGD("My file\n");
 		}
-		Light::end();
+		LED::end();
+		App::startBlink(50);
 		name = "";
 		crc = 0x00;
 		for (auto i = 6; i < size; i++) {
@@ -248,7 +239,6 @@ void setup()
 			LOGL(F("CREATE FAILED"));
 		}
 		LOGD("\nReceiving file: %s\n", name.c_str());
-		App::lED_LOW();
 	});
 
 	MeshRC::on("#>FILE+", [](u8* data, u8 size) {
@@ -271,7 +261,6 @@ void setup()
 				receivingFiles = false;
 				LOGD("%02X ", data[i]);
 			}
-			App::lED_BLINK();
 			LOGL(millis() - tmr);
 		}
 	});
@@ -279,7 +268,7 @@ void setup()
 	MeshRC::on("#>FILE$", [](u8* data, u8 size) {
 		if (!App::isPaired())
 			return;
-		App::lED_HIGH();
+		App::stopBlink();
 		LOGD("%02X %02X\n", crc, data[0]);
 		if (!file || data[0] != crc)
 			return;
@@ -308,10 +297,7 @@ void setup()
 	MeshRC::begin();
 }
 
-WiFiClient client;
-
-void loop()
-{
+void loop() {
 	// MDNS.update();
 	ArduinoOTA.handle();
 	if (shouldSendSync) {
@@ -319,12 +305,18 @@ void loop()
 		LOGD("Sync sent.\n");
 		shouldSendSync = false;
 	}
-	if (shouldSendFiles) {
-		Light::end();
+	if (shouldSendAllShow) {
+		LED::end();
 		sendDir("/show");
-		shouldSendFiles = false;
+		shouldSendAllShow = false;
+	}
+	if (shouldSendCurrentShow) {
+		LED::end();
+		sendFile("/show/1A.lsb");
+		sendFile("/show/1B.lsb");
+		shouldSendCurrentShow = false;
 	}
 }
-} // namespace Net
+}  // namespace Net
 
 #endif
