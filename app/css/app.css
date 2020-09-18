@@ -96,8 +96,8 @@ grid.item > span {
 }
 
 button {
-	padding: 10px 0;
-	font-weight: bold;
+    padding: 1.5em 0;
+	font-weight: 500;
 	margin: 0;
 	text-transform: uppercase;
 	background: rgba(234, 92, 255, 0.15);
@@ -108,8 +108,10 @@ button {
 	transition: all .3s ease;
 	cursor: pointer;
 }
-button.medium {
+button.large {
 	font-size: 150%;
+    letter-spacing: 0.1em;
+    font-weight: 400;
 }
 button:hover {
 	color: #fff;
@@ -211,4 +213,23 @@ fieldset sup {
 	text-transform: uppercase;
 }
 
+.timeline {
+	overflow: auto;
+    border: 5px solid black;
+    box-sizing: content-box;
+    background-color: black;
+}
+.track {
+    white-space: nowrap;
+}
+.track .frame {
+	position: relative;
+	display: inline-block;
+	height: 100px;
+	background: black;
+}
+.track .frame label {
+	position: absolute;
+	bottom: calc(100% + 5px);
+}
 

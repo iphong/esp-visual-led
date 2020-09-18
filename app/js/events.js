@@ -5,7 +5,7 @@ global.handleFile = function handleFile(file) {
 	return new Promise((resolve, reject) => {
 		console.debug('select file: ' + file.name)
 		if (file.name.endsWith('.lsf')) {
-			parseLSF(file).then(resolve)
+			parseLSF(file).then(fetchData).then(resolve)
 		} else if (file.name.endsWith('.ipx')) {
 			// parseIPX(file).then(resolve)
 		} else if (file.type.startsWith('audio')) {
@@ -77,7 +77,7 @@ global.handleClick = function handleClick(e) {
 		stopShow().then(() => {
 			post('/config', { show: CONFIG.show }).then(() => {
 				if (!CONFIG.show) startShow()
-				else loadAudioConfig()
+				else loadShowData().then(startShow)
 			})
 		})
 	}
@@ -135,11 +135,22 @@ global.handleDragDrop = function handleDragDrop(e) {
 	}
 }
 
+global.handleScroll = function handleScroll(e) {
+	if (e.target.closest('.timeline')) {
+		$('.timeline').forEach(el => {
+			if (el !== e.target) {
+				el.scrollLeft = e.target.scrollLeft
+			}
+		})
+	}
+}
+
 global.handleInit = function handleInit() {
 	render()
 	fetchData()
 }
 
+window.addEventListener('scroll', handleScroll, true)
 window.addEventListener('dragover', handleDragOver, true)
 window.addEventListener('dragleave', handleDragLeave, true)
 window.addEventListener('drop', handleDragDrop, true)
@@ -148,9 +159,5 @@ window.addEventListener('change', handleChange, true)
 window.addEventListener('input', handleChange, true)
 window.addEventListener('click', handleClick, true)
 window.addEventListener('touchstart', new Function(), true)
-
-// window.addEventListener('end', sendCommand.bind(null, 'end'), true)
-// window.addEventListener('play', sendCommand.bind(null, 'resume'), true)
-// window.addEventListener('pause', sendCommand.bind(null, 'pause'), true)
 
 window.addEventListener('load', handleInit)

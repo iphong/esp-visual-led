@@ -7,8 +7,6 @@
 #ifndef __APP_H__
 #define __APP_H__
 
-#define ENABLE_DEBUG_LOGS
-
 #ifdef ENABLE_DEBUG_LOGS
 #define LOG(x...) Serial.print(x)
 #define LOGD(x...) Serial.printf(x)

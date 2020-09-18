@@ -240,7 +240,11 @@ void setup(void) {
 		if (server.hasArg("command")) {
 			String cmd = server.arg("command");
 			if (cmd == "pair") {
-				Net::sendPair();
+				if (server.hasArg("channel")) {
+					Net::sendPair(server.arg("channel").toInt());
+				} else {
+					Net::sendPair();
+				}
 				replyOK();
 			} else if (cmd == "seek") {
 				if (server.hasArg("time")) {
@@ -254,11 +258,9 @@ void setup(void) {
 					replyBadRequest("Missing argument: time ");
 				}
 			} else if (cmd == "start") {
-				replyOK();
-				LED::end();
-				Net::sendSync();
 				LED::begin();
 				Net::sendSync();
+				replyOK();
 			} else if (cmd == "toggle") {
 				LED::toggle();
 				Net::sendSync();
@@ -277,6 +279,12 @@ void setup(void) {
 				replyOK();
 			} else if (cmd == "ping") {
 				Net::sendPing();
+				replyOK();
+			} else if (cmd == "sync") {
+				LED::end();
+				Net::sendSync();
+				Net::sendFile("/show/" + String(App::data.show) + "A.lsb");
+				Net::sendFile("/show/" + String(App::data.show) + "B.lsb");
 				replyOK();
 			} else {
 				replyBadRequest("Unknown command: " + cmd);

@@ -74,6 +74,37 @@
 	</section>
 
 	<section class="tab" data-tab="2">
+
+		<grid class="four">
+			<button data-command="start">Start</button>
+			<button data-command="end">Stop</button>
+			<button data-command="pause">pause</button>
+			<button data-command="resume">resume</button>
+		</grid>
+
+		<grid>
+			<div class="timeline">
+				<div id="timeline1" class="track"></div>
+				<div id="timeline2" class="track"></div>
+			</div>
+		</grid>
+
+		<grid>
+			<button data-action="show-file-select-dialog" class="large">
+				Import Light Show
+			</button>
+			<grid class="two">
+				<button data-command="sync">Sync</button>
+				<button data-command="pair">Pair</button>
+			</grid>
+		</grid>
+
+		<grid>
+			<button data-action="reset-show-data">Reset</button>
+		</grid>
+	</section>
+	<!--
+	<section class="tab" data-tab="3">
 		<grid class="two">
 			<button data-action="show-file-select-dialog">Music</button>
 			<button data-command="update">Visual</button>
@@ -131,6 +162,7 @@
 	<section class="tab" data-tab="3">
 		Hello
 	</section>
+	-->
 
 </main>
 <script src="dist/tempo.js"></script>

@@ -60,6 +60,20 @@ global.loadAudioConfig = function loadAudioConfig() {
 		renderAudio()
 	})
 }
+window.loadShowData = function loadShowData() {
+	return Promise.resolve()
+		.then(() => {
+			return get(`show/${CONFIG.show}A.lsb`)
+				.then(A => renderShowTimeline('#timeline1', A))
+				.catch(e => $('#timeline1')[0].innerHTML = '')
+		})
+		.then(() => {
+			return get(`show/${CONFIG.show}B.lsb`)
+				.then(B => renderShowTimeline('#timeline2', B))
+				.catch(e => $('#timeline2')[0].innerHTML = '')
+		})
+}
+
 
 let fetchTime = Date.now()
 global.fetchData = function fetchData() {
@@ -76,7 +90,8 @@ global.fetchData = function fetchData() {
 				color.rgb = CONFIG[CONFIG.segment]
 				updateHSL()
 				renderColor()
-				if (CONFIG.show) loadAudioConfig()
+				if (CONFIG.show) loadShowData().then(next)
+				else next()
 			})
 		})
 }

@@ -238,7 +238,7 @@ void setup() {
 	});
 
 	MeshRC::on("#>FILE^", [](u8* data, u8 size) {
-		// if (!App::isPaired()) return;
+		if (!App::isPaired()) return;
 		if (receivingFiles) return;
 		if (MeshRC::equals(data, (u8*)App::chipID, 6) || MeshRC::equals(data, broadcastWildCard, 6)) {
 			receivingFiles = true;
@@ -266,7 +266,7 @@ void setup() {
 
 	static bool savingSegment = false;
 	MeshRC::on("#>FILE+", [](u8* data, u8 size) {
-		// if (!App::isPaired()) return;
+		if (!App::isPaired()) return;
 		if (savingSegment) return;
 		savingSegment = true;
 		if (file) {
@@ -285,7 +285,7 @@ void setup() {
 	});
 
 	MeshRC::on("#>FILE$", [](u8* data, u8 size) {
-		// if (!App::isPaired()) return;
+		if (!App::isPaired()) return;
 		if (!receivingFiles) return;
 		receivingFiles = false;
 		if (file) {

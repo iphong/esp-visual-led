@@ -191,9 +191,9 @@ class Show {
 		LOGD("Play time: %u, sync time: %u\n", playTime, time);
 		if (!file || !time || paused)
 			begin();
-		if (playTime > time + 2) {
+		if (playTime > time + 10) {
 			holdTime = playTime - time;
-		} else if (playTime < time - 2) {
+		} else if (playTime < time - 10) {
 			while (playTime < time) {
 				if (!tick(false))
 					continue;
@@ -217,16 +217,18 @@ class Show {
 				break;
 			case LOOP_FRAME:
 				if (loopTime == 0) {
-					LOGD("\nloop ");
+					LOGD("\n * ");
 					loopStart = file.position();
 					loopFrame = next();
 				}
 				if (shouldSetColor && loopFrame.type == RGB_FRAME) {
 					setColor(&loopFrame, loopTime - loopFrame.start);
 				}
-				if (++loopTime >= loopFrame.start + loopFrame.duration) {
+				if (++loopTime - loopFrame.start >= loopFrame.duration) {
 					LOGD(" * ");
-					lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
+					if (loopFrame.type == RGB_FRAME) {
+						lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
+					}
 					loopFrame = next();
 					if (loopFrame.type == END_FRAME) {
 						loopTime = 0;
@@ -236,10 +238,10 @@ class Show {
 				}
 				break;
 			case END_FRAME:
-				LOGD("\nended.");
+				LOGD("\nended");
 				if (repeat) {
-					loopTime = 0;
 					playTime = 0;
+					loopTime = 0;
 					loopStart = 0;
 					file.seek(0);
 					frame = next();
@@ -249,11 +251,11 @@ class Show {
 				return false;
 		}
 		if (++playTime - frame.start >= frame.duration && frame.type) {
+			LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
 				loopTime = 0;
 				file.seek(loopEnd);
 			}
-			LOGD("\nframe");
 			if (frame.type == RGB_FRAME) {
 				lastColor.set(frame.r, frame.g, frame.b);
 			}

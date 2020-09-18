@@ -1,35 +1,38 @@
 
+global.$ = function $(selector) {
+	return document.body.querySelectorAll(selector)
+}
 global.setText = function setText(selector, text) {
 	if (typeof text === 'undefined') return
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		el.innerText = text
 	})
 }
 global.setValue = function setValue(selector, value) {
 	if (typeof value === 'undefined') return
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		el.value = value
 	})
 }
 global.setProp = function setProp(selector, prop, value) {
 	if (typeof value === 'undefined') return
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		el[prop] = value
 	})
 }
 global.setAttr = function setAttr(selector, attr, value) {
 	if (typeof value === 'undefined') return
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		el.setAttribute(attr, value)
 	})
 }
 global.click = function click(selector) {
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		el.click()
 	})
 }
 global.call = function call(selector, method, ...args) {
-	document.querySelectorAll(selector).forEach(el => {
+	$(selector).forEach(el => {
 		if (typeof el[method] === 'function') {
 			el[method].call(el, ...args)
 		}
@@ -60,21 +63,21 @@ global.renderColor = function renderColor() {
 
 // render ui components bound to current show
 global.renderShow = function renderShow() {
-	document.querySelectorAll('[data-segment]').forEach(el => {
+	$('[data-segment]').forEach(el => {
 		if (el.dataset.segment === CONFIG.segment) {
 			el.classList.add('selected')
 		} else {
 			el.classList.remove('selected')
 		}
 	})
-	document.querySelectorAll('[data-show]').forEach(el => {
+	$('[data-show]').forEach(el => {
 		if (parseInt(el.dataset.show) === CONFIG.show) {
 			el.classList.add('selected')
 		} else {
 			el.classList.remove('selected')
 		}
 	})
-	document.querySelectorAll('section.tab').forEach(el => {
+	$('section.tab').forEach(el => {
 		if (parseInt(el.dataset.tab) === 1 && !CONFIG.show) {
 			el.classList.add('active')
 		} else if (parseInt(el.dataset.tab) === 2 && CONFIG.show) {
@@ -82,6 +85,26 @@ global.renderShow = function renderShow() {
 		} else {
 			el.classList.remove('active')
 		}
+	})
+}
+global.renderShowTimeline = function renderShowTimeline(selector, content) {
+	$(selector).forEach(wrapper => {
+		wrapper.innerHTML = ''
+		let lastColor = `rgb(0,0,0)`
+		content.split('\n').forEach(line => {
+			if (line.trim().startsWith('C')) {
+				const [, start, duration, transition, r, g, b] = line.trim().split(' ')
+				const color = `rgb(${r},${g},${b})`
+				const percent = Math.round(transition / duration * 100)
+
+				const frame = document.createElement('span')
+				frame.classList.add('frame')
+				frame.style.width = `${Math.round(parseInt(duration) / 10)}px`
+				frame.style.background = `linear-gradient(90deg, ${lastColor}0px, ${color} ${Math.round(transition / 10)}px, ${color} ${Math.round(duration / 10)}px)`
+				wrapper.appendChild(frame)
+				lastColor = color
+			}
+		})
 	})
 }
 global.renderAudio = function renderAudio() {
@@ -98,6 +121,6 @@ global.renderAudio = function renderAudio() {
 global.render = function render() {
 	renderShow()
 	renderColor()
-	renderAudio()
+	// renderAudio()
 }
 

@@ -105,7 +105,7 @@ void setup() {
 	#ifdef MASTER
 	Net::apAddr = {10, 1, 1, 1};
 	#else
-	Net::apAddr = {10, 1, 2, 1};
+	Net::apAddr = {10, 1, 1, 1};
 	#endif
 	Net::apMask = {255, 255, 255, 0};
 
@@ -115,14 +115,15 @@ void setup() {
 	Net::setup();
 	Api::setup();
 
-	LED::begin();
+	Net::sendPing();
 
-	app.once_scheduled(1, Net::sendPing);
-	// app.attach_ms_scheduled_accurate(1000, Net::sendSync);
+	app.attach_ms_scheduled_accurate(1000, Net::sendSync);
 
 	btn.begin();
 	btn.onPress(buttonPressHandler);
 	btn.onPressHold(buttonPressHoldHandler);
+
+	LED::begin();
 }
 
 void loop() {
