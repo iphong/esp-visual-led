@@ -153,7 +153,7 @@ class Show {
 		return frame;
 	}
 
-	void setColor(Frame* frame, int lapsed) {
+	void setColor(Frame* frame, unsigned int lapsed) {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
 			ratio = (float)lapsed / frame->transition;

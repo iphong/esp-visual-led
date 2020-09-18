@@ -45,6 +45,7 @@ global.parseAudio = function parseAudio(file) {
 					})
 					AUDIO.channels[i] = { 
 						tempo,
+						beats,
 						delay: beats[0],
 						end: beats[beats.length - 1]
 					}
@@ -81,10 +82,10 @@ global.loadAudioConfig = function loadAudioConfig(id = CONFIG.show, data = AUDIO
 }
 global.saveLightShow = function saveLightShow(id = CONFIG.show, data = AUDIO) {
 	return new Promise(resolve => {
-		SHOWS[0] = createLoop(0, AUDIO.channels[0], AUDIO.tempo)
-		SHOWS[1] = createLoop(1, AUDIO.channels[1], AUDIO.tempo)
-		// SHOWS[0] = createSequenceFromBeats(AUDIO.channels[0].beats, 0)
-		// SHOWS[1] = createSequenceFromBeats(AUDIO.channels[1].beats, 1)
+		// SHOWS[0] = createLoop(0, AUDIO.channels[0], AUDIO.tempo)
+		// SHOWS[1] = createLoop(1, AUDIO.channels[1], AUDIO.tempo)
+		SHOWS[0] = createSequenceFromBeats(AUDIO.channels[0].beats, 0)
+		SHOWS[1] = createSequenceFromBeats(AUDIO.channels[1].beats, 1)
 		return uploadFile(`show/${CONFIG.show}A.lsb`, SHOWS[0])
 			.then(() => uploadFile(`show/${CONFIG.show}B.lsb`, SHOWS[1]))
 			.then(() => resolve(SHOWS))
@@ -92,7 +93,8 @@ global.saveLightShow = function saveLightShow(id = CONFIG.show, data = AUDIO) {
 }
 global.clearLightShow = function clearLightShow(id = CONFIG.show, data = AUDIO) {
 	return new Promise(resolve => {
-		return request('DELETE', `show/${CONFIG.show}A.lsb`)
+		return request('DELETE', `show/${CONFIG.show}.json`)
+			.then(() => request('DELETE', `show/${CONFIG.show}B.lsb`))
 			.then(() => request('DELETE', `show/${CONFIG.show}B.lsb`))
 			.then(resolve)
 	})

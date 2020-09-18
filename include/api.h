@@ -1,16 +1,15 @@
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include "app.h"
-#include "net.h"
-#include "led.h"
 
+#include "app.h"
+#include "led.h"
+#include "net.h"
 
 #ifndef __API_H__
 #define __API_H__
-
-#define DBG_OUTPUT_PORT Serial
 
 namespace Api {
 
@@ -21,12 +20,14 @@ String unsupportedFiles = String();
 File uploadFile;
 String transferTarget;
 
+WiFiClient client;
+HTTPClient http;
+
 static const char TEXT_PLAIN[] PROGMEM = "text/plain";
 static const char FS_INIT_ERROR[] PROGMEM = "FS INIT ERROR";
 static const char FILE_NOT_FOUND[] PROGMEM = "FileNotFound";
 
-boolean isIp(String str)
-{
+boolean isIp(String str) {
 	for (size_t i = 0; i < str.length(); i++) {
 		int c = str.charAt(i);
 		if (c != '.' && (c < '0' || c > '9')) {
@@ -36,8 +37,7 @@ boolean isIp(String str)
 	return true;
 }
 
-String toStringIp(IPAddress ip)
-{
+String toStringIp(IPAddress ip) {
 	String res = "";
 	for (int i = 0; i < 3; i++) {
 		res += String((ip >> (8 * i)) & 0xFF) + ".";
@@ -46,55 +46,44 @@ String toStringIp(IPAddress ip)
 	return res;
 }
 
-void replyOK()
-{
+void replyOK() {
 	server.send(200, FPSTR(TEXT_PLAIN), "");
 }
 
-void replyOKWithMsg(String msg)
-{
+void replyOKWithMsg(String msg) {
 	server.send(200, FPSTR(TEXT_PLAIN), msg);
 }
 
-void replyNotFound(String msg)
-{
+void replyNotFound(String msg) {
 	server.send(404, FPSTR(TEXT_PLAIN), msg);
 }
 
-void replyBadRequest(String msg)
-{
+void replyBadRequest(String msg) {
 	LOGL(msg);
 	server.send(400, FPSTR(TEXT_PLAIN), msg + "\r\n");
 }
 
-void replyServerError(String msg)
-{
+void replyServerError(String msg) {
 	LOGL(msg);
 	server.send(500, FPSTR(TEXT_PLAIN), msg + "\r\n");
 }
 
-/*
-	Read the given file from the filesystem and stream it back to the client
-	*/
-bool handleFileRead(String path)
-{
+/* Read the given file from the filesystem and stream it back to the client */
+bool handleFileRead(String path) {
 	LOGL(String("handleFileRead: ") + path);
 	if (!App::fsOK) {
 		replyServerError(FPSTR(FS_INIT_ERROR));
 		return true;
 	}
-
 	if (path.endsWith("/")) {
 		path += "index.html";
 	}
-
 	String contentType;
 	if (server.hasArg("download")) {
 		contentType = F("application/octet-stream");
 	} else {
 		contentType = mime::getContentType(path);
 	}
-
 	if (!App::fs->exists(path)) {
 		// File not found, try gzip version
 		path = path + ".gz";
@@ -107,25 +96,21 @@ bool handleFileRead(String path)
 		file.close();
 		return true;
 	}
-
 	return false;
 }
-
-String lastExistingParent(String path)
-{
+String lastExistingParent(String path) {
 	while (!path.isEmpty() && !App::fs->exists(path)) {
 		if (path.lastIndexOf('/') > 0) {
 			path = path.substring(0, path.lastIndexOf('/'));
 		} else {
-			path = String(); // No slash => the top folder does not exist
+			path = String();  // No slash => the top folder does not exist
 		}
 	}
 	LOGL(String("Last existing parent: ") + path);
 	return path;
 }
 
-void deleteRecursive(String path)
-{
+void deleteRecursive(String path) {
 	File file = App::fs->open(path, "r");
 	bool isDir = file.isDirectory();
 	file.close();
@@ -147,8 +132,28 @@ void deleteRecursive(String path)
 	App::fs->rmdir(path);
 }
 
-void setup(void)
-{
+void setup(void) {
+	server.on("/nodes", HTTP_GET, []() {
+		LOGL("GET online nodes list");
+		String json;
+		json.reserve(128);
+
+		json = "[";
+		for (size_t i=0; i<Net::nodesCount; i++) {
+			json += "{\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\"}";
+			if (i < Net::nodesCount-1) json += ",";
+		}
+		json += "]";
+
+		server.send(200, "application/json", json);
+	});
+	server.on("/nodes", HTTP_POST, []() {
+		LOGL("POST online nodes action");
+		if (server.hasArg("select")) {
+			Net::wifiConnect("SDC_" + server.arg("select"), "11111111");
+		}
+		replyOK();
+	});
 
 	server.on("/status", HTTP_GET, []() {
 		LOGL("handleStatus");
@@ -208,7 +213,7 @@ void setup(void)
 				LED::begin();
 			}
 		}
-		server.send(200, "text/plain", "OK");
+		replyOK();
 	});
 
 	server.on("/color", HTTP_POST, []() {
@@ -228,7 +233,7 @@ void setup(void)
 		}
 		App::save();
 		LED::begin();
-		server.send(200, "text/plain", "OK");
+		replyOK();
 	});
 
 	server.on("/command", HTTP_POST, []() {
@@ -270,9 +275,8 @@ void setup(void)
 				LED::end();
 				Net::sendSync();
 				replyOK();
-			} else if (cmd == "probe") {
-				Net::sendProbe();
-				Net::sendSync();
+			} else if (cmd == "ping") {
+				Net::sendPing();
 				replyOK();
 			} else {
 				replyBadRequest("Unknown command: " + cmd);
@@ -468,12 +472,49 @@ void setup(void)
 			LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 		} else if (upload.status == UPLOAD_FILE_END) {
 			if (uploadFile) {
-				uploadFile.close();
+				LOGL(WiFi.status());
+				if (WiFi.status() == WL_CONNECTED) {
+					const String url = "http://" + WiFi.gatewayIP().toString() + "/edit";
+					const String path = uploadFile.fullName();
+					uploadFile.close();
+					uploadFile = App::fs->open(path, "r");
+					String body = "------WebKitFormBoundaryZsEgKezFz4SNJZFs\n";
+					body += "Content-Disposition: form-data; name=\"data\"; filename=\"" + path + "\"\n";
+					body += "Content-Type: " + mime::getContentType(path) + "\n\n\n";
+					body += "------WebKitFormBoundaryZsEgKezFz4SNJZFs--" + uploadFile.readString();
+
+					LOGL(url);
+					LOGL(body);
+					http.begin(client, url);
+					http.addHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryZsEgKezFz4SNJZFs");
+					int status = http.POST(body);
+					
+					if (status > 0) {
+					// HTTP header has been send and Server response header has been handled
+					LOGD("[HTTP] POST... code: %d\n", status);
+
+					// file found at server
+					if (status == HTTP_CODE_OK) {
+						const String& payload = http.getString();
+						LOGL("received payload:\n<<");
+						LOGL(payload);
+						LOGL(">>");
+					}
+					} else {
+						LOGD("[HTTP] POST... failed, error: %s\n", http.errorToString(status).c_str());
+					}
+
+					http.end();
+				}
+				else uploadFile.close();
 			}
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
 
 			if (server.hasArg("sync")) {
-				Net::sendFile(upload.filename);
+				if (server.hasArg("target"))
+					Net::sendFile(upload.filename, server.arg("target"));
+				else
+					Net::sendFile(upload.filename);
 			}
 		}
 	});
@@ -483,7 +524,7 @@ void setup(void)
 			return replyServerError(FPSTR(FS_INIT_ERROR));
 		}
 
-		String uri = ESP8266WebServer::urlDecode(server.uri()); // required to read paths with blanks
+		String uri = ESP8266WebServer::urlDecode(server.uri());	 // required to read paths with blanks
 
 		if (handleFileRead(uri)) {
 			return;
@@ -519,10 +560,9 @@ void setup(void)
 	LOGL("HTTP server started");
 }
 
-void loop(void)
-{
+void loop(void) {
 	server.handleClient();
 }
-};
+};	// namespace Api
 
 #endif

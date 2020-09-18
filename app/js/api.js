@@ -22,7 +22,7 @@ global.request = function request(method = 'POST', path = '', args = {}, body = 
 		req.addEventListener('error', reject)
 	})
 }
-global.uploadFile = function uploadFile(path, file) {
+global.uploadFile = function uploadFile(path, file, sync = true, target = null) {
 	if (typeof file === 'string') file = new Blob([file])
 	console.warn(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
 	return new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ global.uploadFile = function uploadFile(path, file) {
 		const req = new XMLHttpRequest()
 		form.append('filename', path)
 		form.append('file', file)
-		req.open('POST', 'edit?sync', true)
+		req.open('POST', `edit?${sync ? 'sync' : 'nosync'}&${target ? `target=${target}` : ''}`, true)
 		req.send(form)
 		req.onloadend = (e) => {
 			console.append(req.status, req.statusText)
@@ -99,7 +99,6 @@ global.resetShow = function resetShow() {
 	SHOWS.length = 0
 	render()
 	return stopShow()
-		.then(saveAudioConfig)
 		.then(clearLightShow)
 }
 global.saveShow = function saveShow() {

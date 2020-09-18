@@ -1,0 +1,7 @@
+#!/bin/bash
+
+esptool.py --port /dev/cu.wchusbserial1410 --baud 921600 write_flash 0x00000000 firmware/firmware.bin 0x00100000 firmware/littlefs.bin
+esptool.py --port /dev/cu.wchusbserial1420 --baud 921600 write_flash 0x00000000 firmware/firmware.bin 0x00100000 firmware/littlefs.bin
+# esptool.py --port /dev/cu.SLAB_USBtoUART* --baud 921600 write_flash 0x00000000 firmware/firmware.bin 0x00100000 firmware/littlefs.bin
+
+exit

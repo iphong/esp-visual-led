@@ -47,6 +47,7 @@ global.handleChange = function handleChange(e) {
 		if (e.type === 'change') {
 			post('/color', Object.assign({ segment: CONFIG.segment }, color.rgb))
 		}
+		
 	} else if (e.target.matches('input[data-group="audio"]')) {
 		const { key } = e.target.dataset
 		const value = e.target.value

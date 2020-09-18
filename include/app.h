@@ -7,7 +7,7 @@
 #ifndef __APP_H__
 #define __APP_H__
 
-// #define ENABLE_DEBUG_LOGS
+#define ENABLE_DEBUG_LOGS
 
 #ifdef ENABLE_DEBUG_LOGS
 #define LOG(x...) Serial.print(x)
@@ -20,7 +20,7 @@
 #endif
 
 #define HEADER '$'
-#define VERSION 9
+#define VERSION 1
 
 namespace App {
 enum Mode {
@@ -42,8 +42,7 @@ struct Color {
 };
 struct Output {
 	Effect type = SOLID;
-	Color color = {255, 0, 0};
-	Color color2 = {0, 0, 255};
+	Color color = {0, 0, 0};
 	u8 ratio;
 	u32 period;
 	u32 spacing;
@@ -111,25 +110,31 @@ void saveChannel(u8 channel) {
 	save();
 }
 void saveMaster(u8* addr) {
-	memcpy(data.master, addr, 6);
+	if (addr == NULL) {
+		memcpy(data.master, MeshRC::broadcast, 6);
+	} else {
+		memcpy(data.master, addr, 6);
+	}
 	save();
 }
 void setMode(Mode newMode) {
 	mode = newMode;
-	if (newMode == BIND) startBlink(200);
-	else stopBlink();
-	LOGD("mode = %i\n", App::mode);
 }
 
 void saveData() {
 	EEPROM.begin(512);
+	uint8_t crc = 255;
 	char buf[sizeof(data)];
 	memcpy(buf, &data, sizeof(data));
 	LOG("Saving config ... [ ");
-	for (size_t pos = 0; pos < sizeof(data); pos++) {
+	size_t pos = 0;
+	while (pos < sizeof(data)) {
+		crc += buf[pos];
 		EEPROM.write(pos, buf[pos]);
 		Serial.printf("%02X ", buf[pos]);
+		pos++;
 	}
+	EEPROM.write(pos, crc);
 	if (EEPROM.commit())
 		LOGL("] - OK");
 	else
@@ -139,12 +144,14 @@ void saveData() {
 
 void loadData() {
 	size_t pos = 0;
+	uint8_t crc = 255;
 	Data tmp;
 	char buf[sizeof(tmp)];
 	EEPROM.begin(512);
 	LOG("Loading config ... [ ");
 	while (pos < sizeof(tmp)) {
 		buf[pos] = EEPROM.read(pos);
+		crc += buf[pos];
 		Serial.printf("%02X ", buf[pos]);
 		pos++;
 	}

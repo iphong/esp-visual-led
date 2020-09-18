@@ -1,5 +1,6 @@
 const path = require('path')
 const exec = require('child_process').exec
+const spawn = require('child_process').spawn
 const fs = require('fs')
 
 const APP_PATH = path.resolve(__dirname, '../app')
@@ -8,8 +9,10 @@ const REMOTE_URL = '10.1.1.1/edit'
 // const REMOTE_URL = '10.0.0.131/edit'
 // const REMOTE_URL = '10.0.0.162/edit'
 
+exec('webpack -p -w')
+
 fs.watch(APP_PATH, { recursive: true, persistent: true }, (action, filename) => {
-	if (path.basename(filename).startsWith('.')) return
+	if (path.basename(filename).startsWith('.') || filename.startsWith('js')) return
 	if (action == 'change') {
 		const src = path.join(APP_PATH, filename)
 		const dst = path.join(DATA_PATH, filename)
