@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 
@@ -139,9 +139,9 @@ void setup(void) {
 		json.reserve(128);
 
 		json = "[";
-		for (size_t i=0; i<Net::nodesCount; i++) {
+		for (size_t i = 0; i < Net::nodesCount; i++) {
 			json += "{\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\"}";
-			if (i < Net::nodesCount-1) json += ",";
+			if (i < Net::nodesCount - 1) json += ",";
 		}
 		json += "]";
 
@@ -150,7 +150,7 @@ void setup(void) {
 	server.on("/nodes", HTTP_POST, []() {
 		LOGL("POST online nodes action");
 		if (server.hasArg("select")) {
-			Net::wifiConnect("SDC_" + server.arg("select"), "11111111");
+			// Net::wifiConnect("SDC_" + server.arg("select"), "11111111");
 		}
 		replyOK();
 	});
@@ -185,8 +185,8 @@ void setup(void) {
 
 	server.on("/color", HTTP_GET, []() {
 		LOGL("handleColor");
-		App::Color* a = &App::data.a.color;
-		App::Color* b = &App::data.b.color;
+		App::RGB* a = &App::data.a.color;
+		App::RGB* b = &App::data.b.color;
 		String value1 = String(a->r) + "," + String(a->g) + "," + String(a->b);
 		String value2 = String(b->r) + "," + String(b->g) + "," + String(b->b);
 		String json = "{ \"a\": [" + value1 + "], \"b\": [" + value2 + "] }";
@@ -258,25 +258,27 @@ void setup(void) {
 					replyBadRequest("Missing argument: time ");
 				}
 			} else if (cmd == "start") {
-				LED::begin();
-				Net::sendSync();
 				replyOK();
-			} else if (cmd == "toggle") {
-				LED::toggle();
-				Net::sendSync();
-				replyOK();
-			} else if (cmd == "pause") {
-				LED::pause();
-				Net::sendSync();
-				replyOK();
-			} else if (cmd == "resume") {
-				LED::resume();
-				Net::sendSync();
-				replyOK();
-			} else if (cmd == "end") {
 				LED::end();
 				Net::sendSync();
+				LED::begin();
+				Net::sendSync();
+			} else if (cmd == "toggle") {
 				replyOK();
+				LED::toggle();
+				Net::sendSync();
+			} else if (cmd == "pause") {
+				replyOK();
+				LED::pause();
+				Net::sendSync();
+			} else if (cmd == "resume") {
+				replyOK();
+				LED::resume();
+				Net::sendSync();
+			} else if (cmd == "end") {
+				replyOK();
+				LED::end();
+				Net::sendSync();
 			} else if (cmd == "ping") {
 				Net::sendPing();
 				replyOK();
@@ -496,34 +498,36 @@ void setup(void) {
 					http.begin(client, url);
 					http.addHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryZsEgKezFz4SNJZFs");
 					int status = http.POST(body);
-					
-					if (status > 0) {
-					// HTTP header has been send and Server response header has been handled
-					LOGD("[HTTP] POST... code: %d\n", status);
 
-					// file found at server
-					if (status == HTTP_CODE_OK) {
-						const String& payload = http.getString();
-						LOGL("received payload:\n<<");
-						LOGL(payload);
-						LOGL(">>");
-					}
+					if (status > 0) {
+						// HTTP header has been send and Server response header has been handled
+						LOGD("[HTTP] POST... code: %d\n", status);
+
+						// file found at server
+						if (status == HTTP_CODE_OK) {
+							const String& payload = http.getString();
+							LOGL("received payload:\n<<");
+							LOGL(payload);
+							LOGL(">>");
+						}
 					} else {
 						LOGD("[HTTP] POST... failed, error: %s\n", http.errorToString(status).c_str());
 					}
 
 					http.end();
-				}
-				else uploadFile.close();
+				} else
+					uploadFile.close();
 			}
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
 
+#ifdef MASTER
 			if (server.hasArg("sync")) {
 				if (server.hasArg("target"))
 					Net::sendFile(upload.filename, server.arg("target"));
 				else
 					Net::sendFile(upload.filename);
 			}
+#endif
 		}
 	});
 

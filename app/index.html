@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <title>SDC LED TECHNOLOGY</title>
-<meta charset="UTF-8"/>
+<meta charset="UTF-8" />
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LED">
@@ -10,8 +10,10 @@
 <link rel="stylesheet" href="css/app.css">
 
 <div hidden>
-	<input type="file" id="select-file"/>
-	<audio id="player" loop></audio>
+	<input type="file" id="select-file" />
+
+	<audio id="player" controls loop></audio>
+
 </div>
 <header>
 	<grid class="header">
@@ -29,6 +31,7 @@
 		</grid>
 	</grid>
 </header>
+
 <main class="tabs">
 	<section class="tab" data-tab="1">
 		<grid class="list">
@@ -40,34 +43,34 @@
 		<grid class="list">
 			<grid class="item color-slider">
 				<label>R</label>
-				<input type="range" min="0" max="255" step="1" data-key="r" data-group="rgb"/>
+				<input type="range" min="0" max="255" step="1" data-key="r" data-group="rgb" />
 				<span>255</span>
 			</grid>
 			<grid class="item color-slider">
 				<label>G</label>
-				<input type="range" min="0" max="255" step="1" data-key="g" data-group="rgb"/>
+				<input type="range" min="0" max="255" step="1" data-key="g" data-group="rgb" />
 				<span>255</span>
 			</grid>
 			<grid class="item color-slider">
 				<label>B</label>
-				<input type="range" min="0" max="255" step="1" data-key="b" data-group="rgb"/>
+				<input type="range" min="0" max="255" step="1" data-key="b" data-group="rgb" />
 				<span>255</span>
 			</grid>
 		</grid>
 		<grid class="list">
 			<grid class="item color-slider">
 				<label>H</label>
-				<input type="range" min="0" max="1" step="0.01" data-key="h" data-group="hsl"/>
+				<input type="range" min="0" max="1" step="0.01" data-key="h" data-group="hsl" />
 				<span>255</span>
 			</grid>
 			<grid class="item color-slider">
 				<label>S</label>
-				<input type="range" min="0" max="1" step="0.01" data-key="s" data-group="hsl"/>
+				<input type="range" min="0" max="1" step="0.01" data-key="s" data-group="hsl" />
 				<span>1.00</span>
 			</grid>
 			<grid class="item color-slider">
 				<label>L</label>
-				<input type="range" min="0" max="1" step="0.01" data-key="l" data-group="hsl"/>
+				<input type="range" min="0" max="1" step="0.01" data-key="l" data-group="hsl" />
 				<span>1.00</span>
 			</grid>
 		</grid>
@@ -75,6 +78,10 @@
 
 	<section class="tab" data-tab="2">
 
+		<grid class="two">
+			<button data-action="show-file-select-dialog" class="large">Light</button>
+			<button data-action="show-file-select-dialog"  class="large">Music</button>
+		</grid>
 		<grid class="four">
 			<button data-command="start">Start</button>
 			<button data-command="end">Stop</button>
@@ -90,9 +97,6 @@
 		</grid>
 
 		<grid>
-			<button data-action="show-file-select-dialog" class="large">
-				Import Light Show
-			</button>
 			<grid class="two">
 				<button data-command="sync">Sync</button>
 				<button data-command="pair">Pair</button>

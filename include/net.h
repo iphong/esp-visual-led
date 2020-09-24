@@ -13,11 +13,11 @@
 
 namespace Net {
 
-bool shouldSendAllShow;
-bool shouldSendCurrentShow;
-bool shouldSendSync;
+Ticker timeSyncInterrupt;
+
 bool receivingFiles;
 bool sendingFiles;
+bool IS_WIFI_ON;
 
 String staSSID;
 String staPSK;
@@ -31,13 +31,23 @@ Dir dir;
 File file;
 String tmpName = "/tmp/receiving";
 String name = "";
-
 u8 broadcastWildCard[] = "******";
-
 u8 crc = 0x00;
 
-// const byte DNS_PORT = 53;
-// DNSServer dnsServer;
+void wifiOn() {
+	IS_WIFI_ON = true;
+	WiFi.mode(WIFI_AP_STA);
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
+	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
+}
+
+void wifiOff() {
+	IS_WIFI_ON = false;
+	WiFi.softAPdisconnect();
+}
+void wifiToggle() {
+	IS_WIFI_ON ? wifiOff() : wifiOn();
+}
 
 struct NodeInfo {
 	char id[6];
@@ -53,35 +63,42 @@ struct SyncData {
 u8 syncBuffer[32];
 void sendSync() {
 #ifdef MASTER
-	if (sendingFiles || App::isPairing())
-		return;
-	SyncData tmp = {
-		LED::getTime(),
-		App::data.show,
-		App::data.brightness,
-		LED::paused,
-		LED::ended};
-	memcpy(syncBuffer, &tmp, sizeof(tmp));
-	MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
-	MeshRC::wait();
+	if (!sendingFiles && !App::isPairing()) {
+		SyncData tmp = {
+			LED::getTime(),
+			App::data.show,
+			App::data.brightness,
+			LED::paused,
+			LED::ended};
+		memcpy(syncBuffer, &tmp, sizeof(tmp));
+		MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
+		MeshRC::wait();
+	}
 #endif
 }
 void recvSync(u8* data, u8 size) {
-	if (receivingFiles || App::isPairing())
-		return;
-	SyncData tmp;
-	memcpy(&tmp, data, size);
-	LOGD("Sync received: %u %i %i %u\n", tmp.show, tmp.ended, tmp.paused,
-		 tmp.time);
-	App::data.show = tmp.show;
-	if (tmp.ended) {
-		LED::end();
-	} else if (tmp.paused) {
-		LED::pause();
-	} else {
-		LED::resume();
-		LED::setTime(tmp.time);
+#ifndef MASTER
+	if (!receivingFiles && !App::isPairing()) {
+		SyncData tmp;
+		memcpy(&tmp, data, size);
+		LOGD("Sync received: %u %i %i %u\n", tmp.show, tmp.ended, tmp.paused,
+			 tmp.time);
+		if (tmp.show == 0 && App::data.show != 0) {
+			LED::end();
+		}
+		App::data.show = tmp.show;
+		if (tmp.show > 0) {
+			if (tmp.ended) {
+				LED::end();
+			} else if (tmp.paused) {
+				LED::pause();
+			} else {
+				LED::resume();
+				LED::setTime(tmp.time);
+			}
+		}
 	}
+#endif
 }
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
@@ -89,12 +106,12 @@ void sendPing() {
 	LOGL("sent ping");
 	MeshRC::send("#>PING");
 }
-void recvPing(u8* data, u8 size) {
+void recvPing() {
 	LOGL("received ping");
-	MeshRC::send("#>NODE" + String(App::chipID));
+	MeshRC::send("#>PONG" + String(App::chipID));
 }
-void recvNode(u8* data, u8 size) {
-	LOGL("received node");
+void recvPong(u8* data, u8 size) {
+	LOGL("received pong");
 	bool isNew = true;
 	NodeInfo tmp;
 	memcpy(&tmp, data, size);
@@ -109,19 +126,28 @@ void recvNode(u8* data, u8 size) {
 	}
 }
 
-// Master send pair message to pending slaves
 void sendPair(u8 channel = 255) {
 	if (channel != 255) {
 		LOGD("Sending pair with channel: %u\n", channel);
-		MeshRC::send("#>PAIR@", &channel, 1);
+		MeshRC::send("#>PAIR", &channel, 1);
 	} else {
 		LOGD("Sending pair without channel\n");
-		MeshRC::send("#>PAIR*");
+		MeshRC::send("#>PAIR");
 	}
 }
 
-u32 delayUntil;
+void recvPair(u8* data, u8 size) {
+	if (App::isPairing() && !receivingFiles) {
+		App::stopBlink();
+		if (size >= 1) App::saveChannel(data[0]);
+		App::saveMaster(MeshRC::sender);
+		App::setMode(App::SHOW);
+		App::lED_LOW();
+	}
+}
+
 void waitDelay(u32 time) {
+	static u32 delayUntil;
 	while (MeshRC::sending)
 		yield();  // Wait while sending
 	delayUntil = millis() + time;
@@ -130,7 +156,7 @@ void waitDelay(u32 time) {
 }
 
 void sendFile(String path, String targetID = "******") {
-	LOGD("Send file : %s -- ", path.c_str());
+	LOGD("send file: %s -- ", path.c_str());
 	if (!App::fs->exists(path)) {
 		LOGD("NOT EXISTS\n");
 		return;
@@ -140,7 +166,7 @@ void sendFile(String path, String targetID = "******") {
 	LOGD("OK\n");
 	file = App::fs->open(path, "r");
 	crc = 0x00;
-	for (auto i=0; i<1; i++) {
+	for (auto i = 0; i < 1; i++) {
 		MeshRC::send("#>FILE^" + targetID + String(file.fullName()));
 		waitDelay(1000);
 	}
@@ -157,7 +183,7 @@ void sendFile(String path, String targetID = "******") {
 			LOGD("%02X ", data[i + 2]);
 		}
 		LOGD("\n");
-		for (auto i=0; i<1; i++) {
+		for (auto i = 0; i < 1; i++) {
 			MeshRC::send("#>FILE+", data, sizeof(data));
 			App::lED_BLINK();
 			waitDelay(100);
@@ -165,7 +191,7 @@ void sendFile(String path, String targetID = "******") {
 	}
 
 	file.close();
-	for (auto i=0; i<1; i++) {
+	for (auto i = 0; i < 1; i++) {
 		MeshRC::send("#>FILE$" + String((const char)crc));
 		waitDelay(500);
 	}
@@ -175,7 +201,7 @@ void sendFile(String path, String targetID = "******") {
 }
 
 void sendDir(String path) {
-	LOGD("Send DIR : %s\n", path.c_str());
+	LOGD("Send DIR: %s\n", path.c_str());
 	dir = App::fs->openDir(path);
 	while (dir.next()) {
 		if (dir.isFile()) {
@@ -186,146 +212,141 @@ void sendDir(String path) {
 	}
 }
 
-bool IS_WIFI_ON;
-void wifiOn() {
-	IS_WIFI_ON = true;
-	WiFi.softAPConfig(apAddr, apAddr, apMask);
-	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
+void recvFile(u8* buf, u8 len) {
+	if (!App::isPaired()) return;
+	char type = buf[0];
+	u8* data = &buf[1];
+	u8 size = len - 1;
+	switch (type) {
+		// FILE STREAM HEADER
+		case '^':
+			if (MeshRC::equals(data, (u8*)App::chipID, 6) || MeshRC::equals(data, broadcastWildCard, 6)) {
+				receivingFiles = true;
+				LOGD("My file\n");
+				LED::end();
+				App::stopBlink();
+				App::lED_LOW();
+				name = "";
+				crc = 0x00;
+				for (auto i = 6; i < size; i++) {
+					name.concat((const char)data[i]);
+				}
+				if (file)
+					file.close();
+				file = App::fs->open(tmpName, "w");
+				file.write((const char*)0);
+				file.seek(0);
+				if (!file) {
+					LOGL(F("CREATE FAILED"));
+					receivingFiles = false;
+				} else {
+					LOGD("\nreceiving file: %s\n", name.c_str());
+				}
+			}
+			break;
+
+		// FILE STREAM DATA
+		case '+':
+			if (file) {
+				App::lED_BLINK();
+				u32 tmr = millis();
+				u16 pos = data[0] << 8 | data[1];
+				LOGD("%04X :: %u bytes :: ", pos, size);
+				for (auto i = 2; i < size; i++) {
+					crc += data[i];
+					file.write(data[i]);
+					// LOGD("%02X ", data[i]);
+				}
+				LOG(millis() - tmr);
+				LOGL(" ms");
+			} else {
+				receivingFiles = false;
+			}
+			break;
+
+		// FILE STREAM END
+		case '$':
+			if (receivingFiles && file) {
+				App::lED_LOW();
+				LOGD("EOF %02X = %02X\n", crc, data[0]);
+				file.close();
+				if (data[0] == crc) {
+					if (App::fs->exists(name)) {
+						App::fs->remove(name);
+					}
+					App::fs->rename(tmpName, name);
+					if (App::fs->exists(tmpName)) {
+						App::fs->remove(tmpName);
+					}
+				}
+			}
+			receivingFiles = false;
+			break;
+		default:
+			break;
+	}
 }
 
-void wifiOff() {
-	IS_WIFI_ON = false;
-	WiFi.softAPdisconnect();
+void handleRestartMsg() {
+	ESP.restart();
 }
-void wifiToggle() {
-	IS_WIFI_ON ? wifiOff() : wifiOn();
-}
-void wifiConnect(String ssid, String pass) {
-	WiFi.begin(ssid, pass);
-}
-void wifiDisconnect() {
-	WiFi.disconnect();
+
+void handleWifiMsg(u8* data, u8 size) {
+	if (size) {
+		u8 turnOn = data[0];
+		if (turnOn)
+			wifiOn();
+		else
+			wifiOff();
+	}
 }
 
 void setup() {
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.setAutoConnect(true);
-	WiFi.setAutoReconnect(true);
-
+#ifdef MASTER
 	wifiOn();
-	wifiDisconnect();
+#else
+	wifiOff();
+#endif
 
-	ArduinoOTA.onStart([]() { App::startBlink(100); });
-	ArduinoOTA.onEnd([]() { App::stopBlink(); });
+	ArduinoOTA.onStart([]() {
+		LED::end();
+		App::lED_LOW();
+	});
+	ArduinoOTA.onProgress([](int percent, int total) {
+		App::lED_BLINK();
+	});
+	ArduinoOTA.onEnd([]() {
+		App::lED_HIGH();
+	});
+	ArduinoOTA.onError([](ota_error_t err) {
+		ESP.restart();
+	});
 	ArduinoOTA.begin();
 
-	MeshRC::on("#>SYNC", recvSync);
-	MeshRC::on("#>PING", recvPing);
-	MeshRC::on("#>NODE", recvNode);
-	MeshRC::on("#>PAIR*", [](u8* data, u8 size) {
-		if (receivingFiles || !App::isPairing())
-			return;
-		App::saveMaster(MeshRC::sender);
-		App::setMode(App::SHOW);
-	});
+	MeshRC::on("#>PING", Net::recvPing);
+	MeshRC::on("#>PONG", Net::recvPong);
+	MeshRC::on("#>SYNC", Net::recvSync);
+	MeshRC::on("#>PAIR", Net::recvPair);
+	MeshRC::on("#>FILE", Net::recvFile);
 
-	MeshRC::on("#>PAIR@", [](u8* data, u8 size) {
-		if (receivingFiles || !App::isPairing())
-			return;
-		App::saveChannel(data[0]);
-		App::saveMaster(MeshRC::sender);
-		App::setMode(App::SHOW);
-	});
+	MeshRC::on("#>RESTART", handleRestartMsg);
+	MeshRC::on("#>WIFI", handleWifiMsg);
 
-	MeshRC::on("#>FILE^", [](u8* data, u8 size) {
-		if (!App::isPaired()) return;
-		if (receivingFiles) return;
-		if (MeshRC::equals(data, (u8*)App::chipID, 6) || MeshRC::equals(data, broadcastWildCard, 6)) {
-			receivingFiles = true;
-			LOGD("My file\n");
-			LED::end();
-			App::startBlink(50);
-			name = "";
-			crc = 0x00;
-			for (auto i = 6; i < size; i++) {
-				name.concat((const char)data[i]);
-			}
-			if (file)
-				file.close();
-			file = App::fs->open(tmpName, "w");
-			file.write((const char*)0);
-			file.seek(0);
-			if (!file) {
-				LOGL(F("CREATE FAILED"));
-				receivingFiles = false;
-			} else {
-				LOGD("\nReceiving file: %s\n", name.c_str());
-			}
-		}
-	});
+	MeshRC::on("#>BEGIN", LED::begin);
+	MeshRC::on("#>PAUSE", LED::pause);
+	MeshRC::on("#>RESUME", LED::resume);
+	MeshRC::on("#>TOGGLE", LED::toggle);
+	MeshRC::on("#>END", LED::end);
 
-	static bool savingSegment = false;
-	MeshRC::on("#>FILE+", [](u8* data, u8 size) {
-		if (!App::isPaired()) return;
-		if (savingSegment) return;
-		savingSegment = true;
-		if (file) {
-			u32 tmr = millis();
-			u16 pos = data[0] << 8 | data[1];
-			LOGD("%04X :: %u bytes :: ", pos, size);
-			for (auto i = 2; i < size; i++) {
-				crc += data[i];
-				file.write(data[i]);
-				// LOGD("%02X ", data[i]);
-			}
-			LOG(millis() - tmr);
-			LOGL(" ms");
-		}
-		savingSegment = false;
-	});
-
-	MeshRC::on("#>FILE$", [](u8* data, u8 size) {
-		if (!App::isPaired()) return;
-		if (!receivingFiles) return;
-		receivingFiles = false;
-		if (file) {
-			App::stopBlink();
-			LOGD("%02X %02X\n", crc, data[0]);
-			file.close();
-			if (data[0] == crc) {
-				if (App::fs->exists(name)) {
-					App::fs->remove(name);
-				}
-				App::fs->rename(tmpName, name);
-				if (App::fs->exists(tmpName)) {
-					App::fs->remove(tmpName);
-				}
-			}		
-			LOGL("EOF.\n");
-		}
-	});
 	MeshRC::begin();
+#ifdef MASTER
+	timeSyncInterrupt.attach_ms_scheduled_accurate(1000, sendSync);
+#endif
 }
 
 void loop() {
 	// MDNS.update();
 	ArduinoOTA.handle();
-	if (shouldSendSync) {
-		sendSync();
-		LOGD("Sync sent.\n");
-		shouldSendSync = false;
-	}
-	if (shouldSendAllShow) {
-		LED::end();
-		sendDir("/show");
-		shouldSendAllShow = false;
-	}
-	if (shouldSendCurrentShow) {
-		LED::end();
-		sendFile("/show/1A.lsb");
-		sendFile("/show/1B.lsb");
-		shouldSendCurrentShow = false;
-	}
 }
 }  // namespace Net
 

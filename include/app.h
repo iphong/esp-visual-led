@@ -12,35 +12,26 @@
 #define LOGD(x...) Serial.printf(x)
 #define LOGL(x...) Serial.println(x)
 #else
-#define LOG(x...) Serial.write('.')
-#define LOGL(x...) Serial.write('.')
-#define LOGD(x...) Serial.write('.')
+#define LOG(x...) Serial.print("")
+#define LOGL(x...) Serial.print("")
+#define LOGD(x...) Serial.print("")
 #endif
 
 #define HEADER '$'
-#define VERSION 1
+#define VERSION 2
 
 namespace App {
 enum Mode {
 	SHOW = 0,
 	BIND = 1
 };
-enum Effect {
-	SOLID = 0,
-	FLASH = 1,
-	PULSE = 2,
-	DOTS = 3,
-	RAINBOW = 4,
-	GRADIENT = 5
-};
-struct Color {
+struct RGB {
 	u8 r;
 	u8 g;
 	u8 b;
 };
 struct Output {
-	Effect type = SOLID;
-	Color color = {0, 0, 0};
+	RGB color = {0, 0, 0};
 	u8 ratio;
 	u32 period;
 	u32 spacing;
@@ -68,6 +59,8 @@ bool sdOK;
 
 u32 lastChanged;
 bool shouldSave;
+
+
 static void lED_HIGH() {
 	digitalWrite(LED_PIN, 1);
 }

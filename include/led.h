@@ -2,24 +2,14 @@
 #include "Ticker.h"
 #include "espnow.h"
 
-// #define R1_PIN D6
-// #define G1_PIN D7
-// #define B1_PIN D8
-
-// #define R2_PIN D1
-// #define G2_PIN D2
-// #define B2_PIN D4
-
-// #define INVERTED_RGB
-
-#ifndef __LIGHT_H__
-#define __LIGHT_H__
+#ifndef __LED_H__
+#define __LED_H__
 
 namespace LED {
 
+bool repeat = true;
 bool paused = false;
 bool ended = true;
-bool repeat = true;
 
 void pause() {
 	paused = true;
@@ -55,7 +45,7 @@ class RGB {
 		b = c->b;
 	}
 
-	void set(App::Color* c) {
+	void set(App::RGB* c) {
 		r = c->r;
 		g = c->g;
 		b = c->b;
@@ -157,15 +147,21 @@ class Show {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
 			ratio = (float)lapsed / frame->transition;
-			
-			if (frame->r > lastColor.r) color.r = lastColor.r + (frame->r - lastColor.r) * ratio;
-			else color.r = lastColor.r - (lastColor.r - frame->r) * ratio;
-			
-			if (frame->g > lastColor.g) color.g = lastColor.g + (frame->g - lastColor.g) * ratio;
-			else color.g = lastColor.g - (lastColor.g - frame->g) * ratio;
-			
-			if (frame->b > lastColor.b) color.b = lastColor.b + (frame->b - lastColor.b) * ratio;
-			else color.b = lastColor.b - (lastColor.b - frame->b) * ratio;
+
+			if (frame->r > lastColor.r)
+				color.r = lastColor.r + (frame->r - lastColor.r) * ratio;
+			else
+				color.r = lastColor.r - (lastColor.r - frame->r) * ratio;
+
+			if (frame->g > lastColor.g)
+				color.g = lastColor.g + (frame->g - lastColor.g) * ratio;
+			else
+				color.g = lastColor.g - (lastColor.g - frame->g) * ratio;
+
+			if (frame->b > lastColor.b)
+				color.b = lastColor.b + (frame->b - lastColor.b) * ratio;
+			else
+				color.b = lastColor.b - (lastColor.b - frame->b) * ratio;
 
 			// LOGD("%f %u %u %u\n", ratio, color.r, color.g, color.b);
 
@@ -191,16 +187,15 @@ class Show {
 		LOGD("Play time: %u, sync time: %u\n", playTime, time);
 		if (!file || !time || paused)
 			begin();
-		if (playTime > time + 10) {
+		if (playTime > time + 20) {
 			holdTime = playTime - time;
-		} else if (playTime < time - 10) {
+		} else if (playTime < time - 20) {
 			while (playTime < time) {
 				if (!tick(false))
 					continue;
 			}
 		}
 	}
-
 	// true = playing
 	// false = ended
 	bool tick(bool shouldSetColor = true) {
@@ -217,7 +212,7 @@ class Show {
 				break;
 			case LOOP_FRAME:
 				if (loopTime == 0) {
-					LOGD("\n * ");
+					// LOGD("\n * ");
 					loopStart = file.position();
 					loopFrame = next();
 				}
@@ -225,7 +220,7 @@ class Show {
 					setColor(&loopFrame, loopTime - loopFrame.start);
 				}
 				if (++loopTime - loopFrame.start >= loopFrame.duration) {
-					LOGD(" * ");
+					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
 						lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
 					}
@@ -238,7 +233,7 @@ class Show {
 				}
 				break;
 			case END_FRAME:
-				LOGD("\nended");
+				// LOGD("\nended");
 				if (repeat) {
 					playTime = 0;
 					loopTime = 0;
@@ -251,7 +246,7 @@ class Show {
 				return false;
 		}
 		if (++playTime - frame.start >= frame.duration && frame.type) {
-			LOGD("\nframe");
+			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
 				loopTime = 0;
 				file.seek(loopEnd);
@@ -265,6 +260,7 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
+#ifndef MASTER
 #ifdef INVERTED_RGB
 		analogWrite(r_pin, 255 - r);
 		analogWrite(g_pin, 255 - g);
@@ -273,6 +269,7 @@ class Show {
 		analogWrite(r_pin, r);
 		analogWrite(g_pin, g);
 		analogWrite(b_pin, b);
+#endif
 #endif
 	}
 
@@ -313,17 +310,21 @@ u32 getTime() {
 }
 
 void setTime(u32 time) {
+#ifndef MASTER
 	if (App::data.show) {
 		A.setTime(time);
 		B.setTime(time);
 	}
+#endif
 }
 
 void setup() {
+#ifndef MASTER
 	analogWriteFreq(1000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
+#endif
 }
 
 void end() {
@@ -339,6 +340,12 @@ void begin() {
 	A.begin();
 	B.begin();
 }
+bool isRunning() {
+	return !ended;
+}
+bool isPaused() {
+	return paused;
+}
 }  // namespace LED
 
-#endif	// __LIGHT_H__
+#endif

@@ -94,9 +94,9 @@ global.saveLightShow = function saveLightShow(id = CONFIG.show, data = AUDIO) {
 global.clearLightShow = function clearLightShow(id = CONFIG.show, data = AUDIO) {
 	return new Promise(resolve => {
 		return request('DELETE', `show/${CONFIG.show}.json`)
-			.then(() => request('DELETE', `/show/${CONFIG.show}A.lsb`))
-			.then(() => request('DELETE', `/show/${CONFIG.show}B.lsb`))
-			.then(resolve)
+			.finally(() => request('DELETE', `/show/${CONFIG.show}A.lsb`))
+			.finally(() => request('DELETE', `/show/${CONFIG.show}B.lsb`))
+			.finally(resolve)
 	})
 }
 

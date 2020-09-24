@@ -1,25 +1,18 @@
+#define MESH_RC_DEBUG_ALL_MSG
+
+
 #include <Arduino.h>
 #include <Button.h>
 
-#include "api.h"
 #include "app.h"
+#include "api.h"
 #include "led.h"
 #include "net.h"
+#include "ir.h"
+#include "hmi.h"
 // #include "sd.h"
 
-Ticker app;
 Button btn(BTN_PIN);
-
-WiFiEventHandler connectedHandler = WiFi.onSoftAPModeStationConnected([](WiFiEventSoftAPModeStationConnected e) {
-	LOGL("AP Connected");
-	// App::startBlink(50);
-	Net::sendPing();
-});
-
-WiFiEventHandler disconnectedHandler = WiFi.onSoftAPModeStationDisconnected([](WiFiEventSoftAPModeStationDisconnected e) {
-	LOGL("AP Disonnected");
-	// App::stopBlink();
-});
 
 Button::callback_t buttonPressHandler = [](u8 repeats) {
 	LOGD("Button pressed.\n");
@@ -65,48 +58,37 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 #ifdef MASTER
 			Net::sendPair();
 #else
-			
-			if (App::isPairing()) {
-				App::stopBlink();
-				App::mode = App::SHOW;
-				MeshRC::master = App::data.master;
-			} else {
+			if (!App::isPairing()) {
 				LED::end();
 				App::startBlink(200);
 				App::mode = App::BIND;
 				MeshRC::master = NULL;
+			} else {
+				App::stopBlink();
+				App::mode = App::SHOW;
+				MeshRC::master = App::data.master;
 			}
 			LOGD("mode = %i\n", App::mode);
 #endif
 			break;
 		case 1:
-			LOGD("unpair master\n");
-			LED::end();
-			App::saveMaster(NULL);
-			break;
-		case 4:
 			Net::wifiToggle();
-			break;
-		case 5:
-			LOGD("empty /show directory\n");
-			LED::end();
-			Api::deleteRecursive("/show");
 			break;
 	}
 };
 
 void setup() {
+	sprintf(App::chipID, "%06X", system_get_chip_id());
+
 	Serial.begin(921600);
 
-	sprintf(App::chipID, "%06X", system_get_chip_id());
+	btn.begin();
+	btn.onPress(buttonPressHandler);
+	btn.onPressHold(buttonPressHoldHandler);
 
 	Net::apSSID = "SDC_" + String(App::chipID);
 	Net::apPSK = "11111111";
-	#ifdef MASTER
 	Net::apAddr = {10, 1, 1, 1};
-	#else
-	Net::apAddr = {10, 1, 1, 1};
-	#endif
 	Net::apMask = {255, 255, 255, 0};
 
 	// SD::setup();
@@ -114,20 +96,19 @@ void setup() {
 	LED::setup();
 	Net::setup();
 	Api::setup();
-
-	Net::sendPing();
-
-	app.attach_ms_scheduled_accurate(1000, Net::sendSync);
-
-	btn.begin();
-	btn.onPress(buttonPressHandler);
-	btn.onPressHold(buttonPressHoldHandler);
-
-	LED::begin();
+#ifdef BRIDGE
+	IR::setup();
+#endif
+#ifdef MASTER
+	Hmi::setup();
+#endif
 }
 
 void loop() {
 	App::loop();
 	Api::loop();
 	Net::loop();
+#ifdef MASTER
+	Hmi::loop();
+#endif
 }

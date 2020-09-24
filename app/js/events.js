@@ -1,24 +1,25 @@
 global.handleError = function handleError() {
 	console.error(...arguments)
 }
-global.handleFile = function handleFile(file) {
+global.handleFile = async function handleFile(file) {
 	return new Promise((resolve, reject) => {
 		console.debug('select file: ' + file.name)
 		if (file.name.endsWith('.lsf')) {
-			parseLSF(file).then(fetchData).then(resolve)
+			parseLSF(file).finally(fetchData).finally(resolve)
 		} else if (file.name.endsWith('.ipx')) {
 			// parseIPX(file).then(resolve)
 		} else if (file.type.startsWith('audio')) {
 			stopShow().then(() => {
 				setAttr('#player', 'src', URL.createObjectURL(file))
-				if (!AUDIO || AUDIO.filename !== file.name) {
-					parseAudio(file)
-						.then(saveLightShow)
-						.then(resolve)
-						.then(startShow)
-				} else {
-					startShow().then(resolve)
-				}
+				// startShow().then(resolve)
+				// if (!AUDIO || AUDIO.filename !== file.name) {
+				// 	parseAudio(file)
+				// 		.then(saveLightShow)
+				// 		.then(resolve)
+				// 		.then(startShow)
+				// } else {
+				// 	startShow().then(resolve)
+				// }
 			})
 		} else {
 			console.error('unsupported file format')
@@ -77,7 +78,7 @@ global.handleClick = function handleClick(e) {
 		stopShow().then(() => {
 			post('/config', { show: CONFIG.show }).then(() => {
 				if (!CONFIG.show) startShow()
-				else loadShowData().then(startShow)
+				else loadShowData()
 			})
 		})
 	}

@@ -1,7 +1,7 @@
 const setFrameRegex = /(\t)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
 const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
 const endFrameRegex = /(\t)?([0-9]+)ms: end/i
-global.parseLSF = function parseLSF(file) {
+global.parseLSF = async function parseLSF(file) {
 	const reader = new FileReader()
 	reader.readAsText(file)
 	reader.onload = () => {
@@ -68,14 +68,16 @@ global.parseLSF = function parseLSF(file) {
 						// lines2.push(buf)
 						break
 					case 'loop':
-						lines.push(['L', frame.start, frame.duration].join(' '))
+						if (frame.duration) {
+							lines.push(['L', frame.start, frame.duration].join(' '))
+							convert(frame.frames, true)
+						}
 						// 02   00 00 00 00  00 00 00 00
 						// buf = new Uint8Array(9)
 						// view = new DataView(buf.buffer)
 						// view.setUint8(0, 0x02)
 						// view.setUint32(1, frame.start)
 						// view.setUint32(5, frame.duration)
-						convert(frame.frames, true)
 						// lines2.push(buf)
 						break
 					case 'end':

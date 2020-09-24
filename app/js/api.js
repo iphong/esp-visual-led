@@ -22,7 +22,7 @@ global.request = function request(method = 'POST', path = '', args = {}, body = 
 		req.addEventListener('error', reject)
 	})
 }
-global.uploadFile = function uploadFile(path, file, sync = true, target = null) {
+global.uploadFile = function uploadFile(path, file, sync = false, target = null) {
 	if (typeof file === 'string') file = new Blob([file])
 	console.warn(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
 	return new Promise((resolve, reject) => {
@@ -78,9 +78,11 @@ window.loadShowData = function loadShowData() {
 let fetchTime = Date.now()
 global.fetchData = function fetchData() {
 	fetchTime = Date.now()
-	const next = () => setTimeout(fetchData, 5000 - (Date.now() - fetchTime))
+	const next = () => {
+		// setTimeout(fetchData, 5000 - (Date.now() - fetchTime))
+	}
 	// load hardware configs data
-	get('/status')
+	return get('/status')
 		.then(res => {
 			Object.assign(CONFIG, res)
 			renderShow()
