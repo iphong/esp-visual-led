@@ -17,7 +17,7 @@ Ticker timeSyncInterrupt;
 
 bool receivingFiles;
 bool sendingFiles;
-bool IS_WIFI_ON;
+bool IS_WIFI_ON = false;
 
 String staSSID;
 String staPSK;
@@ -46,7 +46,7 @@ void wifiOff() {
 	WiFi.softAPdisconnect();
 }
 void wifiToggle() {
-	IS_WIFI_ON ? wifiOff() : wifiOn();
+	!IS_WIFI_ON ? wifiOn() : wifiOff();
 }
 
 struct NodeInfo {
@@ -301,27 +301,27 @@ void handleWifiMsg(u8* data, u8 size) {
 	}
 }
 
-void setup() {
-#ifdef MASTER
-	wifiOn();
-#else
-	wifiOff();
-#endif
+bool callbackOnConnect = false;
+struct WiFiConnection {
+	String ssid;
+	String pass;
+};
+void sendWiFiConnection(String ssid, String pass) {
+	WiFiConnection msg = {ssid, pass};
+	u8 buffer[sizeof(msg)];
+	memcpy(buffer, &msg, sizeof(msg));
+	MeshRC::send("$>WIFI+", buffer, sizeof(msg));
+}
+void recvWiFiConnection(u8* data, u8 size) {
+	WiFiConnection conn;
+	memcpy(&conn, data, size);
+	WiFi.begin(conn.ssid, conn.pass);
+	callbackOnConnect = true;
+};
 
-	ArduinoOTA.onStart([]() {
-		LED::end();
-		App::lED_LOW();
-	});
-	ArduinoOTA.onProgress([](int percent, int total) {
-		App::lED_BLINK();
-	});
-	ArduinoOTA.onEnd([]() {
-		App::lED_HIGH();
-	});
-	ArduinoOTA.onError([](ota_error_t err) {
-		ESP.restart();
-	});
-	ArduinoOTA.begin();
+void setup() {
+	MeshRC::on("$>WIFI+", recvWiFiConnection);
+	MeshRC::on("$>WIFI-", []() { WiFi.disconnect(); });
 
 	MeshRC::on("#>PING", Net::recvPing);
 	MeshRC::on("#>PONG", Net::recvPong);
@@ -345,8 +345,10 @@ void setup() {
 }
 
 void loop() {
-	// MDNS.update();
-	ArduinoOTA.handle();
+	if (callbackOnConnect && WiFi.status() == WL_CONNECTED) {
+		MeshRC::send("$<WIFI+" + WiFi.localIP().toString());
+		callbackOnConnect = false;
+	}
 }
 }  // namespace Net
 

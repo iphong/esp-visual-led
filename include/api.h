@@ -133,6 +133,20 @@ void deleteRecursive(String path) {
 }
 
 void setup(void) {
+	server.on("/wifi", HTTP_GET, []() {
+		replyOKWithMsg(WiFi.localIP().toString());
+	});
+	server.on("/wifi", HTTP_POST, []() {
+		if (!server.hasArg("ssid")) {
+			replyBadRequest("No SSID provided.");
+		} else {
+			String ssid = server.arg("ssid");
+			String pass = server.arg("pass");
+			Net::sendWiFiConnection(ssid, pass);
+			WiFi.begin(ssid, pass);
+			replyOKWithMsg(WiFi.localIP().toString());
+		}
+	});
 	server.on("/nodes", HTTP_GET, []() {
 		LOGL("GET online nodes list");
 		String json;
@@ -147,6 +161,7 @@ void setup(void) {
 
 		server.send(200, "application/json", json);
 	});
+
 	server.on("/nodes", HTTP_POST, []() {
 		LOGL("POST online nodes action");
 		if (server.hasArg("select")) {

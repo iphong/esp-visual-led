@@ -310,7 +310,7 @@ u32 getTime() {
 }
 
 void setTime(u32 time) {
-#ifndef MASTER
+#if !defined(MASTER) && !defined(BRIDGE)
 	if (App::data.show) {
 		A.setTime(time);
 		B.setTime(time);
@@ -319,7 +319,7 @@ void setTime(u32 time) {
 }
 
 void setup() {
-#ifndef MASTER
+#if !defined(MASTER) && !defined(BRIDGE)
 	analogWriteFreq(1000);
 	analogWriteRange(255);
 	A.setup();

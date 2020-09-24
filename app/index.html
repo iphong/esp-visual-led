@@ -16,24 +16,24 @@
 
 </div>
 <header>
-	<grid class="header">
-		<h3>SDC</h3>
-		<button data-show="0">A/B</button>
-		<grid class="four">
-			<button data-show="1">1</button>
-			<button data-show="2">2</button>
-			<button data-show="3">3</button>
-			<button data-show="4">4</button>
-			<button data-show="5">5</button>
-			<button data-show="6">6</button>
-			<button data-show="7">7</button>
-			<button data-show="8">8</button>
-		</grid>
+	<div>
+		D1D0F8
+	</div>
+	<div>
+		<label>Master</label>
+		<label>10.0.0.30</label>
+		<label>FF:FF:FF:FF:FF:FF</label>
+	</div>
+	<grid style="grid: auto / 1fr 1fr 1fr 1fr;">
+		<button data-show="1">1</button>
+		<button data-show="2">2</button>
+		<button data-show="3">3</button>
+		<button data-show="4">4</button>
 	</grid>
 </header>
 
 <main class="tabs">
-	<section class="tab" data-tab="1">
+	<section hidden class="tab" data-tab="1">
 		<grid class="list">
 			<grid class="two">
 				<button data-segment="a">A</button>
@@ -76,7 +76,7 @@
 		</grid>
 	</section>
 
-	<section class="tab" data-tab="2">
+	<section hidden class="tab" data-tab="2">
 
 		<grid class="two">
 			<button data-action="show-file-select-dialog" class="large">Light</button>

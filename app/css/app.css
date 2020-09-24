@@ -25,9 +25,40 @@ audio {
 }
 
 header {
-	padding: 10px 20px;
-	background: #4e057a;
-	border-bottom: 2px solid #3d045f;
+	display: grid;
+    padding: 5px;
+    grid-gap: 10px;
+    grid-template-columns: auto;
+    background: #4e057a;
+	font-size: 18px;
+	grid-template-columns: 1fr 1fr 240px;
+	align-items: center;
+}
+
+@media screen and (min-width: 601px) {
+	header > *:first-child {
+		margin-left: 30px;
+	}
+}
+@media screen and (max-width: 600px) {
+	header {
+		grid-template-columns: auto;
+		text-align: center;
+		font-size: 28px;
+	}
+}
+header label {
+	line-height: 1em;
+	font-size: 0.6em;
+	font-weight: bold;
+    vertical-align: middle;
+    padding: 2px 6px;
+	background: rgba(44, 32, 51, 0.78);
+	color: rgb(223, 129, 223);
+    border-radius: 1.25em;
+	text-transform: uppercase;
+	font-family: Menlo, 'Courier New', Courier, monospace;
+	user-select: text !important;
 }
 main {
 	padding: 20px;
@@ -96,7 +127,7 @@ grid.item > span {
 }
 
 button {
-    padding: 1.5em 0;
+    padding: 1.5em 0.5em;
 	font-weight: 500;
 	margin: 0;
 	text-transform: uppercase;

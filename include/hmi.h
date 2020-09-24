@@ -84,7 +84,7 @@ void readDisplay() {
 							LOG("Send IR code: ");
 							LOG(data[1], HEX);
 							LOGL();
-							MeshRC::send("#>IRSEND", &data[1], 1);
+							MeshRC::send("#>IRSEND", &data[1] - 1, 1);
 						}
 						break;
 

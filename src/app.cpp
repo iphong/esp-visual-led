@@ -101,10 +101,29 @@ void setup() {
 #endif
 #ifdef MASTER
 	Hmi::setup();
+	Net::wifiOn();
+#else
+	Net::wifiOff();
 #endif
+
+	ArduinoOTA.onStart([]() {
+		LED::end();
+		App::lED_LOW();
+	});
+	ArduinoOTA.onProgress([](int percent, int total) {
+		App::lED_BLINK();
+	});
+	ArduinoOTA.onEnd([]() {
+		App::lED_HIGH();
+	});
+	ArduinoOTA.onError([](ota_error_t err) {
+		ESP.restart();
+	});
+	ArduinoOTA.begin();
 }
 
 void loop() {
+	ArduinoOTA.handle();
 	App::loop();
 	Api::loop();
 	Net::loop();
