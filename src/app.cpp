@@ -1,16 +1,22 @@
-#define MESH_RC_DEBUG_ALL_MSG
-
-
-#include <Arduino.h>
-#include <Button.h>
+// #define MESH_RC_DEBUG_ALL_MSG
+// #define SEND_FILE_LOGS
+#define RECV_FILE_LOGS
+// #define SYNC_LOGS
 
 #include "app.h"
+
+#include <Arduino.h>
+#include <ArduinoOTA.h>
+#include <Button.h>
+
 #include "api.h"
+#include "hmi.h"
 #include "led.h"
 #include "net.h"
-#include "ir.h"
-#include "hmi.h"
-// #include "sd.h"
+#include "sd.h"
+// #include "ir.h"
+
+// ADC_MODE(ADC_VCC);
 
 Button btn(BTN_PIN);
 
@@ -78,7 +84,10 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 };
 
 void setup() {
+	pinMode(LED_PIN, OUTPUT);
 	sprintf(App::chipID, "%06X", system_get_chip_id());
+
+	App::startBlink(200);
 
 	Serial.begin(921600);
 
@@ -86,44 +95,36 @@ void setup() {
 	btn.onPress(buttonPressHandler);
 	btn.onPressHold(buttonPressHoldHandler);
 
-	Net::apSSID = "SDC_" + String(App::chipID);
+	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
 	Net::apPSK = "11111111";
 	Net::apAddr = {10, 1, 1, 1};
 	Net::apMask = {255, 255, 255, 0};
+
+	LED::onBegin = []() {
+		Net::sendSync();
+	};
+	LED::onEnd = []() {
+		Net::sendSync();
+	};
 
 	// SD::setup();
 	App::setup();
 	LED::setup();
 	Net::setup();
 	Api::setup();
-#ifdef BRIDGE
-	IR::setup();
-#endif
 #ifdef MASTER
 	Hmi::setup();
+	SD::setup();
 	Net::wifiOn();
+	// Net::wifiOff();
 #else
 	Net::wifiOff();
 #endif
-
-	ArduinoOTA.onStart([]() {
-		LED::end();
-		App::lED_LOW();
-	});
-	ArduinoOTA.onProgress([](int percent, int total) {
-		App::lED_BLINK();
-	});
-	ArduinoOTA.onEnd([]() {
-		App::lED_HIGH();
-	});
-	ArduinoOTA.onError([](ota_error_t err) {
-		ESP.restart();
-	});
-	ArduinoOTA.begin();
+	// Net::sendPing();
+	App::stopBlink();
 }
 
 void loop() {
-	ArduinoOTA.handle();
 	App::loop();
 	Api::loop();
 	Net::loop();

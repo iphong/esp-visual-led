@@ -49,22 +49,24 @@ namespace SD {
 		close();
 		Serial.println("DONE SD CARD TEST");
 
-		// open("_test1.txt");
-		// while (file.available()) {
-		// 	Serial.write(file.read());
-		// } 
-		// close();
-		// open("/show/_test2.txt");
-		// while (file.available()) {
-		// 	Serial.write(file.read());
-		// } 
-		// close();
-		// fs.chdir("/show");
-		// open("_test3.txt");
-		// while (file.available()) {
-		// 	Serial.write(file.read());
-		// } 
-		// close();
+		
+		fs.chdir("/");
+		open("_test1.txt");
+		while (file.available()) {
+			Serial.write(file.read());
+		} 
+		close();
+		open("/show/1.json");
+		while (file.available()) {
+			Serial.write(file.read());
+		} 
+		close();
+		fs.chdir("/show");
+		open("_test3.txt");
+		while (file.available()) {
+			Serial.write(file.read());
+		} 
+		close();
 	}
 }
 

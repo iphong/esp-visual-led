@@ -1,8 +1,8 @@
 #include "Arduino.h"
 #include "EEPROM.h"
+#include "LittleFS.h"
 #include "MeshRC.h"
 #include "Ticker.h"
-#include "LittleFS.h"
 
 #ifndef __APP_H__
 #define __APP_H__
@@ -49,17 +49,15 @@ struct Data {
 
 Data data;
 Mode mode;
-Ticker blink;
+
+Ticker saveTimer;
+Ticker blinkTimer;
 
 char chipID[6];
 
 FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
-
-u32 lastChanged;
-bool shouldSave;
-
 
 static void lED_HIGH() {
 	digitalWrite(LED_PIN, 1);
@@ -72,44 +70,17 @@ static void lED_BLINK() {
 }
 
 static void stopBlink() {
-	lED_HIGH();
-	if (blink.active()) blink.detach();
+	if (blinkTimer.active()) blinkTimer.detach();
 }
 static void startBlink(u32 time) {
 	stopBlink();
-	lED_LOW();
-	blink.attach_ms_scheduled_accurate(time, lED_BLINK);
+	blinkTimer.attach_ms(time, lED_BLINK);
 }
-
-void save() {
-	lastChanged = millis();
-	shouldSave = true;
-}
-
 bool isPaired() {
 	return !MeshRC::equals(data.master, MeshRC::broadcast, 6);
 }
 bool isPairing() {
 	return mode == BIND;
-}
-void saveShow(u8 show) {
-	data.show = show;
-	save();
-}
-void saveChannel(u8 channel) {
-	data.channel = channel;
-	save();
-}
-void saveMaster(u8* addr) {
-	if (addr == NULL) {
-		memcpy(data.master, MeshRC::broadcast, 6);
-	} else {
-		memcpy(data.master, addr, 6);
-	}
-	save();
-}
-void setMode(Mode newMode) {
-	mode = newMode;
 }
 
 void saveData() {
@@ -159,10 +130,30 @@ void loadData() {
 		MeshRC::setMaster(data.master);
 	}
 }
+void save() {
+	saveTimer.detach();
+	saveTimer.once(1, saveData);
+}
+void setMode(Mode newMode) {
+	mode = newMode;
+}
+void setShow(u8 show) {
+	data.show = show;
+}
+void setChannel(u8 channel) {
+	data.channel = channel;
+}
+void setMaster(u8* addr) {
+	if (addr == NULL) {
+		memcpy(data.master, MeshRC::broadcast, 6);
+	} else {
+		memcpy(data.master, addr, 6);
+	}
+	if (isPaired()) {
+		MeshRC::setMaster(data.master);
+	}
+}
 void setup() {
-	pinMode(LED_BUILTIN, OUTPUT);
-	lED_LOW();
-
 	loadData();
 
 	fsOK = fs->begin();
@@ -176,10 +167,7 @@ void setup() {
 	}
 }
 void loop() {
-	if (shouldSave && millis() - lastChanged > 1000) {
-		saveData();
-		shouldSave = false;
-	}
+	
 }
 }  // namespace App
 

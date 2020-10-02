@@ -5,7 +5,9 @@ module.exports = {
 	},
 	output: {
 		filename: 'bundle.js',
-		path: __dirname + '/app/dist'
+		path: __dirname + '/app/dist',
+		libraryTarget: 'global',
+		library: 'ledc'
 	},
 	module: {
 		rules: [

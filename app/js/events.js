@@ -1,33 +1,38 @@
-global.handleError = function handleError() {
+import { renderLight, renderWaveform } from "./app"
+
+const { fetchData, post, uploadFile, get } = require("./api")
+const { parseAudio } = require("./audio")
+const { parseLSF } = require("./lsf")
+
+export function handleError() {
 	console.error(...arguments)
 }
-global.handleFile = async function handleFile(file) {
-	return new Promise((resolve, reject) => {
-		console.debug('select file: ' + file.name)
-		if (file.name.endsWith('.lsf')) {
-			parseLSF(file).finally(fetchData).finally(resolve)
-		} else if (file.name.endsWith('.ipx')) {
-			// parseIPX(file).then(resolve)
-		} else if (file.type.startsWith('audio')) {
-			stopShow().then(() => {
-				setAttr('#player', 'src', URL.createObjectURL(file))
-				// startShow().then(resolve)
-				// if (!AUDIO || AUDIO.filename !== file.name) {
-				// 	parseAudio(file)
-				// 		.then(saveLightShow)
-				// 		.then(resolve)
-				// 		.then(startShow)
-				// } else {
-				// 	startShow().then(resolve)
-				// }
-			})
-		} else {
-			console.error('unsupported file format')
-			reject('unsupported file format')
+async function handleFile(file) {
+	console.debug(`select file: ${file.name}`)
+	if (file.name.endsWith('.lsf')) {
+		const data = await parseLSF(file)
+		if (data.length == 1) {
+			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[0]));
+			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[0]));
+		} else if (data.length === 3) {
+			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[1]));
+			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[2]));
 		}
-	})
+		await fetchData()
+	} else if (file.name.endsWith('.lt3')) {
+		const path = `show/${CONFIG.show}.json`
+		await uploadFile(path, file)
+		await fetchData()
+	} else if (file.name.endsWith('.ipx')) {
+		// parseIPX(file).then(resolve)
+	} else if (file.type.startsWith('audio')) {
+		renderWaveform(await parseAudio(file))
+		setAttr('#player', 'src', URL.createObjectURL(file))
+	} else {
+		console.error('unsupported file format')
+	}
 }
-global.handleChange = function handleChange(e) {
+function handleChange(e) {
 	if (e.type === 'change' && e.target.id === 'select-file') {
 		for (let file of e.target.files) {
 			handleFile(file)
@@ -48,7 +53,7 @@ global.handleChange = function handleChange(e) {
 		if (e.type === 'change') {
 			post('/color', Object.assign({ segment: CONFIG.segment }, color.rgb))
 		}
-		
+
 	} else if (e.target.matches('input[data-group="audio"]')) {
 		const { key } = e.target.dataset
 		const value = e.target.value
@@ -65,22 +70,21 @@ global.handleChange = function handleChange(e) {
 		}
 	}
 }
-global.handleClick = function handleClick(e) {
+async function handleClick(e) {
 	if (e.target.dataset.segment) {
 		CONFIG.segment = e.target.dataset.segment
 		color = { rgb: CONFIG[CONFIG.segment] }
-		updateHSL()
-		render()
+		await updateHSL()
+		await render()
 	}
 	else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
+		await render()
+		// await post('exec?cmd=end')
+		await post('show', { id: CONFIG.show })
+		if (CONFIG.show) await loadShowData()
 		render()
-		stopShow().then(() => {
-			post('/config', { show: CONFIG.show }).then(() => {
-				if (!CONFIG.show) startShow()
-				else loadShowData()
-			})
-		})
+		// await post('exec?cmd=start')
 	}
 	else if (e.target.dataset.action) {
 		const action = e.target.dataset.action
@@ -89,10 +93,10 @@ global.handleClick = function handleClick(e) {
 				click('#select-file')
 				break
 			case 'reset-show-data':
-				resetShow()
+				// await resetShow()
 				break
 			case 'save-show-data':
-				saveShow()
+				// await saveShow()
 				break
 			case 'toggle-prop':
 				const key = e.target.dataset.key
@@ -101,53 +105,53 @@ global.handleClick = function handleClick(e) {
 				break
 		}
 	}
+	
 	else if (e.target.dataset.command) {
 		const command = e.target.dataset.command
-		sendCommand(command).then(() => {
-			switch (command) {
-				case 'start':
-					setProp('#player', 'currentTime', 0)
-					call('#player', 'play')
-					break
-				case 'resume':
-					call('#player', 'play')
-					break
-				case 'end':
-					call('#player', 'pause')
-					setProp('#player', 'currentTime', 0)
-					break
-				case 'pause':
-					call('#player', 'pause')
-					break
-			}
-		})
+		await post(`exec?cmd=${command}`)
+		switch (command) {
+			case 'start':
+				setProp('#player', 'currentTime', 0)
+				call('#player', 'play')
+				break
+			case 'resume':
+				call('#player', 'play')
+				break
+			case 'end':
+				call('#player', 'pause')
+				setProp('#player', 'currentTime', 0)
+				break
+			case 'pause':
+				call('#player', 'pause')
+				break
+		}
 	}
 }
-global.handleDragOver = function handleDragOver(e) {
+function handleDragOver(e) {
 	e.preventDefault()
 }
-global.handleDragLeave = function handleDragLeave(e) {
+function handleDragLeave(e) {
 	e.preventDefault()
 }
-global.handleDragDrop = function handleDragDrop(e) {
+function handleDragDrop(e) {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
 		handleFile(file)
 	}
 }
 
-global.handleScroll = function handleScroll(e) {
-	if (e.target.closest('.timeline')) {
-		$('.timeline').forEach(el => {
-			if (el !== e.target) {
-				el.scrollLeft = e.target.scrollLeft
-			}
-		})
-	}
+function handleScroll(e) {
+	// if (e.target.closest('.timeline')) {
+	// 	$('.timeline').forEach(el => {
+	// 		if (el !== e.target) {
+	// 			el.scrollLeft = e.target.scrollLeft
+	// 		}
+	// 	})
+	// }
 }
 
-global.handleInit = function handleInit() {
-	render()
+function handleInit() {
+	// render()
 	fetchData()
 }
 

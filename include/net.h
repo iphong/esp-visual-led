@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 // #include <WiFiServer.h>
 #include <MeshRC.h>
@@ -14,6 +13,7 @@
 namespace Net {
 
 Ticker timeSyncInterrupt;
+Ticker nodePingInterrupt;
 
 bool receivingFiles;
 bool sendingFiles;
@@ -36,7 +36,6 @@ u8 crc = 0x00;
 
 void wifiOn() {
 	IS_WIFI_ON = true;
-	WiFi.mode(WIFI_AP_STA);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
 }
@@ -49,80 +48,92 @@ void wifiToggle() {
 	!IS_WIFI_ON ? wifiOn() : wifiOff();
 }
 
-struct NodeInfo {
-	char id[6];
-	u32 lastUpdate;
-};
 struct SyncData {
-	u32 time;
 	u8 show;
-	u8 brightness;
-	bool paused;
+	u32 time;
 	bool ended;
+	bool paused;
 };
 u8 syncBuffer[32];
 void sendSync() {
 #ifdef MASTER
 	if (!sendingFiles && !App::isPairing()) {
 		SyncData tmp = {
-			LED::getTime(),
 			App::data.show,
-			App::data.brightness,
-			LED::paused,
-			LED::ended};
+			LED::getTime(),
+			LED::ended,
+			LED::paused};
 		memcpy(syncBuffer, &tmp, sizeof(tmp));
 		MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
 		MeshRC::wait();
+#ifdef SYNC_LOGS
+		LOGD("Sync sent: show=%u e=%i p=%i sync=%u play=%u\n", tmp.show, tmp.ended, tmp.paused, tmp.time, LED::getTime());
+#endif
 	}
 #endif
 }
 void recvSync(u8* data, u8 size) {
 #ifndef MASTER
 	if (!receivingFiles && !App::isPairing()) {
+		// if (IS_WIFI_ON) {
+		// 	wifiOff();
+		// 	WiFi.disconnect();
+		// }
 		SyncData tmp;
 		memcpy(&tmp, data, size);
-		LOGD("Sync received: %u %i %i %u\n", tmp.show, tmp.ended, tmp.paused,
-			 tmp.time);
+#ifdef SYNC_LOGS
+		LOGD("Sync received: show=%u e=%i p=%i sync=%u play=%u diff=%i\n", tmp.show, tmp.ended, tmp.paused, tmp.time, LED::getTime(), LED::getTime() - tmp.time);
+#endif
 		if (tmp.show == 0 && App::data.show != 0) {
 			LED::end();
+			LED::begin();
 		}
 		App::data.show = tmp.show;
 		if (tmp.show > 0) {
-			if (tmp.ended) {
+			if (LED::isRunning() && tmp.ended) {
 				LED::end();
-			} else if (tmp.paused) {
+			} else if (!LED::isRunning() && !tmp.ended) {
+				LED::begin();
+			} else if (tmp.paused && !LED::isPaused()) {
 				LED::pause();
-			} else {
+			} else if (!tmp.paused && LED::isPaused()) {
 				LED::resume();
+			}
+			if (!tmp.ended && !tmp.paused) {
 				LED::setTime(tmp.time);
 			}
 		}
 	}
 #endif
 }
+struct NodeInfo {
+	char id[6];
+	String ip;
+};
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
+
 void sendPing() {
 	LOGL("sent ping");
-	MeshRC::send("#>PING");
+	NodeInfo node;
+	u8 buf[sizeof(node)];
+	node.ip = WiFi.localIP().toString();
+	memcpy(node.id, App::chipID, 6);
+	memcpy(buf, &node, sizeof(node));
+	MeshRC::send("#>PING", buf, sizeof(node));
 }
-void recvPing() {
+void recvPing(u8* data, u8 size) {
 	LOGL("received ping");
-	MeshRC::send("#>PONG" + String(App::chipID));
-}
-void recvPong(u8* data, u8 size) {
-	LOGL("received pong");
 	bool isNew = true;
-	NodeInfo tmp;
-	memcpy(&tmp, data, size);
+	NodeInfo node;
+	memcpy(&node, data, size);
 	for (auto node : nodesList) {
-		if (MeshRC::equals((u8*)node.id, (u8*)tmp.id, 6)) {
+		if (MeshRC::equals((u8*)node.id, (u8*)node.id, 6)) {
 			isNew = false;
-			node.lastUpdate = millis();
 		}
 	}
 	if (isNew) {
-		nodesList[nodesCount++] = tmp;
+		nodesList[nodesCount++] = node;
 	}
 }
 
@@ -138,10 +149,11 @@ void sendPair(u8 channel = 255) {
 
 void recvPair(u8* data, u8 size) {
 	if (App::isPairing() && !receivingFiles) {
-		App::stopBlink();
-		if (size >= 1) App::saveChannel(data[0]);
-		App::saveMaster(MeshRC::sender);
+		// App::stopBlink();
+		if (size >= 1) App::setChannel(data[0]);
+		App::setMaster(MeshRC::sender);
 		App::setMode(App::SHOW);
+		App::save();
 		App::lED_LOW();
 	}
 }
@@ -156,6 +168,7 @@ void waitDelay(u32 time) {
 }
 
 void sendFile(String path, String targetID = "******") {
+	// static u8 delayTime;
 	LOGD("send file: %s -- ", path.c_str());
 	if (!App::fs->exists(path)) {
 		LOGD("NOT EXISTS\n");
@@ -166,26 +179,34 @@ void sendFile(String path, String targetID = "******") {
 	LOGD("OK\n");
 	file = App::fs->open(path, "r");
 	crc = 0x00;
+	// delayTime = 105;
 	for (auto i = 0; i < 1; i++) {
 		MeshRC::send("#>FILE^" + targetID + String(file.fullName()));
-		waitDelay(1000);
+		waitDelay(500);
 	}
 	while (file.available()) {
 		u16 pos = file.position();
-		u8 len = _min(128, file.available());
+		u8 len = _min(240, file.available());
 		u8 data[len + 2];
 		data[0] = pos >> 8;
 		data[1] = pos & 0xff;
+#ifdef SEND_FILE_LOGS
 		LOGD("%04X :: ", pos);
+#endif
 		for (auto i = 0; i < len; i++) {
 			data[i + 2] = file.read();
 			crc += data[i + 2];
+#ifdef SEND_FILE_LOGS
 			LOGD("%02X ", data[i + 2]);
+#endif
 		}
+#ifdef SEND_FILE_LOGS
 		LOGD("\n");
+#endif
 		for (auto i = 0; i < 1; i++) {
 			MeshRC::send("#>FILE+", data, sizeof(data));
 			App::lED_BLINK();
+			// if (delayTime > 5) delayTime -= 10;
 			waitDelay(100);
 		}
 	}
@@ -217,14 +238,16 @@ void recvFile(u8* buf, u8 len) {
 	char type = buf[0];
 	u8* data = &buf[1];
 	u8 size = len - 1;
+	u32 tmr = millis();
 	switch (type) {
 		// FILE STREAM HEADER
 		case '^':
 			if (MeshRC::equals(data, (u8*)App::chipID, 6) || MeshRC::equals(data, broadcastWildCard, 6)) {
 				receivingFiles = true;
-				LOGD("My file\n");
 				LED::end();
-				App::stopBlink();
+				// wifiOff();
+				// WiFi.disconnect();
+				// App::stopBlink();
 				App::lED_LOW();
 				name = "";
 				crc = 0x00;
@@ -237,11 +260,13 @@ void recvFile(u8* buf, u8 len) {
 				file.write((const char*)0);
 				file.seek(0);
 				if (!file) {
-					LOGL(F("CREATE FAILED"));
+					LOG(F("CREATE FAILED - "));
 					receivingFiles = false;
 				} else {
-					LOGD("\nreceiving file: %s\n", name.c_str());
+					LOGD("receiving file: %s - ", name.c_str());
 				}
+				LOG(millis() - tmr);
+				LOGL(" us");
 			}
 			break;
 
@@ -249,16 +274,20 @@ void recvFile(u8* buf, u8 len) {
 		case '+':
 			if (file) {
 				App::lED_BLINK();
-				u32 tmr = millis();
 				u16 pos = data[0] << 8 | data[1];
-				LOGD("%04X :: %u bytes :: ", pos, size);
+				u16 pos2 = file.position();
+#ifdef RECV_FILE_LOGS
+				LOGD("%04X %04X :: %u bytes :: ", pos, pos2, size);
+#endif
 				for (auto i = 2; i < size; i++) {
 					crc += data[i];
 					file.write(data[i]);
 					// LOGD("%02X ", data[i]);
 				}
+#ifdef RECV_FILE_LOGS
 				LOG(millis() - tmr);
-				LOGL(" ms");
+				LOGL(" us");
+#endif
 			} else {
 				receivingFiles = false;
 			}
@@ -267,8 +296,9 @@ void recvFile(u8* buf, u8 len) {
 		// FILE STREAM END
 		case '$':
 			if (receivingFiles && file) {
+				// wifiOn();
 				App::lED_LOW();
-				LOGD("EOF %02X = %02X\n", crc, data[0]);
+				LOGD("EOF %02X = %02X - ", crc, data[0]);
 				file.close();
 				if (data[0] == crc) {
 					if (App::fs->exists(name)) {
@@ -279,6 +309,8 @@ void recvFile(u8* buf, u8 len) {
 						App::fs->remove(tmpName);
 					}
 				}
+				LOG(millis() - tmr);
+				LOGL(" us");
 			}
 			receivingFiles = false;
 			break;
@@ -301,30 +333,38 @@ void handleWifiMsg(u8* data, u8 size) {
 	}
 }
 
-bool callbackOnConnect = false;
 struct WiFiConnection {
 	String ssid;
 	String pass;
 };
-void sendWiFiConnection(String ssid, String pass) {
+void sendWiFiConnect(String ssid, String pass) {
 	WiFiConnection msg = {ssid, pass};
 	u8 buffer[sizeof(msg)];
 	memcpy(buffer, &msg, sizeof(msg));
 	MeshRC::send("$>WIFI+", buffer, sizeof(msg));
 }
-void recvWiFiConnection(u8* data, u8 size) {
+void recvWiFiConnect(u8* data, u8 size) {
 	WiFiConnection conn;
 	memcpy(&conn, data, size);
 	WiFi.begin(conn.ssid, conn.pass);
-	callbackOnConnect = true;
-};
+	wifiOn();
+}
 
 void setup() {
-	MeshRC::on("$>WIFI+", recvWiFiConnection);
+	WiFi.mode(WIFI_AP_STA);
+	WiFi.setAutoConnect(false);
+	WiFi.setAutoReconnect(false);
+	WiFi.disconnect();
+
+	ArduinoOTA.onProgress([](int percent, int total) { App::lED_BLINK(); });
+	ArduinoOTA.begin();
+
+#ifndef MASTER
+	MeshRC::on("$>WIFI+", recvWiFiConnect);
 	MeshRC::on("$>WIFI-", []() { WiFi.disconnect(); });
+#endif
 
 	MeshRC::on("#>PING", Net::recvPing);
-	MeshRC::on("#>PONG", Net::recvPong);
 	MeshRC::on("#>SYNC", Net::recvSync);
 	MeshRC::on("#>PAIR", Net::recvPair);
 	MeshRC::on("#>FILE", Net::recvFile);
@@ -340,15 +380,12 @@ void setup() {
 
 	MeshRC::begin();
 #ifdef MASTER
-	timeSyncInterrupt.attach_ms_scheduled_accurate(1000, sendSync);
+	timeSyncInterrupt.attach_ms_scheduled_accurate(100, sendSync);
 #endif
 }
 
 void loop() {
-	if (callbackOnConnect && WiFi.status() == WL_CONNECTED) {
-		MeshRC::send("$<WIFI+" + WiFi.localIP().toString());
-		callbackOnConnect = false;
-	}
+	ArduinoOTA.handle();
 }
 }  // namespace Net
 

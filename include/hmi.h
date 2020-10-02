@@ -39,7 +39,7 @@ void readDisplay() {
 				u8 *data = &buffer[1];
 				u8 size = offset - 4;
 
-				LOGD(":: HMI received 0x[%02X] = ");
+				LOGD(":: HMI received 0x[%02X] = ", size);
 				for (auto i = 0; i < size; i++) {
 					LOGD("%02X ", data[i]);
 				}
@@ -51,7 +51,8 @@ void readDisplay() {
 							case 0x01:	// SHOW ID BEGIN
 								LED::end();
 								Net::sendSync();
-								App::saveShow(data[1]);
+								App::setShow(data[1]);
+								App::save();
 								LED::begin();
 								Net::sendSync();
 								break;
@@ -102,7 +103,7 @@ void setup() {
 	com.begin(9600);
 	com.print("page entry");
 	com.write(termination, 3);
-	timer.attach_ms_scheduled_accurate(1000, sendTime);
+	timer.attach_ms_scheduled(1000, sendTime);
 }
 void loop() {
 	readDisplay();

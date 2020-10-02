@@ -133,127 +133,56 @@ void deleteRecursive(String path) {
 }
 
 void setup(void) {
-	server.on("/wifi", HTTP_GET, []() {
-		replyOKWithMsg(WiFi.localIP().toString());
+	server.on("/stat", HTTP_GET, []() {
+		String json;
+		json.reserve(128);
+
+		json = "{";
+		json += "\"id\":\"" + String(App::chipID) + "\",";
+		json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+		json += "\"mac\":\"" + WiFi.macAddress() + "\",";
+		json += "\"brightness\":" + String(App::data.brightness) + ",";
+		json += "\"channel\":" + String(App::data.channel) + ",";
+		json += "\"show\":" + String(App::data.show) + "";
+		json += "}";
+
+		server.send(200, "application/json", json);
 	});
 	server.on("/wifi", HTTP_POST, []() {
-		if (!server.hasArg("ssid")) {
-			replyBadRequest("No SSID provided.");
+		if (server.hasArg("disconnect")) {
+			WiFi.disconnect();
+			MeshRC::send("$>WIFI-");
+			replyOK();
+		} else if (!server.hasArg("ssid")) {
+			replyBadRequest("Missing SSID");
 		} else {
 			String ssid = server.arg("ssid");
 			String pass = server.arg("pass");
-			Net::sendWiFiConnection(ssid, pass);
+			Net::sendWiFiConnect(ssid, pass);
 			WiFi.begin(ssid, pass);
 			replyOKWithMsg(WiFi.localIP().toString());
 		}
 	});
-	server.on("/nodes", HTTP_GET, []() {
-		LOGL("GET online nodes list");
-		String json;
-		json.reserve(128);
-
-		json = "[";
-		for (size_t i = 0; i < Net::nodesCount; i++) {
-			json += "{\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\"}";
-			if (i < Net::nodesCount - 1) json += ",";
-		}
-		json += "]";
-
-		server.send(200, "application/json", json);
-	});
-
-	server.on("/nodes", HTTP_POST, []() {
-		LOGL("POST online nodes action");
-		if (server.hasArg("select")) {
-			// Net::wifiConnect("SDC_" + server.arg("select"), "11111111");
-		}
-		replyOK();
-	});
-
-	server.on("/status", HTTP_GET, []() {
-		LOGL("handleStatus");
-		FSInfo fs_info;
-		String json;
-		json.reserve(128);
-
-		json = "{\"type\":\"LittleFS\",\"show\":";
-		json += String(App::data.show);
-		json += ",\"channel\":";
-		json += String(App::data.channel);
-		json += ", \"isOk\":";
-		if (App::fsOK) {
-			App::fs->info(fs_info);
-			json += F("\"true\", \"totalBytes\":\"");
-			json += fs_info.totalBytes;
-			json += F("\", \"usedBytes\":\"");
-			json += fs_info.usedBytes;
-			json += "\"";
+	server.on("/show", HTTP_POST, []() {
+		if (!server.hasArg("id")) {
+			replyBadRequest("Missing show ID");
 		} else {
-			json += "\"false\"";
-		}
-		json += F(",\"unsupportedFiles\":\"");
-		json += unsupportedFiles;
-		json += "\"}";
-
-		server.send(200, "application/json", json);
-	});
-
-	server.on("/color", HTTP_GET, []() {
-		LOGL("handleColor");
-		App::RGB* a = &App::data.a.color;
-		App::RGB* b = &App::data.b.color;
-		String value1 = String(a->r) + "," + String(a->g) + "," + String(a->b);
-		String value2 = String(b->r) + "," + String(b->g) + "," + String(b->b);
-		String json = "{ \"a\": [" + value1 + "], \"b\": [" + value2 + "] }";
-
-		server.send(200, "application/json", json);
-	});
-
-	server.on("/config", HTTP_POST, []() {
-		if (server.hasArg("brightness")) {
-			App::data.brightness = server.arg("brightness").toInt();
-			App::save();
-		}
-		if (server.hasArg("channel")) {
-			App::data.channel = server.arg("channel").toInt();
-			App::save();
-			if (!LED::ended) {
-				LED::begin();
+			u32 id = server.arg("id").toInt();
+			if (App::data.show != id) {
+				App::data.show = id;
+				App::save();
+			}
+			File file = App::fs->open("/show/" + String(id) + ".json", "r");
+			if (file) {
+				server.streamFile(file, "application/json");
+			} else {
+				server.send(200, "application/json", "{}");
 			}
 		}
-		if (server.hasArg("show")) {
-			App::data.show = server.arg("show").toInt();
-			App::save();
-			if (!LED::ended) {
-				LED::begin();
-			}
-		}
-		replyOK();
 	});
-
-	server.on("/color", HTTP_POST, []() {
-		String segment = server.arg("segment");
-		u8 r = server.arg("r").toInt();
-		u8 g = server.arg("g").toInt();
-		u8 b = server.arg("b").toInt();
-		if (segment == "a" || segment == "ab") {
-			App::data.a.color.r = r;
-			App::data.a.color.g = g;
-			App::data.a.color.b = b;
-		}
-		if (segment == "b" || segment == "ab") {
-			App::data.b.color.r = r;
-			App::data.b.color.g = g;
-			App::data.b.color.b = b;
-		}
-		App::save();
-		LED::begin();
-		replyOK();
-	});
-
-	server.on("/command", HTTP_POST, []() {
-		if (server.hasArg("command")) {
-			String cmd = server.arg("command");
+	server.on("/exec", HTTP_POST, []() {
+		if (server.hasArg("cmd")) {
+			String cmd = server.arg("cmd");
 			if (cmd == "pair") {
 				if (server.hasArg("channel")) {
 					Net::sendPair(server.arg("channel").toInt());
@@ -265,9 +194,7 @@ void setup(void) {
 				if (server.hasArg("time")) {
 					u32 time = server.arg("time").toInt();
 					LED::end();
-					Net::sendSync();
 					LED::setTime(time);
-					Net::sendSync();
 					replyOK();
 				} else {
 					replyBadRequest("Missing argument: time ");
@@ -275,9 +202,7 @@ void setup(void) {
 			} else if (cmd == "start") {
 				replyOK();
 				LED::end();
-				Net::sendSync();
 				LED::begin();
-				Net::sendSync();
 			} else if (cmd == "toggle") {
 				replyOK();
 				LED::toggle();
@@ -293,13 +218,11 @@ void setup(void) {
 			} else if (cmd == "end") {
 				replyOK();
 				LED::end();
-				Net::sendSync();
 			} else if (cmd == "ping") {
 				Net::sendPing();
 				replyOK();
 			} else if (cmd == "sync") {
 				LED::end();
-				Net::sendSync();
 				Net::sendFile("/show/" + String(App::data.show) + "A.lsb");
 				Net::sendFile("/show/" + String(App::data.show) + "B.lsb");
 				replyOK();
@@ -307,8 +230,26 @@ void setup(void) {
 				replyBadRequest("Unknown command: " + cmd);
 			}
 		} else {
-			replyBadRequest("Missing command argument.");
+			replyBadRequest("Missing cmd argument.");
 		}
+	});
+
+	server.on("/nodes", HTTP_GET, []() {
+		LOGL("GET online nodes list");
+		String json;
+		json.reserve(128);
+
+		json = "[";
+		for (size_t i = 0; i < Net::nodesCount; i++) {
+			json += "{";
+			json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\",";
+			json += "\"ip\":\"" + Net::nodesList[i].ip + "\"";
+			json += "}";
+			if (i < Net::nodesCount - 1) json += ",";
+		}
+		json += "]";
+
+		server.send(200, "application/json", json);
 	});
 
 	server.on("/list", HTTP_GET, []() {
@@ -497,41 +438,7 @@ void setup(void) {
 			LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 		} else if (upload.status == UPLOAD_FILE_END) {
 			if (uploadFile) {
-				LOGL(WiFi.status());
-				if (WiFi.status() == WL_CONNECTED) {
-					const String url = "http://" + WiFi.gatewayIP().toString() + "/edit";
-					const String path = uploadFile.fullName();
-					uploadFile.close();
-					uploadFile = App::fs->open(path, "r");
-					String body = "------WebKitFormBoundaryZsEgKezFz4SNJZFs\n";
-					body += "Content-Disposition: form-data; name=\"data\"; filename=\"" + path + "\"\n";
-					body += "Content-Type: " + mime::getContentType(path) + "\n\n\n";
-					body += "------WebKitFormBoundaryZsEgKezFz4SNJZFs--" + uploadFile.readString();
-
-					LOGL(url);
-					LOGL(body);
-					http.begin(client, url);
-					http.addHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryZsEgKezFz4SNJZFs");
-					int status = http.POST(body);
-
-					if (status > 0) {
-						// HTTP header has been send and Server response header has been handled
-						LOGD("[HTTP] POST... code: %d\n", status);
-
-						// file found at server
-						if (status == HTTP_CODE_OK) {
-							const String& payload = http.getString();
-							LOGL("received payload:\n<<");
-							LOGL(payload);
-							LOGL(">>");
-						}
-					} else {
-						LOGD("[HTTP] POST... failed, error: %s\n", http.errorToString(status).c_str());
-					}
-
-					http.end();
-				} else
-					uploadFile.close();
+				uploadFile.close();
 			}
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
 

@@ -16,7 +16,7 @@ x-console {
 	border: 10px solid #020202c9;
 	
 	box-sizing: content-box;
-	max-height: 120px;
+	max-height: 50px;
 	overflow: auto;
 }
 x-console input,
@@ -108,6 +108,7 @@ class ConsoleElement {
 		this.lastOutput = output
 		this.main.appendChild(line)
 		this.el.scrollTop = this.el.scrollHeight
+		return output
 	}
 }
 const logger = new ConsoleElement()
@@ -120,23 +121,23 @@ for (let key in console) {
 
 window.console.log = (...args) => {
 	original.log(...args)
-	logger.push('•', 'log', ...args)
+	return logger.push('•', 'log', ...args)
 }
 window.console.debug = (...args) => {
 	original.debug(...args)
-	logger.push('•', 'debug', ...args)
+	return logger.push('•', 'debug', ...args)
 }
 window.console.info = (...args) => {
 	original.info(...args)
-	logger.push('•', 'info', ...args)
+	return logger.push('•', 'info', ...args)
 }
 window.console.warn = (...args) => {
 	original.warn(...args)
-	logger.push('•', 'warn', ...args)
+	return logger.push('•', 'warn', ...args)
 }
 window.console.error = (...args) => {
 	original.error(...args)
-	logger.push('•', 'error', ...args)
+	return logger.push('•', 'error', ...args)
 }
 window.console.append = (...args) => {
 	if (logger.lastOutput) {

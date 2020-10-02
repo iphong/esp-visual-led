@@ -7,9 +7,9 @@
 
 namespace LED {
 
+bool ended = true;
 bool repeat = true;
 bool paused = false;
-bool ended = true;
 
 void pause() {
 	paused = true;
@@ -24,16 +24,15 @@ void toggle() {
 }
 
 enum FrameType {
-	RGB_FRAME = 1,
-	LOOP_FRAME = 2,
-	END_FRAME = 3
+	RGB_FRAME = 0x01,
+	END_FRAME = 0x02,
+	LOOP_FRAME = 0x03
 };
-
 class RGB {
    public:
-	unsigned int r;
-	unsigned int g;
-	unsigned int b;
+	u8 r;
+	u8 g;
+	u8 b;
 
 	void set(u8* d) {
 		memcpy(this, d, 3);
@@ -60,13 +59,13 @@ class RGB {
 
 class Frame : public RGB {
    public:
-	FrameType type;
-	unsigned int start = 0;
-	unsigned int duration = 0;
-	unsigned int transition = 0;
-	unsigned int r = 0;
-	unsigned int g = 0;
-	unsigned int b = 0;
+	u8 type;
+	u32 start = 0;
+	u32 duration = 0;
+	u32 transition = 0;
+	u8 r = 0;
+	u8 g = 0;
+	u8 b = 0;
 };
 
 class Show {
@@ -84,7 +83,8 @@ class Show {
 
 	Frame frame;   // Active frame
 	u32 playTime;  // Current playing time
-	u16 holdTime = 0;
+	u32 startTime;
+	u32 holdTime;
 
 	Frame loopFrame;
 	u32 loopTime;
@@ -103,47 +103,28 @@ class Show {
 	u32 getTime() {
 		return playTime;
 	}
-
-	Frame parse(String* line) {
-		Frame frame;
-		line->trim();
-		if (line->startsWith("C")) {
-			frame.type = RGB_FRAME;
-			sscanf(
-				line->c_str(),
-				"%*s %u %u %u %u %u %u",
-				&frame.start,
-				&frame.duration,
-				&frame.transition,
-				&frame.r,
-				&frame.g,
-				&frame.b);
-		} else if (line->startsWith("L")) {
-			frame.type = LOOP_FRAME;
-			sscanf(
-				line->c_str(),
-				"%*s %u %u",
-				&frame.start,
-				&frame.duration);
-		} else if (line->startsWith("E")) {
-			frame.type = END_FRAME;
-			sscanf(
-				line->c_str(),
-				"%*s %u",
-				&frame.start);
-		}
-		return frame;
+	u32 readUint32(unsigned char* buffer) {
+		return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 	}
-
 	Frame next() {
+		u8 b[16];
+		Frame f;
 		if (file.available()) {
-			String line = file.readStringUntil('\n');
-			return parse(&line);
+			file.readBytes((char*)b, 16);
+			f.type = b[0];
+			f.start = readUint32(&b[1]);
+			f.duration = readUint32(&b[5]);
+			f.transition = readUint32(&b[9]);
+			f.r = b[13];
+			f.g = b[14];
+			f.b = b[15];
+			// for (auto b : b) LOGD("%02X ", b);
+			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
 		}
-		return frame;
+		return f;
 	}
 
-	void setColor(Frame* frame, unsigned int lapsed) {
+	void setColor(Frame* frame, u32 lapsed) {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
 			ratio = (float)lapsed / frame->transition;
@@ -175,22 +156,28 @@ class Show {
 	}
 
 	void end() {
+		if (file) file.close();
 		tmr.detach();
-		if (file)
-			file.close();
 		playTime = 0;
 		loopTime = 0;
 		setRGB(0, 0, 0);
 	}
 
 	void setTime(u32 time) {
-		LOGD("Play time: %u, sync time: %u\n", playTime, time);
-		if (!file || !time || paused)
+		static u32 count;
+		int offset = (int)playTime - (int)time;
+#ifdef SYNC_LOGS
+		LOGD("Time offset: %c %i\n", id, offset);
+#endif
+		if (ended || !file || !time)
 			begin();
-		if (playTime > time + 20) {
+		else if (paused)
+			resume();
+		if (offset > 1) {
 			holdTime = playTime - time;
-		} else if (playTime < time - 20) {
-			while (playTime < time) {
+		} else if (offset < -1) {
+			count = 8000;
+			while (--count && playTime < time) {
 				if (!tick(false))
 					continue;
 			}
@@ -219,7 +206,7 @@ class Show {
 				if (shouldSetColor && loopFrame.type == RGB_FRAME) {
 					setColor(&loopFrame, loopTime - loopFrame.start);
 				}
-				if (++loopTime - loopFrame.start >= loopFrame.duration) {
+				if (++loopTime >= loopFrame.start + loopFrame.duration) {
 					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
 						lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
@@ -233,19 +220,10 @@ class Show {
 				}
 				break;
 			case END_FRAME:
-				// LOGD("\nended");
-				if (repeat) {
-					playTime = 0;
-					loopTime = 0;
-					loopStart = 0;
-					file.seek(0);
-					frame = next();
-				} else {
-					end();
-				}
-				return false;
+				// LOGL("ended");
+				repeat ? begin() : end();
 		}
-		if (++playTime - frame.start >= frame.duration && frame.type) {
+		if (++playTime >= frame.start + frame.duration) {
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
 				loopTime = 0;
@@ -281,7 +259,6 @@ class Show {
 	}
 
 	void begin() {
-		// if (!ended)
 		end();
 		if (App::data.show != 0) {
 			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
@@ -296,9 +273,11 @@ class Show {
 			tmr.attach_ms_scheduled_accurate(1, [this]() {
 				tick(true);
 			});
+			startTime = millis();
 		} else {
 			setRGB(data->color.r, data->color.g, data->color.b);
 		}
+		startTime = millis();
 	}
 };
 
@@ -309,8 +288,13 @@ u32 getTime() {
 	return _max(A.getTime(), B.getTime());
 }
 
+using callback_t = std::function<void()>;
+
+callback_t onBegin;
+callback_t onEnd;
+
 void setTime(u32 time) {
-#if !defined(MASTER) && !defined(BRIDGE)
+#ifndef MASTER
 	if (App::data.show) {
 		A.setTime(time);
 		B.setTime(time);
@@ -319,8 +303,8 @@ void setTime(u32 time) {
 }
 
 void setup() {
-#if !defined(MASTER) && !defined(BRIDGE)
-	analogWriteFreq(1000);
+#ifndef MASTER
+	analogWriteFreq(100);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
@@ -332,6 +316,7 @@ void end() {
 	paused = false;
 	A.end();
 	B.end();
+	if (onEnd) onEnd();
 }
 
 void begin() {
@@ -339,6 +324,7 @@ void begin() {
 	paused = false;
 	A.begin();
 	B.begin();
+	if (onBegin) onBegin();
 }
 bool isRunning() {
 	return !ended;

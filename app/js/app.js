@@ -1,37 +1,38 @@
+import { AUDIO, LIGHT } from "./data"
 
-global.$ = function $(selector) {
+export function $(selector) {
 	return document.body.querySelectorAll(selector)
 }
-global.setText = function setText(selector, text) {
+export function setText(selector, text) {
 	if (typeof text === 'undefined') return
 	$(selector).forEach(el => {
-		el.innerText = text
+		el.innerHTML = text
 	})
 }
-global.setValue = function setValue(selector, value) {
+export function setValue(selector, value) {
 	if (typeof value === 'undefined') return
 	$(selector).forEach(el => {
 		el.value = value
 	})
 }
-global.setProp = function setProp(selector, prop, value) {
+export function setProp(selector, prop, value) {
 	if (typeof value === 'undefined') return
 	$(selector).forEach(el => {
 		el[prop] = value
 	})
 }
-global.setAttr = function setAttr(selector, attr, value) {
+export function setAttr(selector, attr, value) {
 	if (typeof value === 'undefined') return
 	$(selector).forEach(el => {
 		el.setAttribute(attr, value)
 	})
 }
-global.click = function click(selector) {
+export function click(selector) {
 	$(selector).forEach(el => {
 		el.click()
 	})
 }
-global.call = function call(selector, method, ...args) {
+export function call(selector, method, ...args) {
 	$(selector).forEach(el => {
 		if (typeof el[method] === 'function') {
 			el[method].call(el, ...args)
@@ -39,37 +40,15 @@ global.call = function call(selector, method, ...args) {
 	})
 }
 
-// render rgb and hsl color input sliders
-global.renderColor = function renderColor() {
-	Object.keys(color).forEach(group => {
-		Object.keys(color[group]).forEach(channel => {
-			const el = document.querySelector(`input[data-group="${group}"][data-key="${channel}"]`)
-			if (el) {
-				el.value = color[group][channel]
-				const span = el.parentElement.querySelector('span')
-				if (span) {
-					switch (group) {
-						case 'hsl':
-							span.innerText = Math.round(color[group][channel] * 100) + '%'
-							break
-						case 'rgb':
-							span.innerText = el.value
-					}
-				}
-			}
-		})
-	})
+export function renderHead() {
+	const { id, ip, mac, brightness, channel, show } = CONFIG
+	setText('#id', id)
+	setText('#ip', ip)
+	setText('#mac', mac)
 }
 
-// render ui components bound to current show
-global.renderShow = function renderShow() {
-	$('[data-segment]').forEach(el => {
-		if (el.dataset.segment === CONFIG.segment) {
-			el.classList.add('selected')
-		} else {
-			el.classList.remove('selected')
-		}
-	})
+
+export function renderShow() {
 	$('[data-show]').forEach(el => {
 		if (parseInt(el.dataset.show) === CONFIG.show) {
 			el.classList.add('selected')
@@ -77,50 +56,207 @@ global.renderShow = function renderShow() {
 			el.classList.remove('selected')
 		}
 	})
-	$('section.tab').forEach(el => {
-		if (parseInt(el.dataset.tab) === 1 && !CONFIG.show) {
-			el.classList.add('active')
-		} else if (parseInt(el.dataset.tab) === 2 && CONFIG.show) {
-			el.classList.add('active')
-		} else {
-			el.classList.remove('active')
-		}
-	})
-}
-global.renderShowTimeline = function renderShowTimeline(selector, content) {
-	$(selector).forEach(wrapper => {
-		wrapper.innerHTML = ''
-		let lastColor = `rgb(0,0,0)`
-		content.split('\n').forEach(line => {
-			if (line.trim().startsWith('C')) {
-				const [, start, duration, transition, r, g, b] = line.trim().split(' ')
-				const color = `rgb(${r},${g},${b})`
-				const percent = Math.round(transition / duration * 100)
-
-				const frame = document.createElement('span')
-				frame.classList.add('frame')
-				frame.style.width = `${Math.round(parseInt(duration) / 10)}px`
-				frame.style.background = `linear-gradient(90deg, ${lastColor}0px, ${color} ${Math.round(transition / 10)}px, ${color} ${Math.round(duration / 10)}px)`
-				wrapper.appendChild(frame)
-				lastColor = color
-			}
+	$('.tracks').forEach($tracks => {
+		$tracks.innerHTML = ''
+		LIGHT.tracks.forEach(track => {
+			const $track = document.createElement('div')
+			const { elements, ...params } = track
+			$track.classList.add('track')
+			Object.assign($track.dataset, params)
+			$tracks.appendChild($track)
+			renderLight($track, track)
 		})
 	})
 }
-global.renderAudio = function renderAudio() {
-	setAttr('#player', 'src', AUDIO.url)
-	setText('#audio-filename', AUDIO.filename)
-	setText('#audio-duration', Math.round(AUDIO.duration))
-	setText('#audio-tempo', AUDIO.tempo)
-	setText('#audio-beats', AUDIO.beats)
-	setValue('#audio-color1', AUDIO.color1)
-	setValue('#audio-color2', AUDIO.color2)
-	setValue('#audio-ratio', AUDIO.ratio)
+
+export function renderLight(container, track) {
+	switch (track.device) {
+		case 1:
+			container.style.height = '25px'
+			break;
+		case 2:
+			container.style.height = '25px'
+			break;
+		default:
+			return console.log('unsupported device type:', track.device)
+	}
+	track.elements.forEach(el => {
+		const $el = document.createElement('span')
+		let { color, colorStart, colorEnd, ...params } = el
+		Object.assign($el.dataset, params)
+		const start = params.startTime
+		const duration = params.endTime - el.startTime
+		if (color) color = convertColor(color)
+		if (colorStart) colorStart = convertColor(colorStart)
+		if (colorEnd) colorEnd = convertColor(colorEnd)
+		$el.style.left = `${start / 50}px`
+		$el.style.width = `${duration / 50}px`
+		let color1, color2
+		switch (params.type) {
+			case 2: // solid
+				$el.style.backgroundColor = toCssColor(color)
+				break;
+			case 3: // gradient
+				color1 = toCssColor(colorStart)
+				color2 = toCssColor(colorEnd)
+				$el.style.background = `linear-gradient(90deg, ${color1} 0%, ${color2} 100%)`
+				break;
+			case 4: // flash
+				color1 = toCssColor(colorStart)
+				color2 = toCssColor(colorEnd)
+				const { period, ratio } = params
+				$el.style.backgroundImage = `url(${drawFlash(color1, color2, period, ratio)})`
+				$el.style.backgroundSize = '10%'
+				break;
+			case 5: // rainbow
+				$el.style.backgroundImage = `url(${drawRainbow(params.period)})`
+				$el.style.backgroundSize = '10%'
+				// $el.style.backgroundImage = `linear-gradient(to right, red, orange , yellow, green, cyan, blue, violet)`
+				break;
+			case 6: // dots
+				$el.style.backgroundImage = `url(${drawDots(toCssColor(color), params.spacing)})`
+				$el.style.backgroundSize = '10%'
+				break;
+			case 7: // pulse
+				$el.style.backgroundImage = `url(${drawPulse(toCssColor(color), params.period)})`
+				$el.style.backgroundSize = '10%'
+			default:
+		}
+		container.appendChild($el)
+	})
 }
 
-global.render = function render() {
+function convertColor({ r, g, b }) {
+	return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) }
+}
+function toCssColor({ r, g, b }) {
+	return `rgb(${r}, ${g}, ${b})`
+}
+function toCssHSL({ h, s, l }) {
+	return `hsl(${h * 360}, ${s * 100}%, ${l * 100}%)`
+}
+const tmpCanvas = document.createElement('canvas')
+function drawFlash(color1, color2, period, ratio) {
+	tmpCanvas.width = period
+	tmpCanvas.height = 1
+	const ctx = tmpCanvas.getContext('2d')
+	const len1 = period * (ratio / 100)
+	const len2 = period * ((100 - ratio) / 100)
+	ctx.fillStyle = color1
+	ctx.fillRect(0, 0, len1, 1);
+	ctx.fillStyle = color2
+	ctx.fillRect(len1, 0, len2, 1);
+	return tmpCanvas.toDataURL()
+}
+function drawDots(color, spacing) {
+	tmpCanvas.width = spacing + 2
+	tmpCanvas.height = 1
+	const ctx = tmpCanvas.getContext('2d')
+	ctx.fillStyle = color
+	ctx.fillRect(0, 0, 1, 1);
+	ctx.fillStyle = 'black'
+	ctx.fillRect(1, 0, 1, 1);
+	return tmpCanvas.toDataURL()
+}
+function drawPulse(color, period) {
+	tmpCanvas.width = period
+	tmpCanvas.height = 1
+	const ctx = tmpCanvas.getContext('2d')
+	ctx.fillStyle = color
+	ctx.fillRect(0, 0, period, 1);
+	ctx.fillStyle = 'black'
+	ctx.fillRect(0, 0, 24, 1);
+	ctx.fillStyle = 'white'
+	ctx.fillRect(12, 0, 2, 1);
+	return tmpCanvas.toDataURL()
+}
+function drawRainbow(period) {
+	tmpCanvas.width = period
+	tmpCanvas.height = 1
+	const ctx = tmpCanvas.getContext('2d')
+	var gradient = ctx.createLinearGradient(0, 0, period, 0);
+	gradient.addColorStop(1/6*0, 'red');
+	gradient.addColorStop(1/6*1, 'orange');
+	gradient.addColorStop(1/6*2, 'yellow');
+	gradient.addColorStop(1/6*3, 'green');
+	gradient.addColorStop(1/6*4, 'cyan');
+	gradient.addColorStop(1/6*5, 'blue');
+	gradient.addColorStop(1/6*6, 'violet');
+	ctx.fillStyle = gradient
+	ctx.fillRect(0, 0, period, 1);
+	return tmpCanvas.toDataURL()
+}
+
+export function renderWaveform() {
+	$('canvas.waveform').forEach((canvas, index) => {
+		const ctx = canvas.getContext("2d");
+		const canvasContainer = canvas.parentElement;
+		const waveData = AUDIO.channels[index].data
+		const height = canvas.offsetHeight;
+		const width = AUDIO.duration * 50
+		const halfHeight = height / 2;
+		length = waveData.length;
+
+		const step = Math.round(length / width);
+		canvas.width = width;
+		canvas.height = height;
+		canvas.style.width = width + "px";
+		canvas.style.height = height + "px";
+		canvas.style.left = Math.round(canvasContainer.clientWidth / 2) + "px";
+
+		let x = 0,
+			sumPositive = 0,
+			sumNegative = 0,
+			maxPositive = 0,
+			maxNegative = 0,
+			kNegative = 0,
+			kPositive = 0,
+			drawIdx = step;
+		for (let i = 0; i < length; i++) {
+			if (i == drawIdx) {
+				// const p1 = maxNegative * halfHeight + halfHeight;
+				// ctx.strokeStyle = '#555555';
+				// ctx.strokeRect(x, p1, 1, (maxPositive * halfHeight + halfHeight) - p1);
+
+				const p2 = sumNegative / kNegative * halfHeight + halfHeight;
+				ctx.strokeStyle = '#eeeeee';
+				ctx.strokeRect(x, p2, 1, (sumPositive / kPositive * halfHeight + halfHeight) - p2);
+				x++;
+				drawIdx += step;
+				sumPositive = 0;
+				sumNegative = 0;
+				maxPositive = 0;
+				maxNegative = 0;
+				kNegative = 0;
+				kPositive = 0;
+			} else {
+				if (waveData[i] < 0) {
+					sumNegative += waveData[i];
+					kNegative++;
+					if (maxNegative > waveData[i]) maxNegative = waveData[i];
+				} else {
+					sumPositive += waveData[i];
+					kPositive++;
+					if (maxPositive < waveData[i]) maxPositive = waveData[i];
+				}
+
+			}
+		}
+	})
+}
+
+export function render() {
+	renderHead()
 	renderShow()
-	renderColor()
-	// renderAudio()
 }
 
+Object.assign(window, {
+	$,
+	setText,
+	setValue,
+	setProp,
+	setAttr,
+	click,
+	call,
+	render
+})
