@@ -2,7 +2,8 @@
 export const CONFIG = {
 	brightness: 255,
 	channel: 0,
-	show: 0
+	show: 0,
+	nodes: []
 }
 
 // store audio configs for current show

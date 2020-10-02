@@ -7,9 +7,9 @@
 
 namespace LED {
 
-bool ended = true;
-bool repeat = true;
+bool running = false;
 bool paused = false;
+bool repeat = false;
 
 void pause() {
 	paused = true;
@@ -169,7 +169,7 @@ class Show {
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
 #endif
-		if (ended || !file || !time)
+		if (!running || !file || !time)
 			begin();
 		else if (paused)
 			resume();
@@ -312,7 +312,7 @@ void setup() {
 }
 
 void end() {
-	ended = true;
+	running = false;
 	paused = false;
 	A.end();
 	B.end();
@@ -320,14 +320,14 @@ void end() {
 }
 
 void begin() {
-	ended = false;
+	running = true;
 	paused = false;
 	A.begin();
 	B.begin();
 	if (onBegin) onBegin();
 }
 bool isRunning() {
-	return !ended;
+	return running;
 }
 bool isPaused() {
 	return paused;

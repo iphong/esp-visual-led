@@ -1,7 +1,10 @@
 // #define MESH_RC_DEBUG_ALL_MSG
 // #define SEND_FILE_LOGS
-#define RECV_FILE_LOGS
+// #define RECV_FILE_LOGS
 // #define SYNC_LOGS
+// #ifdef MASTER
+// #define USE_SD_CARD
+// #endif
 
 #include "app.h"
 
@@ -13,8 +16,9 @@
 #include "hmi.h"
 #include "led.h"
 #include "net.h"
+#ifdef USE_SD_CARD
 #include "sd.h"
-// #include "ir.h"
+#endif
 
 // ADC_MODE(ADC_VCC);
 
@@ -24,7 +28,7 @@ Button::callback_t buttonPressHandler = [](u8 repeats) {
 	LOGD("Button pressed.\n");
 	switch (repeats) {
 		case 1:
-			if (LED::ended) {
+			if (!LED::running) {
 				LED::begin();
 			} else {
 				LOGD("play next show\n");
@@ -40,7 +44,7 @@ Button::callback_t buttonPressHandler = [](u8 repeats) {
 			}
 			break;
 		case 2:
-			if (LED::ended)
+			if (!LED::running)
 				LED::begin();
 			else {
 				LOGD("play prev show\n");
@@ -114,13 +118,14 @@ void setup() {
 	Api::setup();
 #ifdef MASTER
 	Hmi::setup();
-	SD::setup();
 	Net::wifiOn();
-	// Net::wifiOff();
 #else
 	Net::wifiOff();
 #endif
-	// Net::sendPing();
+#ifdef USE_SD_CARD
+	SD::setup();
+#endif
+	Net::sendPing();
 	App::stopBlink();
 }
 

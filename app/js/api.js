@@ -71,6 +71,15 @@ export async function loadShowData() {
 		LIGHT.tracks = []
 	}
 }
+
+export async function loadNodes() {
+	const nodes = await get('nodes')
+	if (nodes.map(n => n.id).join() !== CONFIG.nodes.map(n => n.id).join()) {
+		CONFIG.nodes = nodes
+		return true
+	}
+	return false
+}
 export async function fetchData() {
 	const result = await get('stat')
 	Object.assign(CONFIG, result)

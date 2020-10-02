@@ -47,9 +47,9 @@ export async function parseLSF(file) {
 						view.setUint8(13, r)
 						view.setUint8(14, g)
 						view.setUint8(15, b)
-						let hex = ''
-						frame.forEach(byte => (hex += (byte.toString(16).padStart(2, '0') + ' ')))
-						console.log(hex)
+						// let hex = ''
+						// frame.forEach(byte => (hex += (byte.toString(16).padStart(2, '0') + ' ')))
+						// console.log(hex)
 						return frame
 					})
 			})

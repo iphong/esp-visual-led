@@ -1,22 +1,27 @@
-import { renderLight, renderWaveform } from "./app"
+import { renderLight, renderNodes, renderWaveform } from "./app"
 
-const { fetchData, post, uploadFile, get } = require("./api")
+const { fetchData, post, uploadFile, get, loadNodes } = require("./api")
 const { parseAudio } = require("./audio")
 const { parseLSF } = require("./lsf")
 
 export function handleError() {
 	console.error(...arguments)
 }
-async function handleFile(file) {
+async function handleFile(file, event) {
 	console.debug(`select file: ${file.name}`)
 	if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
+		let sync, target
+		if (event && event.target.dataset.device) {
+			sync = true
+			target = event.target.dataset.device
+		}
 		if (data.length == 1) {
-			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[0]));
-			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[0]));
+			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
+			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[0]), sync, target);
 		} else if (data.length === 3) {
-			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[1]));
-			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[2]));
+			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[1]), sync, target);
+			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[2]), sync, target);
 		}
 		await fetchData()
 	} else if (file.name.endsWith('.lt3')) {
@@ -71,7 +76,10 @@ function handleChange(e) {
 	}
 }
 async function handleClick(e) {
-	if (e.target.dataset.segment) {
+	if (e.target.matches('article.node')) {
+		const id = e.target.dataset.device
+		post('blink?target=' + id)
+	} else if (e.target.dataset.segment) {
 		CONFIG.segment = e.target.dataset.segment
 		color = { rgb: CONFIG[CONFIG.segment] }
 		await updateHSL()
@@ -129,14 +137,22 @@ async function handleClick(e) {
 }
 function handleDragOver(e) {
 	e.preventDefault()
+	const droppable = e.target.closest('[data-dropppable]')
+	if (droppable) {
+		droppable.classList.add('active')
+	}
 }
 function handleDragLeave(e) {
 	e.preventDefault()
+	const droppable = e.target.closest('[data-dropppable]')
+	if (droppable) {
+		droppable.classList.remove('active')
+	}
 }
 function handleDragDrop(e) {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
-		handleFile(file)
+		handleFile(file, e)
 	}
 }
 
@@ -153,6 +169,9 @@ function handleScroll(e) {
 function handleInit() {
 	// render()
 	fetchData()
+	setInterval(async () => {
+		if (await loadNodes()) renderNodes() 
+	}, 5000)
 }
 
 window.addEventListener('scroll', handleScroll, true)

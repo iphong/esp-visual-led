@@ -12,7 +12,7 @@
 	-ms-user-select: none;
 }
 body {
-	padding: 60px 0 200px 0;
+	padding: 53px 0 0 0;
 	margin: 0;
 	background: #111111;
 	color: #ffffff;
@@ -82,7 +82,7 @@ button.selected {
 section.timeline {
 	width: 100%;
 	display: grid;
-	grid-gap: 5px;
+	grid-gap: 2px;
 	overflow-x: auto;
 }
 
@@ -90,7 +90,7 @@ div.tracks {
 	width: auto;
 	display: grid;
 	grid: auto / auto;
-	grid-gap: 5px;
+	grid-gap: 2px;
 }
 div.track {
 	position: relative;;
@@ -108,3 +108,25 @@ canvas {
 	display: block;
 }
 
+section.nodes {
+	display: block;
+	padding: 10px;
+}
+article.node {
+	display: inline-block;
+    padding: 10px;
+    background: #222222;
+    border: 2px solid white;
+    font-weight: bold;
+    margin: 5px;
+    font-size: 14px;
+    height: 60px;
+    width: 60px;
+    line-height: 60px;
+    text-align: center;
+    border-radius: 50%;
+
+}
+article.node.active {
+	border-color: blueviolet;
+}

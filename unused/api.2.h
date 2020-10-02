@@ -199,14 +199,14 @@ namespace Api {
 			if (server.hasArg("channel")) {
 				App::data.channel = server.arg("channel").toInt();
 				App::save();
-				if (!LED::ended) {
+				if (LED::running) {
 					LED::begin();
 				}
 			}
 			if (server.hasArg("show")) {
 				App::data.show = server.arg("show").toInt();
 				App::save();
-				if (!LED::ended) {
+				if (LED::running) {
 					LED::begin();
 				}
 			}

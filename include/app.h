@@ -72,9 +72,13 @@ static void lED_BLINK() {
 static void stopBlink() {
 	if (blinkTimer.active()) blinkTimer.detach();
 }
-static void startBlink(u32 time) {
+static void startBlink(u32 time = 1000) {
 	stopBlink();
 	blinkTimer.attach_ms(time, lED_BLINK);
+}
+static void toggleBlink(u32 time = 1000) {
+	if (blinkTimer.active()) stopBlink();
+	else startBlink(time);
 }
 bool isPaired() {
 	return !MeshRC::equals(data.master, MeshRC::broadcast, 6);

@@ -51,7 +51,7 @@ void wifiToggle() {
 struct SyncData {
 	u8 show;
 	u32 time;
-	bool ended;
+	bool running;
 	bool paused;
 };
 u8 syncBuffer[32];
@@ -61,13 +61,13 @@ void sendSync() {
 		SyncData tmp = {
 			App::data.show,
 			LED::getTime(),
-			LED::ended,
+			LED::running,
 			LED::paused};
 		memcpy(syncBuffer, &tmp, sizeof(tmp));
 		MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
 		MeshRC::wait();
 #ifdef SYNC_LOGS
-		LOGD("Sync sent: show=%u e=%i p=%i sync=%u play=%u\n", tmp.show, tmp.ended, tmp.paused, tmp.time, LED::getTime());
+		LOGD("Sync sent: show=%u running=%i paused=%i sync=%u play=%u\n", tmp.show, tmp.running, tmp.paused, tmp.time, LED::getTime());
 #endif
 	}
 #endif
@@ -82,7 +82,7 @@ void recvSync(u8* data, u8 size) {
 		SyncData tmp;
 		memcpy(&tmp, data, size);
 #ifdef SYNC_LOGS
-		LOGD("Sync received: show=%u e=%i p=%i sync=%u play=%u diff=%i\n", tmp.show, tmp.ended, tmp.paused, tmp.time, LED::getTime(), LED::getTime() - tmp.time);
+		LOGD("Sync received: show=%u running=%i paused=%i sync=%u play=%u diff=%i\n", tmp.show, tmp.running, tmp.paused, tmp.time, LED::getTime(), LED::getTime() - tmp.time);
 #endif
 		if (tmp.show == 0 && App::data.show != 0) {
 			LED::end();
@@ -90,16 +90,16 @@ void recvSync(u8* data, u8 size) {
 		}
 		App::data.show = tmp.show;
 		if (tmp.show > 0) {
-			if (LED::isRunning() && tmp.ended) {
+			if (LED::isRunning() && !tmp.running) {
 				LED::end();
-			} else if (!LED::isRunning() && !tmp.ended) {
+			} else if (!LED::isRunning() && tmp.running) {
 				LED::begin();
 			} else if (tmp.paused && !LED::isPaused()) {
 				LED::pause();
 			} else if (!tmp.paused && LED::isPaused()) {
 				LED::resume();
 			}
-			if (!tmp.ended && !tmp.paused) {
+			if (tmp.running && !tmp.paused) {
 				LED::setTime(tmp.time);
 			}
 		}
@@ -108,32 +108,26 @@ void recvSync(u8* data, u8 size) {
 }
 struct NodeInfo {
 	char id[6];
-	String ip;
 };
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
 
 void sendPing() {
 	LOGL("sent ping");
-	NodeInfo node;
-	u8 buf[sizeof(node)];
-	node.ip = WiFi.localIP().toString();
-	memcpy(node.id, App::chipID, 6);
-	memcpy(buf, &node, sizeof(node));
-	MeshRC::send("#>PING", buf, sizeof(node));
+	MeshRC::send("#>PING" + String(App::chipID).substring(0, 6));
 }
 void recvPing(u8* data, u8 size) {
 	LOGL("received ping");
 	bool isNew = true;
-	NodeInfo node;
-	memcpy(&node, data, size);
+	NodeInfo n;
+	memcpy(&n, data, size);
 	for (auto node : nodesList) {
-		if (MeshRC::equals((u8*)node.id, (u8*)node.id, 6)) {
+		if (MeshRC::equals((u8*)n.id, (u8*)node.id, 6)) {
 			isNew = false;
 		}
 	}
 	if (isNew) {
-		nodesList[nodesCount++] = node;
+		nodesList[nodesCount++] = n;
 	}
 }
 
@@ -349,6 +343,12 @@ void recvWiFiConnect(u8* data, u8 size) {
 	WiFi.begin(conn.ssid, conn.pass);
 	wifiOn();
 }
+void recvBlink(u8* id, u8 size) {
+	if (size > 0 && !MeshRC::equals(id, (u8 *)App::chipID, size)) {
+		return;z
+	}
+	App::toggleBlink(500);
+}
 
 void setup() {
 	WiFi.mode(WIFI_AP_STA);
@@ -364,6 +364,7 @@ void setup() {
 	MeshRC::on("$>WIFI-", []() { WiFi.disconnect(); });
 #endif
 
+	MeshRC::on("#>BLINK", Net::recvBlink);
 	MeshRC::on("#>PING", Net::recvPing);
 	MeshRC::on("#>SYNC", Net::recvSync);
 	MeshRC::on("#>PAIR", Net::recvPair);

@@ -37,36 +37,36 @@ namespace SD {
 		sdOK = fs.begin(D8);
 		Serial.println(sdOK ? F("SD card initialized.") : F("SD card init failed!"));
 
-		open("_test1.txt");
-		write("Hello 1", 7);
-		close();
-		open("/show/1.json");
-		write("{}", 2);
-		close();
-		fs.chdir("/show");
-		open("_test3.txt");
-		write("Hello 3", 7);
-		close();
-		Serial.println("DONE SD CARD TEST");
+		// open("_test1.txt");
+		// write("Hello 1", 7);
+		// close();
+		// open("/show/1.json");
+		// write("{}", 2);
+		// close();
+		// fs.chdir("/show");
+		// open("_test3.txt");
+		// write("Hello 3", 7);
+		// close();
+		// Serial.println("DONE SD CARD TEST");
 
 		
-		fs.chdir("/");
-		open("_test1.txt");
-		while (file.available()) {
-			Serial.write(file.read());
-		} 
-		close();
-		open("/show/1.json");
-		while (file.available()) {
-			Serial.write(file.read());
-		} 
-		close();
-		fs.chdir("/show");
-		open("_test3.txt");
-		while (file.available()) {
-			Serial.write(file.read());
-		} 
-		close();
+		// fs.chdir("/");
+		// open("_test1.txt");
+		// while (file.available()) {
+		// 	Serial.write(file.read());
+		// } 
+		// close();
+		// open("/show/1.json");
+		// while (file.available()) {
+		// 	Serial.write(file.read());
+		// } 
+		// close();
+		// fs.chdir("/show");
+		// open("_test3.txt");
+		// while (file.available()) {
+		// 	Serial.write(file.read());
+		// } 
+		// close();
 	}
 }
 

@@ -11,6 +11,8 @@ const REMOTE_URL = '10.1.1.1/edit'
 // const REMOTE_URL = '10.0.0.163/edit'
 // const REMOTE_URL = '10.0.0.116/edit'
 
+exec('webpack -w -p');
+
 fs.watch(APP_PATH, { recursive: true, persistent: true }, (action, filename) => {
 	if (path.basename(filename).startsWith('.') || filename.startsWith('js')) return
 	const src = path.join(APP_PATH, filename)
@@ -24,8 +26,4 @@ fs.watch(APP_PATH, { recursive: true, persistent: true }, (action, filename) => 
 		process.stdout.write(`uploading "${filename}.gz" ... \n`)
 		execSync(`curl -F "file=@${dst}.gz;filename=${filename}.gz" ${REMOTE_URL}`)
 	}
-
-	// if (action == 'rename') {
-		
-	// }
 })

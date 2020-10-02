@@ -7,6 +7,9 @@
 #include "app.h"
 #include "led.h"
 #include "net.h"
+#ifdef USE_SD_CARD
+#include "sd.h"
+#endif
 
 #ifndef __API_H__
 #define __API_H__
@@ -71,7 +74,11 @@ void replyServerError(String msg) {
 /* Read the given file from the filesystem and stream it back to the client */
 bool handleFileRead(String path) {
 	LOGL(String("handleFileRead: ") + path);
+#ifdef USE_SD_CARD
+	if (!SD::sdOK) {
+#else
 	if (!App::fsOK) {
+#endif
 		replyServerError(FPSTR(FS_INIT_ERROR));
 		return true;
 	}
@@ -84,10 +91,41 @@ bool handleFileRead(String path) {
 	} else {
 		contentType = mime::getContentType(path);
 	}
+#ifdef USE_SD_CARD
+	int dirIndex = path.lastIndexOf("/");
+	if (dirIndex >= 0) {
+		String dir = path.substring(0, dirIndex + 1);
+		LOG("change dir = ");
+		LOGL(dir);
+		SD::fs.chdir(dir);
+		path = path.substring(dirIndex + 1, path.length());
+		LOG("filename = ");
+		LOGL(path);
+	}
+	if (!SD::fs.exists(path.c_str())) {
+#else
 	if (!App::fs->exists(path)) {
+#endif
 		// File not found, try gzip version
 		path = path + ".gz";
 	}
+#ifdef USE_SD_CARD
+	if (SD::fs.exists(path.c_str())) {
+		SD::open(path);
+		if (SD::file) {
+			while (SD::file.available()) {
+				Serial.write(SD::file.read());
+			}
+			// server.send(200, contentType, SD::file.readString().c_str());
+			SD::close();
+			return true;
+		} else {
+			LOGL("Can not openfile in SD card!");
+		}
+	}
+	server.send(200, contentType, "foo");
+	return true;
+#else
 	if (App::fs->exists(path)) {
 		File file = App::fs->open(path, "r");
 		if (server.streamFile(file, contentType) != file.size()) {
@@ -96,8 +134,9 @@ bool handleFileRead(String path) {
 		file.close();
 		return true;
 	}
+#endif
 	return false;
-}
+}  // namespace Api
 String lastExistingParent(String path) {
 	while (!path.isEmpty() && !App::fs->exists(path)) {
 		if (path.lastIndexOf('/') > 0) {
@@ -147,6 +186,14 @@ void setup(void) {
 		json += "}";
 
 		server.send(200, "application/json", json);
+	});
+	server.on("/blink", HTTP_POST, []() {
+		if (server.hasArg("target")) {
+			MeshRC::send("$>BLINK" + server.arg("target"));
+		} else {
+			MeshRC::send("$>BLINK");
+		}
+		replyOK();
 	});
 	server.on("/wifi", HTTP_POST, []() {
 		if (server.hasArg("disconnect")) {
@@ -233,17 +280,14 @@ void setup(void) {
 			replyBadRequest("Missing cmd argument.");
 		}
 	});
-
 	server.on("/nodes", HTTP_GET, []() {
 		LOGL("GET online nodes list");
 		String json;
 		json.reserve(128);
-
 		json = "[";
 		for (size_t i = 0; i < Net::nodesCount; i++) {
 			json += "{";
-			json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\",";
-			json += "\"ip\":\"" + Net::nodesList[i].ip + "\"";
+			json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\"";
 			json += "}";
 			if (i < Net::nodesCount - 1) json += ",";
 		}
@@ -251,7 +295,6 @@ void setup(void) {
 
 		server.send(200, "application/json", json);
 	});
-
 	server.on("/list", HTTP_GET, []() {
 		if (!App::fsOK) {
 			return replyServerError(FPSTR(FS_INIT_ERROR));
@@ -423,23 +466,55 @@ void setup(void) {
 				filename = "/" + filename;
 			}
 			LOGL(String("handleFileUpload Name: ") + filename);
+#ifdef USE_SD_CARD
+			int dirIndex = filename.lastIndexOf("/");
+			if (dirIndex >= 0) {
+				String dir = filename.substring(0, dirIndex + 1);
+				LOG("change dir = ");
+				LOGL(dir);
+				SD::fs.chdir(dir);
+				filename = filename.substring(dirIndex + 1, filename.length());
+				LOG("filename = ");
+				LOGL(filename);
+			}
+			SD::open(filename);
+			if (!SD::file) {
+				return replyServerError(F("CREATE FAILED"));
+			}
+#else
 			uploadFile = App::fs->open(filename, "w");
 			if (!uploadFile) {
 				return replyServerError(F("CREATE FAILED"));
 			}
+#endif
 			LOGL(String("Upload: START, filename: ") + filename);
 		} else if (upload.status == UPLOAD_FILE_WRITE) {
+#ifdef USE_SD_CARD
+			if (SD::file) {
+				size_t bytesWritten = SD::file.write(upload.buf, upload.currentSize);
+				if (bytesWritten != upload.currentSize) {
+					return replyServerError(F("WRITE FAILED"));
+				}
+			}
+#else
 			if (uploadFile) {
 				size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
 				if (bytesWritten != upload.currentSize) {
 					return replyServerError(F("WRITE FAILED"));
 				}
 			}
+#endif
 			LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 		} else if (upload.status == UPLOAD_FILE_END) {
+#ifdef USE_SD_CARD
+			if (SD::file) {
+				SD::file.close();
+			}
+#else
 			if (uploadFile) {
 				uploadFile.close();
 			}
+#endif
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
 
 #ifdef MASTER

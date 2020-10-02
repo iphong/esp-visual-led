@@ -1,4 +1,4 @@
-import { AUDIO, LIGHT } from "./data"
+import { AUDIO, CONFIG, LIGHT } from "./data"
 
 export function $(selector) {
 	return document.body.querySelectorAll(selector)
@@ -47,6 +47,20 @@ export function renderHead() {
 	setText('#mac', mac)
 }
 
+export function renderNodes() {
+	$('section.nodes').forEach(section => {
+		section.innerHTML = ''
+		CONFIG.nodes.forEach(node => {
+			const $node = document.createElement('article')
+			$node.classList.add('node')
+			$node.innerHTML = node.id
+			$node.dataset.device = node.id
+			$node.dataset.droppable = true
+			section.appendChild($node)
+		})
+	})
+}
+
 
 export function renderShow() {
 	$('[data-show]').forEach(el => {
@@ -58,6 +72,7 @@ export function renderShow() {
 	})
 	$('.tracks').forEach($tracks => {
 		$tracks.innerHTML = ''
+		$tracks.style.width = LIGHT.params.end/50 + 'px'
 		LIGHT.tracks.forEach(track => {
 			const $track = document.createElement('div')
 			const { elements, ...params } = track
@@ -72,14 +87,15 @@ export function renderShow() {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '25px'
+			container.style.height = '40px'
 			break;
 		case 2:
-			container.style.height = '25px'
+			container.style.height = '20px'
 			break;
 		default:
 			return console.log('unsupported device type:', track.device)
 	}
+
 	track.elements.forEach(el => {
 		const $el = document.createElement('span')
 		let { color, colorStart, colorEnd, ...params } = el
@@ -106,20 +122,20 @@ export function renderLight(container, track) {
 				color2 = toCssColor(colorEnd)
 				const { period, ratio } = params
 				$el.style.backgroundImage = `url(${drawFlash(color1, color2, period, ratio)})`
-				$el.style.backgroundSize = '10%'
+				$el.style.backgroundSize = '20%'
 				break;
 			case 5: // rainbow
 				$el.style.backgroundImage = `url(${drawRainbow(params.period)})`
-				$el.style.backgroundSize = '10%'
+				$el.style.backgroundSize = '20%'
 				// $el.style.backgroundImage = `linear-gradient(to right, red, orange , yellow, green, cyan, blue, violet)`
 				break;
 			case 6: // dots
 				$el.style.backgroundImage = `url(${drawDots(toCssColor(color), params.spacing)})`
-				$el.style.backgroundSize = '10%'
+				$el.style.backgroundSize = '20%'
 				break;
 			case 7: // pulse
 				$el.style.backgroundImage = `url(${drawPulse(toCssColor(color), params.period)})`
-				$el.style.backgroundSize = '10%'
+				$el.style.backgroundSize = '20%'
 			default:
 		}
 		container.appendChild($el)
@@ -193,7 +209,7 @@ export function renderWaveform() {
 		const canvasContainer = canvas.parentElement;
 		const waveData = AUDIO.channels[index].data
 		const height = canvas.offsetHeight;
-		const width = AUDIO.duration * 50
+		const width = AUDIO.duration * 20
 		const halfHeight = height / 2;
 		length = waveData.length;
 
@@ -214,9 +230,9 @@ export function renderWaveform() {
 			drawIdx = step;
 		for (let i = 0; i < length; i++) {
 			if (i == drawIdx) {
-				// const p1 = maxNegative * halfHeight + halfHeight;
-				// ctx.strokeStyle = '#555555';
-				// ctx.strokeRect(x, p1, 1, (maxPositive * halfHeight + halfHeight) - p1);
+				const p1 = maxNegative * halfHeight + halfHeight;
+				ctx.strokeStyle = '#333333';
+				ctx.strokeRect(x, p1, 1, (maxPositive * halfHeight + halfHeight) - p1);
 
 				const p2 = sumNegative / kNegative * halfHeight + halfHeight;
 				ctx.strokeStyle = '#eeeeee';
