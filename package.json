@@ -4,6 +4,7 @@
     "babel-loader": "^8.1.0",
     "css-loader": "^4.3.0",
     "ts-loader": "^8.0.3",
+    "unzip-js": "^1.0.0",
     "webpack": "^4.44.1"
   },
   "devDependencies": {

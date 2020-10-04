@@ -60,39 +60,16 @@ export function exec(cmd) {
 	// console.log('execute ' + cmd)
 	return request('POST', 'exec', { cmd })
 }
-export async function loadShowData() {
-	try {
-		const data = await get(`show/${CONFIG.show}.json`)
-		LIGHT.params = data.solution
-		LIGHT.tracks = data.tracks
-	} catch(e) {
-		console.log('show not available')
-		LIGHT.params = {}
-		LIGHT.tracks = []
-	}
-}
 
-export async function loadNodes() {
-	const nodes = await get('nodes')
-	if (nodes.map(n => n.id).join() !== CONFIG.nodes.map(n => n.id).join()) {
-		CONFIG.nodes = nodes
-		return true
-	}
-	return false
-}
 export async function fetchData() {
-	const result = await get('stat')
-	Object.assign(CONFIG, result)
-	if (result.show) await loadShowData();
+	Object.assign(CONFIG, await get('stat'))
+	CONFIG.nodes = await get('nodes')
 	render()
 }
-
-
 Object.assign(global, {
 	request,
 	get,
 	post,
 	uploadFile,
-	loadShowData,
 	fetchData
 })

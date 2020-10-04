@@ -1,15 +1,34 @@
-import { renderLight, renderNodes, renderWaveform } from "./app"
+import { render, renderHead, renderLight, renderNodes, renderShow, renderWaveform } from "./app"
 
-const { fetchData, post, uploadFile, get, loadNodes } = require("./api")
+const { fetchData, post, uploadFile, get } = require("./api")
 const { parseAudio } = require("./audio")
-const { parseLSF } = require("./lsf")
+const { parseLSF, parseLTP } = require("./lsf")
+
+export const socket = new WebSocket(`ws://${location.hostname}:81`)
+socket.addEventListener('message', async (e) => {
+	const reader = new FileReader()
+	reader.readAsText(e.data)
+	reader.addEventListener('loadend', async () => {
+		console.log(`SOCKET:: `, reader.result)
+		const msg = reader.result
+		if (msg.startsWith('#>PING')) {
+			CONFIG.nodes = await get('nodes')
+			renderNodes()
+		}
+	})
+})
+
+window.socket = socket
+window.send = socket.send
 
 export function handleError() {
 	console.error(...arguments)
 }
 async function handleFile(file, event) {
 	console.debug(`select file: ${file.name}`)
-	if (file.name.endsWith('.lsf')) {
+	if (file.name.endsWith('.ltp')) {
+		await parseLTP(file)
+	} else if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
 		let sync, target
 		if (event && event.target.dataset.device) {
@@ -76,9 +95,9 @@ function handleChange(e) {
 	}
 }
 async function handleClick(e) {
-	if (e.target.matches('article.node')) {
+	if (e.target.dataset.device) {
 		const id = e.target.dataset.device
-		post('blink?target=' + id)
+		socket.send('#>BLINK' + id)
 	} else if (e.target.dataset.segment) {
 		CONFIG.segment = e.target.dataset.segment
 		color = { rgb: CONFIG[CONFIG.segment] }
@@ -88,11 +107,8 @@ async function handleClick(e) {
 	else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
 		await render()
-		// await post('exec?cmd=end')
 		await post('show', { id: CONFIG.show })
-		if (CONFIG.show) await loadShowData()
-		render()
-		// await post('exec?cmd=start')
+		renderShow()
 	}
 	else if (e.target.dataset.action) {
 		const action = e.target.dataset.action
@@ -113,7 +129,7 @@ async function handleClick(e) {
 				break
 		}
 	}
-	
+
 	else if (e.target.dataset.command) {
 		const command = e.target.dataset.command
 		await post(`exec?cmd=${command}`)
@@ -169,9 +185,6 @@ function handleScroll(e) {
 function handleInit() {
 	// render()
 	fetchData()
-	setInterval(async () => {
-		if (await loadNodes()) renderNodes() 
-	}, 5000)
 }
 
 window.addEventListener('scroll', handleScroll, true)

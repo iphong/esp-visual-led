@@ -103,14 +103,12 @@ div.track > span {
 	height: 100%;
 	box-sizing: border-box;
 }
-canvas {
-	height: 80px;
-	display: block;
-}
 
-section.nodes {
+section.nodes:not(:empty) {
 	display: block;
+    background: #222222;
 	padding: 10px;
+	margin: 2px 0;
 }
 article.node {
 	display: inline-block;
@@ -124,9 +122,16 @@ article.node {
     width: 60px;
     line-height: 60px;
     text-align: center;
-    border-radius: 50%;
+    /* border-radius: 50%; */
 
 }
 article.node.active {
 	border-color: blueviolet;
+}
+
+.loading {
+	color: white;
+	text-align: center;
+	display: block;
+	padding: 10px;
 }

@@ -1,3 +1,4 @@
+import { parseAudio } from "./audio"
 import { AUDIO, CONFIG, LIGHT } from "./data"
 
 export function $(selector) {
@@ -61,7 +62,6 @@ export function renderNodes() {
 	})
 }
 
-
 export function renderShow() {
 	$('[data-show]').forEach(el => {
 		if (parseInt(el.dataset.show) === CONFIG.show) {
@@ -72,7 +72,7 @@ export function renderShow() {
 	})
 	$('.tracks').forEach($tracks => {
 		$tracks.innerHTML = ''
-		$tracks.style.width = LIGHT.params.end/50 + 'px'
+		$tracks.style.width = LIGHT.params.end / 50 + 'px'
 		LIGHT.tracks.forEach(track => {
 			const $track = document.createElement('div')
 			const { elements, ...params } = track
@@ -83,7 +83,6 @@ export function renderShow() {
 		})
 	})
 }
-
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
@@ -191,34 +190,48 @@ function drawRainbow(period) {
 	tmpCanvas.height = 1
 	const ctx = tmpCanvas.getContext('2d')
 	var gradient = ctx.createLinearGradient(0, 0, period, 0);
-	gradient.addColorStop(1/6*0, 'red');
-	gradient.addColorStop(1/6*1, 'orange');
-	gradient.addColorStop(1/6*2, 'yellow');
-	gradient.addColorStop(1/6*3, 'green');
-	gradient.addColorStop(1/6*4, 'cyan');
-	gradient.addColorStop(1/6*5, 'blue');
-	gradient.addColorStop(1/6*6, 'violet');
+	gradient.addColorStop(1 / 6 * 0, 'red');
+	gradient.addColorStop(1 / 6 * 1, 'orange');
+	gradient.addColorStop(1 / 6 * 2, 'yellow');
+	gradient.addColorStop(1 / 6 * 3, 'green');
+	gradient.addColorStop(1 / 6 * 4, 'cyan');
+	gradient.addColorStop(1 / 6 * 5, 'blue');
+	gradient.addColorStop(1 / 6 * 6, 'violet');
 	ctx.fillStyle = gradient
 	ctx.fillRect(0, 0, period, 1);
 	return tmpCanvas.toDataURL()
 }
 
-export function renderWaveform() {
-	$('canvas.waveform').forEach((canvas, index) => {
+export async function renderAudio() {
+	if (AUDIO.file) {
+		$('.track.waveform').forEach(el => (el.innerHTML = '<div class="loading">Loading...</div>'))
+		renderWaveform(await parseAudio(AUDIO.file))
+		setAttr('#player', 'src', URL.createObjectURL(AUDIO.file))
+	} else {
+		setAttr('#player', 'src', '')
+		$('.track.waveform').forEach(el => (el.innerHTML = ''))
+	}
+}
+
+export async function renderWaveform() {
+	$('.track.waveform').forEach((wrapper, index) => {
+		const canvas = document.createElement('canvas')
 		const ctx = canvas.getContext("2d");
-		const canvasContainer = canvas.parentElement;
 		const waveData = AUDIO.channels[index].data
-		const height = canvas.offsetHeight;
+		const height = 80;
 		const width = AUDIO.duration * 20
 		const halfHeight = height / 2;
-		length = waveData.length;
-
+		const length = waveData.length;
 		const step = Math.round(length / width);
+
+		wrapper.innerHTML = ''
+		wrapper.appendChild(canvas)
+		
 		canvas.width = width;
 		canvas.height = height;
 		canvas.style.width = width + "px";
 		canvas.style.height = height + "px";
-		canvas.style.left = Math.round(canvasContainer.clientWidth / 2) + "px";
+		canvas.style.left = Math.round(wrapper.clientWidth / 2) + "px";
 
 		let x = 0,
 			sumPositive = 0,
@@ -261,9 +274,11 @@ export function renderWaveform() {
 	})
 }
 
-export function render() {
+export async function render() {
 	renderHead()
+	renderNodes();
 	renderShow()
+	renderAudio()
 }
 
 Object.assign(window, {

@@ -39,4 +39,5 @@ global.updateHSL = function updateHSL() {
 	const { r, g, b } = color.rgb
 	color.hsl = rgbToHsl(r, g, b)
 }
+
 Object.assign(global, { CONFIG, AUDIO, LIGHT })

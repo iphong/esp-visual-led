@@ -437,6 +437,12 @@ bindings@^1.5.0:
   dependencies:
     file-uri-to-path "1.0.0"
 
+blob-slicer@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/blob-slicer/-/blob-slicer-1.0.0.tgz#8b007f2b89ce6f357fd067c5eae5c7966560cc31"
+  dependencies:
+    buffer "^4.9.1"
+
 bluebird@^3.5.5:
   version "3.7.2"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.2.tgz#9f229c15be272454ffa973ace0dbee79a1b0c36f"
@@ -536,6 +542,10 @@ browserify-zlib@^0.2.0:
   dependencies:
     pako "~1.0.5"
 
+buffer-crc32@^0.2.13:
+  version "0.2.13"
+  resolved "https://registry.yarnpkg.com/buffer-crc32/-/buffer-crc32-0.2.13.tgz#0d333e3f00eac50aa1454abd30ef8c2a5d9a7242"
+
 buffer-from@^1.0.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.1.tgz#32713bc028f75c02fdb710d7c7bcec1f2c6070ef"
@@ -544,7 +554,7 @@ buffer-xor@^1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/buffer-xor/-/buffer-xor-1.0.3.tgz#26e61ed1422fb70dd42e6e36729ed51d855fe8d9"
 
-buffer@^4.3.0:
+buffer@^4.3.0, buffer@^4.9.1:
   version "4.9.2"
   resolved "https://registry.yarnpkg.com/buffer/-/buffer-4.9.2.tgz#230ead344002988644841ab0244af8c44bbe3ef8"
   dependencies:
@@ -2467,6 +2477,13 @@ unset-value@^1.0.0:
   dependencies:
     has-value "^0.3.1"
     isobject "^3.0.0"
+
+unzip-js@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/unzip-js/-/unzip-js-1.0.0.tgz#4212611a1571557a92431ec0a370f52e17d83087"
+  dependencies:
+    blob-slicer "^1.0.0"
+    buffer-crc32 "^0.2.13"
 
 upath@^1.1.1:
   version "1.2.0"

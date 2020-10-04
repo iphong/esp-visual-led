@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <WebSocketsServer.h>
 // #include <WiFiServer.h>
 #include <MeshRC.h>
 // #include <ESP8266mDNS.h>
@@ -11,6 +12,8 @@
 #define __NET_H__
 
 namespace Net {
+
+WebSocketsServer webSocket(81);
 
 Ticker timeSyncInterrupt;
 Ticker nodePingInterrupt;
@@ -344,10 +347,62 @@ void recvWiFiConnect(u8* data, u8 size) {
 	wifiOn();
 }
 void recvBlink(u8* id, u8 size) {
-	if (size > 0 && !MeshRC::equals(id, (u8 *)App::chipID, size)) {
-		return;z
+	if (size > 0 && !MeshRC::equals(id, (u8*)App::chipID, size)) {
+		return;
 	}
 	App::toggleBlink(500);
+}
+
+void parseCommand(String hex) {
+	int i;
+	int len = hex.length();
+	String byte;
+	String message = "#>";
+	String id;
+	if (hex[0] == ':') {
+		for (i = 1; i < len; i += 2) {
+			byte = hex.substring(i, 2);
+			message += (char)(int)strtol(byte.c_str(), NULL, 16);
+		}
+	} else if (hex[3] == ':') {
+		id = hex.substring(0, 6);
+		for (i = 4; i < len; i += 2) {
+			byte = hex.substring(i, 2);
+			message += (char)(int)strtol(byte.c_str(), NULL, 16);
+		}
+	}
+	LOGL(message);
+	MeshRC::send(message)
+}
+
+bool activeSockets[8];
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+	switch (type) {
+		case WStype_DISCONNECTED:
+			LOGD("[%u] Disconnected!\n", num);
+			if (num < 8) activeSockets[num] = false;
+			break;
+		case WStype_CONNECTED: {
+			IPAddress ip = webSocket.remoteIP(num);
+			if (num < 8) activeSockets[num] = true;
+			LOGD("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+		} break;
+		case WStype_TEXT:
+			LOGD("[%u] get Text: %s\n", num, payload);
+			// parseCommand(String((char *)payload));
+			MeshRC::send(payload, length);
+			break;
+		case WStype_BIN:
+			LOGD("[%u] get binary length: %u\n", num, length);
+			MeshRC::send(payload, length);
+			break;
+		case WStype_ERROR:
+		case WStype_FRAGMENT_TEXT_START:
+		case WStype_FRAGMENT_BIN_START:
+		case WStype_FRAGMENT:
+		case WStype_FRAGMENT_FIN:
+			break;
+	}
 }
 
 void setup() {
@@ -358,6 +413,9 @@ void setup() {
 
 	ArduinoOTA.onProgress([](int percent, int total) { App::lED_BLINK(); });
 	ArduinoOTA.begin();
+
+	webSocket.begin();
+	webSocket.onEvent(webSocketEvent);
 
 #ifndef MASTER
 	MeshRC::on("$>WIFI+", recvWiFiConnect);
@@ -379,6 +437,12 @@ void setup() {
 	MeshRC::on("#>TOGGLE", LED::toggle);
 	MeshRC::on("#>END", LED::end);
 
+	MeshRC::on("", [](u8* data, u8 size) {
+		for (u8 i = 0; i < 8; i++) {
+			webSocket.sendTXT(i, data, size);
+		}
+	});
+
 	MeshRC::begin();
 #ifdef MASTER
 	timeSyncInterrupt.attach_ms_scheduled_accurate(100, sendSync);
@@ -387,6 +451,7 @@ void setup() {
 
 void loop() {
 	ArduinoOTA.handle();
+	webSocket.loop();
 }
 }  // namespace Net
 

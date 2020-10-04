@@ -1,6 +1,52 @@
+import unzip from 'unzip-js'
+import { $, renderAudio, renderShow } from './app'
+import { AUDIO } from './data'
+
 const rgbFrameRegex = /(\t+)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
 const endFrameRegex = /(\t+)?([0-9]+)ms: end/i
 const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
+
+export async function parseLTP(file) {
+	$('.tracks').forEach(el => {
+		el.width = '100%';
+		el.innerHTML = '<div class="loading">loading...</div>'
+	})
+	$('.track.waveform').forEach(el => {
+		el.width = '100%';
+		el.innerHTML = '<div class="loading">loading...</div>'
+	})
+	unzip(file, (err, zip) => {
+		zip.readEntries((err, entries) => {
+			entries.forEach(entry => {
+				const { name } = entry
+				zip.readEntryData(entry, false, (err, stream) => {
+					let content = []
+					stream.on('data', (data) => {
+						content.push(data)
+					})
+					stream.on('end', async () => {
+						const file = new Blob(content)
+						if (name == "project.lt3") {
+							const reader = new FileReader
+							reader.readAsText(file)
+							reader.addEventListener('loadend', () => {
+								const data = JSON.parse(reader.result)
+								LIGHT.params = data.solution
+								LIGHT.tracks = data.tracks
+								renderShow()
+							})
+						} else if (name.endsWith('.mp3')) {
+							AUDIO.file = file
+							renderAudio()
+						} else if (name.startsWith('images/')) {
+							console.log(name)
+						}
+					})
+				})
+			})
+		})
+	})
+}
 
 export async function parseLSF(file) {
 	return new Promise(resolve => {
@@ -40,6 +86,7 @@ export async function parseLSF(file) {
 						if (type === 1 && lines[index + 1]) {
 							duration = lines[index + 1].start - start
 						}
+
 						view.setUint8(0, type)
 						view.setUint32(1, start)
 						view.setUint32(5, duration)
