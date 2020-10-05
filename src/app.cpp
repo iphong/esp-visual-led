@@ -1,6 +1,6 @@
 // #define MESH_RC_DEBUG_ALL_MSG
 // #define SEND_FILE_LOGS
-// #define RECV_FILE_LOGS
+#define RECV_FILE_LOGS
 // #define SYNC_LOGS
 // #ifdef MASTER
 // #define USE_SD_CARD
@@ -20,7 +20,7 @@
 #include "sd.h"
 #endif
 
-// ADC_MODE(ADC_VCC);
+ADC_MODE(ADC_VCC);
 
 Button btn(BTN_PIN);
 

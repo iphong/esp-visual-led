@@ -78,10 +78,6 @@ void sendSync() {
 void recvSync(u8* data, u8 size) {
 #ifndef MASTER
 	if (!receivingFiles && !App::isPairing()) {
-		// if (IS_WIFI_ON) {
-		// 	wifiOff();
-		// 	WiFi.disconnect();
-		// }
 		SyncData tmp;
 		memcpy(&tmp, data, size);
 #ifdef SYNC_LOGS
@@ -111,6 +107,9 @@ void recvSync(u8* data, u8 size) {
 }
 struct NodeInfo {
 	char id[6];
+	char name[20];
+	u8 type;
+	u8 vbat;
 };
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
@@ -146,7 +145,7 @@ void sendPair(u8 channel = 255) {
 
 void recvPair(u8* data, u8 size) {
 	if (App::isPairing() && !receivingFiles) {
-		// App::stopBlink();
+		App::stopBlink();
 		if (size >= 1) App::setChannel(data[0]);
 		App::setMaster(MeshRC::sender);
 		App::setMode(App::SHOW);
@@ -346,13 +345,21 @@ void recvWiFiConnect(u8* data, u8 size) {
 	WiFi.begin(conn.ssid, conn.pass);
 	wifiOn();
 }
-void recvBlink(u8* id, u8 size) {
-	if (size > 0 && !MeshRC::equals(id, (u8*)App::chipID, size)) {
+void recvBlink(u8* data, u8 size) {
+	char action = data[0];
+	char speed = data[1];
+	u8 *id = &data[2];
+	if (size > 2 && !MeshRC::equals(id, (u8*)App::chipID, size)) {
 		return;
 	}
-	App::toggleBlink(500);
+	if (action == '+') {
+		App::startBlink(String(speed).toInt() * 100);
+	} else if (action == '-') {
+		App::stopBlink();
+	} else {
+		App::toggleBlink(String(speed).toInt() * 100);
+	}
 }
-
 void parseCommand(String hex) {
 	int i;
 	int len = hex.length();
@@ -372,9 +379,8 @@ void parseCommand(String hex) {
 		}
 	}
 	LOGL(message);
-	MeshRC::send(message)
+	MeshRC::send(message);
 }
-
 bool activeSockets[8];
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {
@@ -389,12 +395,17 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 		} break;
 		case WStype_TEXT:
 			LOGD("[%u] get Text: %s\n", num, payload);
-			// parseCommand(String((char *)payload));
-			MeshRC::send(payload, length);
+			if (payload[0] == '#') {
+				if (payload[1] == '<') MeshRC::recvHandler(NULL, payload, length);
+				if (payload[1] == '>') MeshRC::send(payload, length);
+			}
 			break;
 		case WStype_BIN:
 			LOGD("[%u] get binary length: %u\n", num, length);
-			MeshRC::send(payload, length);
+			if (payload[0] == '#') {
+				if (payload[1] == '<') MeshRC::recvHandler(NULL, payload, length);
+				if (payload[1] == '>') MeshRC::send(payload, length);
+			}
 			break;
 		case WStype_ERROR:
 		case WStype_FRAGMENT_TEXT_START:
@@ -411,6 +422,8 @@ void setup() {
 	WiFi.setAutoReconnect(false);
 	WiFi.disconnect();
 
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
+
 	ArduinoOTA.onProgress([](int percent, int total) { App::lED_BLINK(); });
 	ArduinoOTA.begin();
 
@@ -423,6 +436,7 @@ void setup() {
 #endif
 
 	MeshRC::on("#>BLINK", Net::recvBlink);
+	MeshRC::on("#<BLINK", Net::recvBlink);
 	MeshRC::on("#>PING", Net::recvPing);
 	MeshRC::on("#>SYNC", Net::recvSync);
 	MeshRC::on("#>PAIR", Net::recvPair);
@@ -439,10 +453,9 @@ void setup() {
 
 	MeshRC::on("", [](u8* data, u8 size) {
 		for (u8 i = 0; i < 8; i++) {
-			webSocket.sendTXT(i, data, size);
+			webSocket.sendBIN(i, data, size);
 		}
 	});
-
 	MeshRC::begin();
 #ifdef MASTER
 	timeSyncInterrupt.attach_ms_scheduled_accurate(100, sendSync);

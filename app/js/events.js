@@ -1,40 +1,25 @@
-import { render, renderHead, renderLight, renderNodes, renderShow, renderWaveform } from "./app"
+import { render } from "./app"
+import { send } from "./ws"
 
-const { fetchData, post, uploadFile, get } = require("./api")
-const { parseAudio } = require("./audio")
-const { parseLSF, parseLTP } = require("./lsf")
+const { parseAudio, renderAudio } = require("./audio")
+const { parseLSF, parseLTP, parseIPX, renderShow } = require("./light")
 
-export const socket = new WebSocket(`ws://${location.hostname}:81`)
-socket.addEventListener('message', async (e) => {
-	const reader = new FileReader()
-	reader.readAsText(e.data)
-	reader.addEventListener('loadend', async () => {
-		console.log(`SOCKET:: `, reader.result)
-		const msg = reader.result
-		if (msg.startsWith('#>PING')) {
-			CONFIG.nodes = await get('nodes')
-			renderNodes()
-		}
-	})
-})
-
-window.socket = socket
-window.send = socket.send
 
 export function handleError() {
 	console.error(...arguments)
 }
+
 async function handleFile(file, event) {
 	console.debug(`select file: ${file.name}`)
-	if (file.name.endsWith('.ltp')) {
+	if (file.name.endsWith('.bin')) {
+		await uploadFile('firmware/' + filename, file)
+	} else if (file.name.endsWith('.ltp')) {
 		await parseLTP(file)
+		await render()
 	} else if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
-		let sync, target
-		if (event && event.target.dataset.device) {
-			sync = true
-			target = event.target.dataset.device
-		}
+		const target = event.target.dataset.device
+		const sync = !!target
 		if (data.length == 1) {
 			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
 			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[0]), sync, target);
@@ -42,16 +27,11 @@ async function handleFile(file, event) {
 			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[1]), sync, target);
 			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[2]), sync, target);
 		}
-		await fetchData()
-	} else if (file.name.endsWith('.lt3')) {
-		const path = `show/${CONFIG.show}.json`
-		await uploadFile(path, file)
-		await fetchData()
 	} else if (file.name.endsWith('.ipx')) {
-		// parseIPX(file).then(resolve)
+		await parseIPX(file)
 	} else if (file.type.startsWith('audio')) {
-		renderWaveform(await parseAudio(file))
-		setAttr('#player', 'src', URL.createObjectURL(file))
+		await parseAudio(file)
+		await renderAudio()
 	} else {
 		console.error('unsupported file format')
 	}
@@ -61,94 +41,29 @@ function handleChange(e) {
 		for (let file of e.target.files) {
 			handleFile(file)
 		}
-	} else if (e.target.matches('grid.color-slider input')) {
-		const channel = e.target.dataset.key
-		const group = e.target.dataset.group
-		color[group][channel] = parseFloat(e.target.value)
-		switch (group) {
-			case 'rgb':
-				updateHSL()
-				break
-			case 'hsl':
-				updateRGB()
-				break
-		}
-		renderColor()
-		if (e.type === 'change') {
-			post('/color', Object.assign({ segment: CONFIG.segment }, color.rgb))
-		}
-
-	} else if (e.target.matches('input[data-group="audio"]')) {
-		const { key } = e.target.dataset
-		const value = e.target.value
-		switch (e.target.type) {
-			case 'color':
-				AUDIO[key] = value
-				break
-			case 'range':
-				AUDIO[key] = parseFloat(value)
-				break
-		}
-		if (e.type === 'change') {
-			console.info(`set ${key} = ${JSON.stringify(AUDIO[key])}`)
-		}
 	}
 }
 async function handleClick(e) {
 	if (e.target.dataset.device) {
-		const id = e.target.dataset.device
-		socket.send('#>BLINK' + id)
-	} else if (e.target.dataset.segment) {
-		CONFIG.segment = e.target.dataset.segment
-		color = { rgb: CONFIG[CONFIG.segment] }
-		await updateHSL()
-		await render()
-	}
-	else if (e.target.dataset.show) {
+		if (e.target.classList.has('selected')) {
+			e.target.classList.remove('selected')
+			send('#>BLINK-' + e.target.dataset.device)
+		} else {
+			e.target.classList.add('selected')
+			send('#>BLINK+1' + e.target.dataset.device)
+		}
+	} else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
-		await render()
-		await post('show', { id: CONFIG.show })
-		renderShow()
-	}
-	else if (e.target.dataset.action) {
-		const action = e.target.dataset.action
-		switch (action) {
+		await post(`show?id=${CONFIG.show}`)
+		await renderShow()
+	} else if (e.target.dataset.action) {
+		switch (e.target.dataset.action) {
 			case 'show-file-select-dialog':
 				click('#select-file')
 				break
-			case 'reset-show-data':
-				// await resetShow()
-				break
-			case 'save-show-data':
-				// await saveShow()
-				break
-			case 'toggle-prop':
-				const key = e.target.dataset.key
-				AUDIO[key] = !AUDIO[key]
-				console.info(`set ${key} = ${AUDIO[key] ? 'on' : 'off'}`)
-				break
 		}
-	}
-
-	else if (e.target.dataset.command) {
-		const command = e.target.dataset.command
-		await post(`exec?cmd=${command}`)
-		switch (command) {
-			case 'start':
-				setProp('#player', 'currentTime', 0)
-				call('#player', 'play')
-				break
-			case 'resume':
-				call('#player', 'play')
-				break
-			case 'end':
-				call('#player', 'pause')
-				setProp('#player', 'currentTime', 0)
-				break
-			case 'pause':
-				call('#player', 'pause')
-				break
-		}
+	} else if (e.target.dataset.command) {
+		await post(`exec?cmd=${e.target.dataset.command}`)
 	}
 }
 function handleDragOver(e) {
@@ -173,18 +88,16 @@ function handleDragDrop(e) {
 }
 
 function handleScroll(e) {
-	// if (e.target.closest('.timeline')) {
-	// 	$('.timeline').forEach(el => {
-	// 		if (el !== e.target) {
-	// 			el.scrollLeft = e.target.scrollLeft
-	// 		}
-	// 	})
-	// }
+	
 }
-
-function handleInit() {
-	// render()
-	fetchData()
+async function fetchData() {
+	Object.assign(CONFIG, await get('stat'))
+	CONFIG.nodes = await get('nodes')
+	Object.assign(SHOW, await get(`show?id=${CONFIG.show}`))
+}
+async function handleInit() {
+	await fetchData()
+	await render()
 }
 
 window.addEventListener('scroll', handleScroll, true)

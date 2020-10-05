@@ -29,6 +29,7 @@ HTTPClient http;
 static const char TEXT_PLAIN[] PROGMEM = "text/plain";
 static const char FS_INIT_ERROR[] PROGMEM = "FS INIT ERROR";
 static const char FILE_NOT_FOUND[] PROGMEM = "FileNotFound";
+static const char DEFAULT_SHOW_JSON[] PROGMEM = "{}";
 
 boolean isIp(String str) {
 	for (size_t i = 0; i < str.length(); i++) {
@@ -210,6 +211,18 @@ void setup(void) {
 			replyOKWithMsg(WiFi.localIP().toString());
 		}
 	});
+	server.on("/show", HTTP_GET, []() {
+		if (!server.hasArg("id")) {
+			replyBadRequest("Missing show ID");
+		} else {
+			File file = App::fs->open("/show/" + server.arg('id') + ".json", "r");
+			if (file) {
+				server.streamFile(file, "application/json");
+			} else {
+				server.send(200, "application/json", "{}");
+			}
+		}
+	});
 	server.on("/show", HTTP_POST, []() {
 		if (!server.hasArg("id")) {
 			replyBadRequest("Missing show ID");
@@ -218,12 +231,6 @@ void setup(void) {
 			if (App::data.show != id) {
 				App::data.show = id;
 				App::save();
-			}
-			File file = App::fs->open("/show/" + String(id) + ".json", "r");
-			if (file) {
-				server.streamFile(file, "application/json");
-			} else {
-				server.send(200, "application/json", "{}");
 			}
 		}
 	});

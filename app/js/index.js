@@ -1,5 +1,4 @@
 // import './log.js'
-import './lsf.js'
 import './color.js'
 import './data.js'
 import './app.js'

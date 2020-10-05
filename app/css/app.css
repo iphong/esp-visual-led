@@ -118,9 +118,9 @@ article.node {
     font-weight: bold;
     margin: 5px;
     font-size: 14px;
-    height: 60px;
+    /* height: 60px; */
     width: 60px;
-    line-height: 60px;
+    /* line-height: 60px; */
     text-align: center;
     /* border-radius: 50%; */
 

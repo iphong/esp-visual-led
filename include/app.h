@@ -18,7 +18,7 @@
 #endif
 
 #define HEADER '$'
-#define VERSION 2
+#define VERSION 3
 
 namespace App {
 enum Mode {
@@ -43,6 +43,7 @@ struct Data {
 	u8 brightness = 255;
 	u8 channel = 0;
 	u8 show = 0;
+	char name[20] = "";
 	Output a;
 	Output b;
 };
@@ -70,10 +71,11 @@ static void lED_BLINK() {
 }
 
 static void stopBlink() {
+	lED_HIGH();
 	if (blinkTimer.active()) blinkTimer.detach();
 }
 static void startBlink(u32 time = 1000) {
-	stopBlink();
+	lED_LOW();
 	blinkTimer.attach_ms(time, lED_BLINK);
 }
 static void toggleBlink(u32 time = 1000) {

@@ -1,8 +1,6 @@
-import { AUDIO } from "./data"
 import { handleError } from "./events"
 
 const AudioContext = window['AudioContext'] || window['webkitAudioContext']
-
 
 export async function parseAudio(file) {
 	return new Promise(resolve => {
@@ -30,6 +28,80 @@ export async function parseAudio(file) {
 		})
 	})
 }
+
+export async function renderAudio() {
+	if (AUDIO.file) {
+		$('.track.waveform').forEach(el => (el.innerHTML = '<div class="loading">Loading...</div>'))
+		renderWaveform(await parseAudio(AUDIO.file))
+		setAttr('#player', 'src', URL.createObjectURL(AUDIO.file))
+	} else {
+		setAttr('#player', 'src', '')
+		$('.track.waveform').forEach(el => (el.innerHTML = ''))
+	}
+}
+
+export async function renderWaveform() {
+	$('.track.waveform').forEach((wrapper, index) => {
+		const canvas = document.createElement('canvas')
+		const ctx = canvas.getContext("2d");
+		const waveData = AUDIO.channels[index].data
+		const height = 80;
+		const width = AUDIO.duration * 20
+		const halfHeight = height / 2;
+		const length = waveData.length;
+		const step = Math.round(length / width);
+
+		wrapper.innerHTML = ''
+		wrapper.appendChild(canvas)
+		
+		canvas.width = width;
+		canvas.height = height;
+		canvas.style.width = width + "px";
+		canvas.style.height = height + "px";
+		canvas.style.left = Math.round(wrapper.clientWidth / 2) + "px";
+
+		let x = 0,
+			sumPositive = 0,
+			sumNegative = 0,
+			maxPositive = 0,
+			maxNegative = 0,
+			kNegative = 0,
+			kPositive = 0,
+			drawIdx = step;
+		for (let i = 0; i < length; i++) {
+			if (i == drawIdx) {
+				const p1 = maxNegative * halfHeight + halfHeight;
+				ctx.strokeStyle = '#333333';
+				ctx.strokeRect(x, p1, 1, (maxPositive * halfHeight + halfHeight) - p1);
+
+				const p2 = sumNegative / kNegative * halfHeight + halfHeight;
+				ctx.strokeStyle = '#eeeeee';
+				ctx.strokeRect(x, p2, 1, (sumPositive / kPositive * halfHeight + halfHeight) - p2);
+				x++;
+				drawIdx += step;
+				sumPositive = 0;
+				sumNegative = 0;
+				maxPositive = 0;
+				maxNegative = 0;
+				kNegative = 0;
+				kPositive = 0;
+			} else {
+				if (waveData[i] < 0) {
+					sumNegative += waveData[i];
+					kNegative++;
+					if (maxNegative > waveData[i]) maxNegative = waveData[i];
+				} else {
+					sumPositive += waveData[i];
+					kPositive++;
+					if (maxPositive < waveData[i]) maxPositive = waveData[i];
+				}
+
+			}
+		}
+	})
+}
+
+
 // let ab
 // global.getWaveformData = function getWaveformData(audio) {
 // 	const data = audio.getChannelData(0)
