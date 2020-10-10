@@ -12,8 +12,9 @@ export function renderNodes() {
 		section.innerHTML = ''
 		CONFIG.nodes.forEach(node => {
 			const $node = document.createElement('article')
+			const name = node.name || node.id
 			$node.classList.add('node')
-			$node.innerHTML = node.id
+			$node.innerHTML = `<div>${name}</div><small>${(node.vbat/1000).toFixed(1)}v</small>`
 			$node.dataset.device = node.id
 			$node.dataset.droppable = true
 			section.appendChild($node)

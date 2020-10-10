@@ -18,7 +18,7 @@
 #endif
 
 #define HEADER '$'
-#define VERSION 3
+#define VERSION 4
 
 namespace App {
 enum Mode {
@@ -43,7 +43,7 @@ struct Data {
 	u8 brightness = 255;
 	u8 channel = 0;
 	u8 show = 0;
-	char name[20] = "";
+	char name[20];
 	Output a;
 	Output b;
 };
@@ -60,23 +60,33 @@ FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
 
-static void lED_HIGH() {
-	digitalWrite(LED_PIN, 1);
+u8 led_pin = R1_PIN;
+
+// bool blinking = false;
+// u8 blinkColor[] = {255,255,255};
+static void LED_HIGH() {
+	digitalWrite(led_pin, 1);
+	// LED::A.setRGB(blinkColor[0], blinkColor[1], blinkColor[2]);
+	// LED::B.setRGB(blinkColor[0], blinkColor[1], blinkColor[2]);
 }
-static void lED_LOW() {
-	digitalWrite(LED_PIN, 0);
+static void LED_LOW() {
+	digitalWrite(led_pin, 0);
+	// LED::A.setRGB(0, 0, 0);
+	// LED::B.setRGB(0, 0, 0);
 }
-static void lED_BLINK() {
-	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+static void LED_BLINK() {
+	bool state = !digitalRead(led_pin);
+	digitalWrite(led_pin, state);
+	// state ? LED_LOW() : LED_HIGH();
 }
 
 static void stopBlink() {
-	lED_HIGH();
+	LED_HIGH();
 	if (blinkTimer.active()) blinkTimer.detach();
 }
 static void startBlink(u32 time = 1000) {
-	lED_LOW();
-	blinkTimer.attach_ms(time, lED_BLINK);
+	LED_LOW();
+	blinkTimer.attach_ms(time, LED_BLINK);
 }
 static void toggleBlink(u32 time = 1000) {
 	if (blinkTimer.active()) stopBlink();
@@ -160,6 +170,7 @@ void setMaster(u8* addr) {
 	}
 }
 void setup() {
+	pinMode(led_pin, OUTPUT);
 	loadData();
 
 	fsOK = fs->begin();

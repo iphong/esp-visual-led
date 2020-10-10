@@ -32,11 +32,17 @@ header {
 	z-index: 10;
 }
 @media screen and (min-width: 601px) {
+	body {
+		padding: 50px 0 0 0;
+	}
 	header > *:first-child {
 		margin-left: 30px;
 	}
 }
 @media screen and (max-width: 600px) {
+	body {
+		padding: 150px 0 0 0;
+	}
 	header {
 		grid-template-columns: auto;
 		text-align: center;
@@ -114,7 +120,8 @@ article.node {
 	display: inline-block;
     padding: 10px;
     background: #222222;
-    border: 2px solid white;
+	border: 2px solid blueviolet;
+	color: #ddd;
     font-weight: bold;
     margin: 5px;
     font-size: 14px;
@@ -122,11 +129,17 @@ article.node {
     width: 60px;
     /* line-height: 60px; */
     text-align: center;
-    /* border-radius: 50%; */
-
+	/* border-radius: 50%; */
+	cursor: pointer;
+	text-align: center;
 }
-article.node.active {
-	border-color: blueviolet;
+article.node > * {
+	pointer-events: none;
+}
+article.node.active,
+article.node.selected {
+	border-color: white;
+	color: white;
 }
 
 .loading {

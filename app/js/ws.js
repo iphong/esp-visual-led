@@ -1,3 +1,6 @@
+import debounce from 'lodash/debounce'
+import { E } from 'unzip-js/src/utils'
+import { get } from "./api"
 import { renderNodes } from "./app"
 
 export const socket = new WebSocket(`ws://${location.hostname}:81`)
@@ -13,16 +16,21 @@ socket.addEventListener('message', async (e) => {
 		})
 	}
 })
+
+const debounceGetNodes = debounce(async function() {
+	CONFIG.nodes = await get('nodes')
+	renderNodes()
+}, 100)
 export async function handleMessage(msg) {
 	console.log(`SOCKET:: `, msg)
-	if (msg.startsWith('#>PING')) {
-		CONFIG.nodes = await get('nodes')
-		renderNodes()
+	if (msg.startsWith('#<PING')) {
+		debounceGetNodes()
 	}
 }
 
-export async function send(msg) {
-	socket.send(msg)
+export async function send(header = '', ...payload) {
+	const headerBytes = header.split('').map(c => c.charCodeAt(0))
+	socket.send(new Uint8Array([35, 62, ...headerBytes, ...payload]))
 }
 
 export async function sendFile(file, receivers = []) {

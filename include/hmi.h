@@ -74,9 +74,6 @@ void readDisplay() {
 						break;
 
 					case 0xA1:
-						if (size == 1)
-							Net::sendPair(data[0]);
-						else
 							Net::sendPair();
 						break;
 					

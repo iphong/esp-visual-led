@@ -39,8 +39,8 @@ u8 crc = 0x00;
 
 void wifiOn() {
 	IS_WIFI_ON = true;
-	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
 }
 
 void wifiOff() {
@@ -107,50 +107,66 @@ void recvSync(u8* data, u8 size) {
 }
 struct NodeInfo {
 	char id[6];
-	char name[20];
 	u8 type;
-	u8 vbat;
+	u16 vbat;
+	char name[20];
 };
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
 
 void sendPing() {
 	LOGL("sent ping");
-	MeshRC::send("#>PING" + String(App::chipID).substring(0, 6));
+#ifdef MASTER
+	MeshRC::send("#>PING");
+#else
+	NodeInfo n;
+	memcpy(n.id, App::chipID, 6);
+	memcpy(n.name, App::data.name, 20);
+	n.type = 2;
+	n.vbat = ESP.getVcc();
+	u8 buf[sizeof(n)];
+	memcpy(buf, &n, sizeof(n));
+	MeshRC::send("#<PING", buf, sizeof(n));
+#endif
 }
 void recvPing(u8* data, u8 size) {
 	LOGL("received ping");
-	bool isNew = true;
-	NodeInfo n;
-	memcpy(&n, data, size);
-	for (auto node : nodesList) {
-		if (MeshRC::equals((u8*)n.id, (u8*)node.id, 6)) {
-			isNew = false;
+#ifdef MASTER
+	if (size) {
+		NodeInfo n;
+		memcpy(&n, data, size);
+		bool isNew = true;
+		int i = 0;
+		for (auto node : nodesList) {
+			if (MeshRC::equals((u8*)n.id, (u8*)node.id, 6)) {
+				isNew = false;
+				nodesList[i] = n;
+			}
+			i++;
+		}
+		if (isNew) {
+			nodesList[nodesCount++] = n;
 		}
 	}
-	if (isNew) {
-		nodesList[nodesCount++] = n;
+#else
+	if (!size) {
+		sendPing();
 	}
+#endif
 }
 
-void sendPair(u8 channel = 255) {
-	if (channel != 255) {
-		LOGD("Sending pair with channel: %u\n", channel);
-		MeshRC::send("#>PAIR", &channel, 1);
-	} else {
-		LOGD("Sending pair without channel\n");
-		MeshRC::send("#>PAIR");
-	}
+void sendPair() {
+	LOGD("Sending pair without channel\n");
+	MeshRC::send("#>PAIR");
 }
 
-void recvPair(u8* data, u8 size) {
+void recvPair() {
 	if (App::isPairing() && !receivingFiles) {
 		App::stopBlink();
-		if (size >= 1) App::setChannel(data[0]);
 		App::setMaster(MeshRC::sender);
 		App::setMode(App::SHOW);
 		App::save();
-		App::lED_LOW();
+		App::LED_LOW();
 	}
 }
 
@@ -171,7 +187,7 @@ void sendFile(String path, String targetID = "******") {
 		return;
 	}
 	sendingFiles = true;
-	App::lED_LOW();
+	App::LED_LOW();
 	LOGD("OK\n");
 	file = App::fs->open(path, "r");
 	crc = 0x00;
@@ -199,9 +215,10 @@ void sendFile(String path, String targetID = "******") {
 #ifdef SEND_FILE_LOGS
 		LOGD("\n");
 #endif
+
 		for (auto i = 0; i < 1; i++) {
 			MeshRC::send("#>FILE+", data, sizeof(data));
-			App::lED_BLINK();
+			App::LED_BLINK();
 			// if (delayTime > 5) delayTime -= 10;
 			waitDelay(100);
 		}
@@ -212,7 +229,7 @@ void sendFile(String path, String targetID = "******") {
 		MeshRC::send("#>FILE$" + String((const char)crc));
 		waitDelay(500);
 	}
-	App::lED_HIGH();
+	App::LED_HIGH();
 	LOGD("Sent\n\n");
 	sendingFiles = false;
 }
@@ -244,7 +261,7 @@ void recvFile(u8* buf, u8 len) {
 				// wifiOff();
 				// WiFi.disconnect();
 				// App::stopBlink();
-				App::lED_LOW();
+				App::LED_LOW();
 				name = "";
 				crc = 0x00;
 				for (auto i = 6; i < size; i++) {
@@ -269,7 +286,7 @@ void recvFile(u8* buf, u8 len) {
 		// FILE STREAM DATA
 		case '+':
 			if (file) {
-				App::lED_BLINK();
+				App::LED_BLINK();
 				u16 pos = data[0] << 8 | data[1];
 				u16 pos2 = file.position();
 #ifdef RECV_FILE_LOGS
@@ -293,7 +310,7 @@ void recvFile(u8* buf, u8 len) {
 		case '$':
 			if (receivingFiles && file) {
 				// wifiOn();
-				App::lED_LOW();
+				App::LED_HIGH();
 				LOGD("EOF %02X = %02X - ", crc, data[0]);
 				file.close();
 				if (data[0] == crc) {
@@ -319,26 +336,10 @@ void handleRestartMsg() {
 	ESP.restart();
 }
 
-void handleWifiMsg(u8* data, u8 size) {
-	if (size) {
-		u8 turnOn = data[0];
-		if (turnOn)
-			wifiOn();
-		else
-			wifiOff();
-	}
-}
-
 struct WiFiConnection {
 	String ssid;
 	String pass;
 };
-void sendWiFiConnect(String ssid, String pass) {
-	WiFiConnection msg = {ssid, pass};
-	u8 buffer[sizeof(msg)];
-	memcpy(buffer, &msg, sizeof(msg));
-	MeshRC::send("$>WIFI+", buffer, sizeof(msg));
-}
 void recvWiFiConnect(u8* data, u8 size) {
 	WiFiConnection conn;
 	memcpy(&conn, data, size);
@@ -348,7 +349,7 @@ void recvWiFiConnect(u8* data, u8 size) {
 void recvBlink(u8* data, u8 size) {
 	char action = data[0];
 	char speed = data[1];
-	u8 *id = &data[2];
+	u8* id = &data[2];
 	if (size > 2 && !MeshRC::equals(id, (u8*)App::chipID, size)) {
 		return;
 	}
@@ -416,6 +417,50 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 	}
 }
 
+void setName(u8* buf, u8 len) {
+	if (MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
+		memset(App::data.name, 0, 20);
+		memcpy(App::data.name, &buf[6], len - 6);
+		App::save();
+	}
+}
+void setBrightness(u8* buf, u8 len) {
+	if (len == 7 && MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
+		App::data.brightness = buf[6];
+		App::save();
+	} else if (len == 1) {
+		App::data.brightness = buf[0];
+		App::save();
+	}
+}
+void setRGB(u8* buf, u8 len) {
+	u8* color;
+	char segment;
+	if (len == 10)
+		if (!MeshRC::equals(&buf[0], (u8*)App::chipID, 6))
+			return;
+		else {
+			segment = (char)buf[6];
+			color = &buf[7];
+		}
+	else if (len == 4) {
+		segment = (char)buf[0];
+		color = &buf[1];
+	}
+	App::data.show = 0;
+	if (segment == 'A' || segment == '0') {
+		LED::A.setRGB(color[0], color[1], color[2]);
+	} else if (segment == 'B' || segment == '1') {
+		LED::B.setRGB(color[0], color[1], color[2]);
+	}
+}
+
+void handleAll(u8* data, u8 size) {
+	for (u8 i = 0; i < 8; i++) {
+		webSocket.sendBIN(i, data, size);
+	}
+}
+
 void setup() {
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.setAutoConnect(false);
@@ -424,38 +469,45 @@ void setup() {
 
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 
-	ArduinoOTA.onProgress([](int percent, int total) { App::lED_BLINK(); });
+	ArduinoOTA.onProgress([](int percent, int total) { App::LED_BLINK(); });
 	ArduinoOTA.begin();
 
 	webSocket.begin();
 	webSocket.onEvent(webSocketEvent);
 
-#ifndef MASTER
-	MeshRC::on("$>WIFI+", recvWiFiConnect);
-	MeshRC::on("$>WIFI-", []() { WiFi.disconnect(); });
-#endif
-
 	MeshRC::on("#>BLINK", Net::recvBlink);
 	MeshRC::on("#<BLINK", Net::recvBlink);
+
+#ifdef MASTER
+	MeshRC::on("#<PING", Net::recvPing);
+#else
 	MeshRC::on("#>PING", Net::recvPing);
+#endif
+
 	MeshRC::on("#>SYNC", Net::recvSync);
 	MeshRC::on("#>PAIR", Net::recvPair);
+
 	MeshRC::on("#>FILE", Net::recvFile);
 
 	MeshRC::on("#>RESTART", handleRestartMsg);
-	MeshRC::on("#>WIFI", handleWifiMsg);
 
-	MeshRC::on("#>BEGIN", LED::begin);
-	MeshRC::on("#>PAUSE", LED::pause);
-	MeshRC::on("#>RESUME", LED::resume);
-	MeshRC::on("#>TOGGLE", LED::toggle);
-	MeshRC::on("#>END", LED::end);
+	MeshRC::on("#>WIFI:AP:ON", Net::wifiOn);
+	MeshRC::on("#>WIFI:AP:OFF", Net::wifiOff);
+	MeshRC::on("$>WIFI:STA:ON", Net::recvWiFiConnect);
+	MeshRC::on("$>WIFI:STA:OFF", []() { WiFi.disconnect(); });
 
-	MeshRC::on("", [](u8* data, u8 size) {
-		for (u8 i = 0; i < 8; i++) {
-			webSocket.sendBIN(i, data, size);
-		}
-	});
+	MeshRC::on("#>SHOW:START", LED::begin);
+	MeshRC::on("#>SHOW:BEGIN", LED::begin);
+	MeshRC::on("#>SHOW:PAUSE", LED::pause);
+	MeshRC::on("#>SHOW:RESUME", LED::resume);
+	MeshRC::on("#>SHOW:TOGGLE", LED::toggle);
+	MeshRC::on("#>SHOW:STOP", LED::end);
+	MeshRC::on("#>SHOW:END", LED::end);
+
+	MeshRC::on("#>NAME", Net::setName);
+	MeshRC::on("#>BRIGHT", Net::setBrightness);
+	MeshRC::on("#>RGB:", Net::setRGB);
+	MeshRC::on("", Net::handleAll);
 	MeshRC::begin();
 #ifdef MASTER
 	timeSyncInterrupt.attach_ms_scheduled_accurate(100, sendSync);

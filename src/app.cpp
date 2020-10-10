@@ -119,14 +119,17 @@ void setup() {
 #ifdef MASTER
 	Hmi::setup();
 	Net::wifiOn();
+	Net::sendPing();
 #else
-	Net::wifiOff();
+	// Net::wifiOff();
+	if (App::isPaired()) {
+		Net::sendPing();
+	}
+	App::stopBlink();
 #endif
 #ifdef USE_SD_CARD
 	SD::setup();
 #endif
-	Net::sendPing();
-	App::stopBlink();
 }
 
 void loop() {

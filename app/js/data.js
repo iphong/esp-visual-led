@@ -18,6 +18,8 @@ export const LIGHT = {
 	tracks: []
 }
 
+export const SHOW = {}
+
 // store color data for current segment
 global.color = {
 	rgb: {
@@ -40,4 +42,4 @@ global.updateHSL = function updateHSL() {
 	color.hsl = rgbToHsl(r, g, b)
 }
 
-Object.assign(global, { CONFIG, AUDIO, LIGHT })
+Object.assign(global, { CONFIG, AUDIO, LIGHT, SHOW })

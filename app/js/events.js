@@ -21,11 +21,11 @@ async function handleFile(file, event) {
 		const target = event.target.dataset.device
 		const sync = !!target
 		if (data.length == 1) {
-			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
-			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[0]), sync, target);
+			await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
+			await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[0]), sync, target);
 		} else if (data.length === 3) {
-			await uploadFile(`show/${CONFIG.show}A.lsb`, new Blob(data[1]), sync, target);
-			await uploadFile(`show/${CONFIG.show}B.lsb`, new Blob(data[2]), sync, target);
+			await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[1]), sync, target);
+			await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[2]), sync, target);
 		}
 	} else if (file.name.endsWith('.ipx')) {
 		await parseIPX(file)
@@ -45,17 +45,17 @@ function handleChange(e) {
 }
 async function handleClick(e) {
 	if (e.target.dataset.device) {
-		if (e.target.classList.has('selected')) {
+		if (e.target.classList.contains('selected')) {
 			e.target.classList.remove('selected')
-			send('#>BLINK-' + e.target.dataset.device)
+			send('BLINK-1' + e.target.dataset.device)
 		} else {
 			e.target.classList.add('selected')
-			send('#>BLINK+1' + e.target.dataset.device)
+			send('BLINK+1' + e.target.dataset.device)
 		}
 	} else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
 		await post(`show?id=${CONFIG.show}`)
-		await renderShow()
+		renderShow()
 	} else if (e.target.dataset.action) {
 		switch (e.target.dataset.action) {
 			case 'show-file-select-dialog':

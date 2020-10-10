@@ -196,21 +196,6 @@ void setup(void) {
 		}
 		replyOK();
 	});
-	server.on("/wifi", HTTP_POST, []() {
-		if (server.hasArg("disconnect")) {
-			WiFi.disconnect();
-			MeshRC::send("$>WIFI-");
-			replyOK();
-		} else if (!server.hasArg("ssid")) {
-			replyBadRequest("Missing SSID");
-		} else {
-			String ssid = server.arg("ssid");
-			String pass = server.arg("pass");
-			Net::sendWiFiConnect(ssid, pass);
-			WiFi.begin(ssid, pass);
-			replyOKWithMsg(WiFi.localIP().toString());
-		}
-	});
 	server.on("/show", HTTP_GET, []() {
 		if (!server.hasArg("id")) {
 			replyBadRequest("Missing show ID");
@@ -232,17 +217,14 @@ void setup(void) {
 				App::data.show = id;
 				App::save();
 			}
+			replyOK();
 		}
 	});
 	server.on("/exec", HTTP_POST, []() {
 		if (server.hasArg("cmd")) {
 			String cmd = server.arg("cmd");
 			if (cmd == "pair") {
-				if (server.hasArg("channel")) {
-					Net::sendPair(server.arg("channel").toInt());
-				} else {
-					Net::sendPair();
-				}
+				Net::sendPair();
 				replyOK();
 			} else if (cmd == "seek") {
 				if (server.hasArg("time")) {
@@ -294,7 +276,10 @@ void setup(void) {
 		json = "[";
 		for (size_t i = 0; i < Net::nodesCount; i++) {
 			json += "{";
-			json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\"";
+			json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\",";
+			json += "\"name\":\"" + String(Net::nodesList[i].name).substring(0, 20) + "\",";
+			json += "\"type\":" + String(Net::nodesList[i].type) + ",";
+			json += "\"vbat\":" + String(Net::nodesList[i].vbat) + "";
 			json += "}";
 			if (i < Net::nodesCount - 1) json += ",";
 		}
@@ -473,55 +458,23 @@ void setup(void) {
 				filename = "/" + filename;
 			}
 			LOGL(String("handleFileUpload Name: ") + filename);
-#ifdef USE_SD_CARD
-			int dirIndex = filename.lastIndexOf("/");
-			if (dirIndex >= 0) {
-				String dir = filename.substring(0, dirIndex + 1);
-				LOG("change dir = ");
-				LOGL(dir);
-				SD::fs.chdir(dir);
-				filename = filename.substring(dirIndex + 1, filename.length());
-				LOG("filename = ");
-				LOGL(filename);
-			}
-			SD::open(filename);
-			if (!SD::file) {
-				return replyServerError(F("CREATE FAILED"));
-			}
-#else
 			uploadFile = App::fs->open(filename, "w");
 			if (!uploadFile) {
 				return replyServerError(F("CREATE FAILED"));
 			}
-#endif
 			LOGL(String("Upload: START, filename: ") + filename);
 		} else if (upload.status == UPLOAD_FILE_WRITE) {
-#ifdef USE_SD_CARD
-			if (SD::file) {
-				size_t bytesWritten = SD::file.write(upload.buf, upload.currentSize);
-				if (bytesWritten != upload.currentSize) {
-					return replyServerError(F("WRITE FAILED"));
-				}
-			}
-#else
 			if (uploadFile) {
 				size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
 				if (bytesWritten != upload.currentSize) {
 					return replyServerError(F("WRITE FAILED"));
 				}
 			}
-#endif
 			LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 		} else if (upload.status == UPLOAD_FILE_END) {
-#ifdef USE_SD_CARD
-			if (SD::file) {
-				SD::file.close();
-			}
-#else
 			if (uploadFile) {
 				uploadFile.close();
 			}
-#endif
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
 
 #ifdef MASTER
