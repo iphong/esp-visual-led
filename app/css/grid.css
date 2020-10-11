@@ -3,6 +3,7 @@ grid {
 	grid-gap: 5px;
 
 }
+
 grid.two {
 	grid: auto / 1fr 1fr;
 }
@@ -18,8 +19,6 @@ grid.five {
 grid.eight {
 	grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
 }
-
-
 grid.item {
 	grid-template-columns: 1fr 8fr 1fr;
 	grid-gap: 10px;

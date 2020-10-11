@@ -3,6 +3,9 @@ export const CONFIG = {
 	brightness: 255,
 	channel: 0,
 	show: 0,
+	time: 0,
+	running: 0,
+	paused: 0,
 	nodes: []
 }
 

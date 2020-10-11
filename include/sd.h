@@ -12,22 +12,34 @@ namespace SD {
 	bool sdOK;
 	sdfat::File file;
 
-	sdfat::File open(String path) {
-		return open(path.c_str());
-	}
 	sdfat::File open(const char *path) {
 		if (file.isOpen()) file.close();
 		file = fs.open(path, (O_RDWR | O_CREAT));
 		Serial.printf("File openned: %s.\n", path);
 		return file;
 	}
-	size_t write(const uint8_t *buf, size_t size) {
+
+	sdfat::File openWrite(const char *path) {
+		if (file.isOpen()) file.close();
+		file = fs.open(path, (O_RDWR | O_CREAT | O_TRUNC));
+		Serial.printf("File openned: %s.\n", path);
+		return file;
+	}
+
+	sdfat::File open(String path) {
+		return open(path.c_str());
+	}
+
+	sdfat::File openWrite(String path) {
+		return openWrite(path.c_str());
+	}
+	size_t write(uint8_t *buf, size_t size) {
 		Serial.printf("File write: %i.\n", size);
-		return file.write(buf, size);
+		return file.write((char *)buf, size);
 	}
 	size_t write(const char *buf, size_t size) {
 		Serial.printf("File write: %i.\n", size);
-		return file.write(buf, size);
+		return file.write((char *)buf, size);
 	}
 	bool close() {
 		Serial.printf("File closed.\n");
@@ -36,6 +48,7 @@ namespace SD {
 	void setup() {
 		sdOK = fs.begin(D8);
 		Serial.println(sdOK ? F("SD card initialized.") : F("SD card init failed!"));
+		fs.mkdir("/show");
 
 		// open("_test1.txt");
 		// write("Hello 1", 7);
@@ -56,7 +69,7 @@ namespace SD {
 		// 	Serial.write(file.read());
 		// } 
 		// close();
-		// open("/show/1.json");
+		// open("/dist/bundle.js.gz");
 		// while (file.available()) {
 		// 	Serial.write(file.read());
 		// } 

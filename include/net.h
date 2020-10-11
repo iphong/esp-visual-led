@@ -7,16 +7,16 @@
 // #include <DNSServer.h>
 // #include <WiFiUdp.h>
 #include "led.h"
+#include "sd.h"
 
 #ifndef __NET_H__
 #define __NET_H__
 
 namespace Net {
 
+#ifdef MASTER
 WebSocketsServer webSocket(81);
-
-Ticker timeSyncInterrupt;
-Ticker nodePingInterrupt;
+#endif
 
 bool receivingFiles;
 bool sendingFiles;
@@ -51,55 +51,64 @@ void wifiToggle() {
 	!IS_WIFI_ON ? wifiOn() : wifiOff();
 }
 
-struct SyncData {
+struct SyncState {
 	u8 show;
+	u8 running;
+	u8 paused;
 	u32 time;
-	bool running;
-	bool paused;
 };
-u8 syncBuffer[32];
-void sendSync() {
-#ifdef MASTER
-	if (!sendingFiles && !App::isPairing()) {
-		SyncData tmp = {
-			App::data.show,
-			LED::getTime(),
-			LED::running,
-			LED::paused};
-		memcpy(syncBuffer, &tmp, sizeof(tmp));
-		MeshRC::send("#>SYNC", syncBuffer, sizeof(tmp));
-		MeshRC::wait();
-#ifdef SYNC_LOGS
-		LOGD("Sync sent: show=%u running=%i paused=%i sync=%u play=%u\n", tmp.show, tmp.running, tmp.paused, tmp.time, LED::getTime());
-#endif
-	}
-#endif
+bool equals(u8* a, u8* b, u8 size, u8 offset = 0) {
+	for (auto i = offset; i < offset + size; i++)
+		if (a[i] != b[i])
+			return false;
+	return true;
+}
+u32 readUint32(unsigned char* buffer) {
+	return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
+}
+u16 readUint16(unsigned char* buffer) {
+	return (u16)buffer[0] << 8 | buffer[1];
+}
+u8* setUint16(u8* buffer, u16 value, size_t offset = 0) {
+	buffer[offset + 1] = value & 0xff;
+	buffer[offset + 0] = (value >> 8);
+	return &buffer[offset + 2];
+}
+u8* setUint32(u8* buffer, u16 value, size_t offset = 0) {
+	buffer[offset + 3] = (value & 0x000000ff);
+	buffer[offset + 2] = (value & 0x0000ff00) >> 8;
+	buffer[offset + 1] = (value & 0x00ff0000) >> 16;
+	buffer[offset + 0] = (value & 0xff000000) >> 24;
+	return &buffer[offset + 4];
 }
 void recvSync(u8* data, u8 size) {
 #ifndef MASTER
 	if (!receivingFiles && !App::isPairing()) {
-		SyncData tmp;
-		memcpy(&tmp, data, size);
+		SyncState state;
+		state.show = data[0];
+		state.running = data[1];
+		state.paused = data[2];
+		state.time = readUint32(&data[3]);
 #ifdef SYNC_LOGS
-		LOGD("Sync received: show=%u running=%i paused=%i sync=%u play=%u diff=%i\n", tmp.show, tmp.running, tmp.paused, tmp.time, LED::getTime(), LED::getTime() - tmp.time);
+		LOGD("Sync received: show=%u running=%i paused=%i sync=%u play=%u diff=%i\n", state.show, state.running, state.paused, state.time, LED::getTime(), LED::getTime() - state.time);
 #endif
-		if (tmp.show == 0 && App::data.show != 0) {
+		if (state.show == 0 && App::data.show != 0) {
 			LED::end();
 			LED::begin();
 		}
-		App::data.show = tmp.show;
-		if (tmp.show > 0) {
-			if (LED::isRunning() && !tmp.running) {
+		App::data.show = state.show;
+		if (state.show > 0) {
+			if (LED::isRunning() && !state.running) {
 				LED::end();
-			} else if (!LED::isRunning() && tmp.running) {
+			} else if (!LED::isRunning() && state.running) {
 				LED::begin();
-			} else if (tmp.paused && !LED::isPaused()) {
+			} else if (state.paused && !LED::isPaused()) {
 				LED::pause();
-			} else if (!tmp.paused && LED::isPaused()) {
+			} else if (!state.paused && LED::isPaused()) {
 				LED::resume();
 			}
-			if (tmp.running && !tmp.paused) {
-				LED::setTime(tmp.time);
+			if (!state.paused) {
+				LED::setTime(state.time);
 			}
 		}
 	}
@@ -115,43 +124,42 @@ NodeInfo nodesList[255];
 size_t nodesCount = 0;
 
 void sendPing() {
-	LOGL("sent ping");
 #ifdef MASTER
 	MeshRC::send("#>PING");
 #else
-	NodeInfo n;
-	memcpy(n.id, App::chipID, 6);
-	memcpy(n.name, App::data.name, 20);
-	n.type = 2;
-	n.vbat = ESP.getVcc();
-	u8 buf[sizeof(n)];
-	memcpy(buf, &n, sizeof(n));
-	MeshRC::send("#<PING", buf, sizeof(n));
+	u8 data[30];
+	memcpy(&data[0], App::chipID, 6);
+	data[7] = 2;
+	setUint16(&data[8], ESP.getVcc());
+	memcpy(&data[10], App::data.name, 20);
+	MeshRC::send("#<PING", data, 30);
+	LOGL("sent ping");
 #endif
 }
 void recvPing(u8* data, u8 size) {
-	LOGL("received ping");
 #ifdef MASTER
-	if (size) {
-		NodeInfo n;
-		memcpy(&n, data, size);
-		bool isNew = true;
-		int i = 0;
-		for (auto node : nodesList) {
-			if (MeshRC::equals((u8*)n.id, (u8*)node.id, 6)) {
-				isNew = false;
-				nodesList[i] = n;
-			}
-			i++;
+	NodeInfo n;
+	memcpy(&n.id, &data[0], 6);
+	n.type = data[7];
+	n.vbat = readUint16(&data[8]);
+	memcpy(&n.name, &data[10], 20);
+	bool isNew = true;
+	int i = 0;
+	for (auto node : nodesList) {
+		if (equals((u8*)n.id, (u8*)node.id, 6)) {
+			isNew = false;
+			nodesList[i] = n;
 		}
-		if (isNew) {
-			nodesList[nodesCount++] = n;
-		}
+		i++;
 	}
+	if (isNew) {
+		nodesList[nodesCount++] = n;
+	}
+	LOG("received ping:");
+	LOG(n.type);
+	LOGL();
 #else
-	if (!size) {
-		sendPing();
-	}
+	sendPing();
 #endif
 }
 
@@ -166,7 +174,6 @@ void recvPair() {
 		App::setMaster(MeshRC::sender);
 		App::setMode(App::SHOW);
 		App::save();
-		App::LED_LOW();
 	}
 }
 
@@ -180,6 +187,17 @@ void waitDelay(u32 time) {
 }
 
 void sendFile(String path, String targetID = "******") {
+#ifdef USE_SD_CARD
+	LOGD("send file: %s -- ", path.c_str());
+	if (!SD::fs.exists(path.c_str())) {
+		LOGD("NOT EXISTS\n");
+		return;
+	}
+	sendingFiles = true;
+	App::LED_LOW();
+	LOGD("OK\n");
+	SD::open(path);
+#else
 	// static u8 delayTime;
 	LOGD("send file: %s -- ", path.c_str());
 	if (!App::fs->exists(path)) {
@@ -190,12 +208,52 @@ void sendFile(String path, String targetID = "******") {
 	App::LED_LOW();
 	LOGD("OK\n");
 	file = App::fs->open(path, "r");
+#endif
 	crc = 0x00;
 	// delayTime = 105;
 	for (auto i = 0; i < 1; i++) {
+#ifdef USE_SD_CARD
+		MeshRC::send("#>FILE^" + targetID + path);
+#else
 		MeshRC::send("#>FILE^" + targetID + String(file.fullName()));
+#endif
 		waitDelay(500);
 	}
+#ifdef USE_SD_CARD
+	while (SD::file.available()) {
+		u16 pos = SD::file.position();
+		u8 len = _min(240, SD::file.available());
+		u8 data[len + 2];
+		data[0] = pos >> 8;
+		data[1] = pos & 0xff;
+#ifdef SEND_FILE_LOGS
+		LOGD("%04X :: ", pos);
+#endif
+		for (auto i = 0; i < len; i++) {
+			data[i + 2] = SD::file.read();
+			crc += data[i + 2];
+#ifdef SEND_FILE_LOGS
+			LOGD("%02X ", data[i + 2]);
+#endif
+		}
+#ifdef SEND_FILE_LOGS
+		LOGD("\n");
+#endif
+
+		for (auto i = 0; i < 1; i++) {
+			MeshRC::send("#>FILE+", data, sizeof(data));
+			App::LED_BLINK();
+			// if (delayTime > 5) delayTime -= 10;
+			waitDelay(100);
+		}
+	}
+
+	SD::file.close();
+	for (auto i = 0; i < 1; i++) {
+		MeshRC::send("#>FILE$" + String((const char)crc));
+		waitDelay(500);
+	}
+#else
 	while (file.available()) {
 		u16 pos = file.position();
 		u8 len = _min(240, file.available());
@@ -229,6 +287,7 @@ void sendFile(String path, String targetID = "******") {
 		MeshRC::send("#>FILE$" + String((const char)crc));
 		waitDelay(500);
 	}
+#endif
 	App::LED_HIGH();
 	LOGD("Sent\n\n");
 	sendingFiles = false;
@@ -332,19 +391,8 @@ void recvFile(u8* buf, u8 len) {
 	}
 }
 
-void handleRestartMsg() {
+void restart() {
 	ESP.restart();
-}
-
-struct WiFiConnection {
-	String ssid;
-	String pass;
-};
-void recvWiFiConnect(u8* data, u8 size) {
-	WiFiConnection conn;
-	memcpy(&conn, data, size);
-	WiFi.begin(conn.ssid, conn.pass);
-	wifiOn();
 }
 void recvBlink(u8* data, u8 size) {
 	char action = data[0];
@@ -361,27 +409,7 @@ void recvBlink(u8* data, u8 size) {
 		App::toggleBlink(String(speed).toInt() * 100);
 	}
 }
-void parseCommand(String hex) {
-	int i;
-	int len = hex.length();
-	String byte;
-	String message = "#>";
-	String id;
-	if (hex[0] == ':') {
-		for (i = 1; i < len; i += 2) {
-			byte = hex.substring(i, 2);
-			message += (char)(int)strtol(byte.c_str(), NULL, 16);
-		}
-	} else if (hex[3] == ':') {
-		id = hex.substring(0, 6);
-		for (i = 4; i < len; i += 2) {
-			byte = hex.substring(i, 2);
-			message += (char)(int)strtol(byte.c_str(), NULL, 16);
-		}
-	}
-	LOGL(message);
-	MeshRC::send(message);
-}
+#ifdef MASTER
 bool activeSockets[8];
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {
@@ -414,8 +442,12 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 		case WStype_FRAGMENT:
 		case WStype_FRAGMENT_FIN:
 			break;
+		case WStype_PING:
+		case WStype_PONG:
+			break;
 	}
 }
+#endif
 
 void setName(u8* buf, u8 len) {
 	if (MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
@@ -424,7 +456,7 @@ void setName(u8* buf, u8 len) {
 		App::save();
 	}
 }
-void setBrightness(u8* buf, u8 len) {
+void setAlpha(u8* buf, u8 len) {
 	if (len == 7 && MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
 		App::data.brightness = buf[6];
 		App::save();
@@ -433,7 +465,7 @@ void setBrightness(u8* buf, u8 len) {
 		App::save();
 	}
 }
-void setRGB(u8* buf, u8 len) {
+void setColor(u8* buf, u8 len) {
 	u8* color;
 	char segment;
 	if (len == 10)
@@ -455,11 +487,13 @@ void setRGB(u8* buf, u8 len) {
 	}
 }
 
+#ifdef MASTER
 void handleAll(u8* data, u8 size) {
 	for (u8 i = 0; i < 8; i++) {
 		webSocket.sendBIN(i, data, size);
 	}
 }
+#endif
 
 void setup() {
 	WiFi.mode(WIFI_AP_STA);
@@ -472,29 +506,25 @@ void setup() {
 	ArduinoOTA.onProgress([](int percent, int total) { App::LED_BLINK(); });
 	ArduinoOTA.begin();
 
+#ifdef MASTER
 	webSocket.begin();
 	webSocket.onEvent(webSocketEvent);
 
-	MeshRC::on("#>BLINK", Net::recvBlink);
-	MeshRC::on("#<BLINK", Net::recvBlink);
-
-#ifdef MASTER
 	MeshRC::on("#<PING", Net::recvPing);
+	MeshRC::on("#<RESET", Net::restart);
+	MeshRC::on("#<WIFI:ON", Net::wifiOn);
+	MeshRC::on("#<WIFI:OFF", Net::wifiOff);
+	MeshRC::on("", Net::handleAll);
 #else
+	MeshRC::on("#>BLINK", Net::recvBlink);
 	MeshRC::on("#>PING", Net::recvPing);
-#endif
-
 	MeshRC::on("#>SYNC", Net::recvSync);
 	MeshRC::on("#>PAIR", Net::recvPair);
-
 	MeshRC::on("#>FILE", Net::recvFile);
 
-	MeshRC::on("#>RESTART", handleRestartMsg);
-
-	MeshRC::on("#>WIFI:AP:ON", Net::wifiOn);
-	MeshRC::on("#>WIFI:AP:OFF", Net::wifiOff);
-	MeshRC::on("$>WIFI:STA:ON", Net::recvWiFiConnect);
-	MeshRC::on("$>WIFI:STA:OFF", []() { WiFi.disconnect(); });
+	MeshRC::on("#>NAME", Net::setName);
+	MeshRC::on("#>COLOR", Net::setColor);
+	MeshRC::on("#>ALPHA", Net::setAlpha);
 
 	MeshRC::on("#>SHOW:START", LED::begin);
 	MeshRC::on("#>SHOW:BEGIN", LED::begin);
@@ -504,19 +534,18 @@ void setup() {
 	MeshRC::on("#>SHOW:STOP", LED::end);
 	MeshRC::on("#>SHOW:END", LED::end);
 
-	MeshRC::on("#>NAME", Net::setName);
-	MeshRC::on("#>BRIGHT", Net::setBrightness);
-	MeshRC::on("#>RGB:", Net::setRGB);
-	MeshRC::on("", Net::handleAll);
-	MeshRC::begin();
-#ifdef MASTER
-	timeSyncInterrupt.attach_ms_scheduled_accurate(100, sendSync);
+	MeshRC::on("#>RESET", restart);
+	MeshRC::on("#>WIFI:ON", Net::wifiOn);
+	MeshRC::on("#>WIFI:OFF", Net::wifiOff);
 #endif
+	MeshRC::begin();
 }
 
 void loop() {
 	ArduinoOTA.handle();
+#ifdef MASTER
 	webSocket.loop();
+#endif
 }
 }  // namespace Net
 

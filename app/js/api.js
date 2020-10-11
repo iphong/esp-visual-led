@@ -242,7 +242,7 @@ export function request(method = 'POST', path = '', args = {}, body = null) {
 		req.addEventListener('error', reject)
 	})
 }
-export async function uploadFile(path, body, sync = false, target = null) {
+export async function uploadFile(path, body, sync = false, target = null, useSD = false) {
 	const file = new Blob([body])
 	const output = console.log(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
 	return new Promise((resolve, reject) => {
@@ -250,7 +250,7 @@ export async function uploadFile(path, body, sync = false, target = null) {
 		const req = new XMLHttpRequest()
 		form.append('filename', path)
 		form.append('file', file)
-		req.open('POST', `edit?${sync ? 'sync' : 'nosync'}&${target ? `target=${target}` : ''}`, true)
+		req.open('POST', `edit?${sync ? 'sync' : 'nosync'}${target ? `&target=${target}` : ''}${useSD ? '&storage=sd':''}`, true)
 		req.send(form)
 		req.onloadend = (e) => {
 			if (output) {

@@ -106,6 +106,33 @@ class Show {
 	u32 readUint32(unsigned char* buffer) {
 		return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 	}
+	bool isInLoop = false;
+	Frame prev() {
+		u8 b[16];
+		Frame f;
+		size_t pos = file.position();
+		if (pos >= 32) {
+			file.seek(pos - 32);
+			file.readBytes((char*)b, 16);
+			f.type = b[0];
+			f.start = readUint32(&b[1]);
+			f.duration = readUint32(&b[5]);
+			f.transition = readUint32(&b[9]);
+			f.r = b[13];
+			f.g = b[14];
+			f.b = b[15];
+			// for (auto b : b) LOGD("%02X ", b);
+			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+		}
+		if (!isInLoop && f.type == END_FRAME) {
+			isInLoop = true;
+			while (isInLoop) prev();
+		}
+		if (isInLoop && f.type == LOOP_FRAME) {
+			isInLoop = false;
+		}
+		return f;
+	}
 	Frame next() {
 		u8 b[16];
 		Frame f;
@@ -174,10 +201,21 @@ class Show {
 		else if (paused)
 			resume();
 		if (offset > 1) {
-			holdTime = playTime - time;
+			while (frame.start >= time) {
+				frame = prev();
+				playTime = frame.start;
+			}
+			// holdTime = playTime - time;
+			while (playTime < time) {
+				if (!tick(false))
+					continue;
+			}
 		} else if (offset < -1) {
-			count = 8000;
-			while (--count && playTime < time) {
+			while (frame.start + frame.duration < time) {
+				frame = next();
+				playTime = frame.start;
+			}
+			while (playTime < time) {
 				if (!tick(false))
 					continue;
 			}

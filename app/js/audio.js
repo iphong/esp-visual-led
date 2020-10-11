@@ -1,3 +1,4 @@
+import { AUDIO } from "./data"
 import { handleError } from "./events"
 
 const AudioContext = window['AudioContext'] || window['webkitAudioContext']
@@ -31,9 +32,9 @@ export async function parseAudio(file) {
 
 export async function renderAudio() {
 	if (AUDIO.file) {
-		$('.track.waveform').forEach(el => (el.innerHTML = '<div class="loading">Loading...</div>'))
-		renderWaveform(await parseAudio(AUDIO.file))
 		setAttr('#player', 'src', URL.createObjectURL(AUDIO.file))
+		// $('.track.waveform').forEach(el => (el.innerHTML = '<div class="loading">Loading...</div>'))
+		// renderWaveform(await parseAudio(AUDIO.file))
 	} else {
 		setAttr('#player', 'src', '')
 		$('.track.waveform').forEach(el => (el.innerHTML = ''))
@@ -46,14 +47,14 @@ export async function renderWaveform() {
 		const ctx = canvas.getContext("2d");
 		const waveData = AUDIO.channels[index].data
 		const height = 80;
-		const width = AUDIO.duration * 20
+		const width = window.innerWidth
 		const halfHeight = height / 2;
 		const length = waveData.length;
 		const step = Math.round(length / width);
 
 		wrapper.innerHTML = ''
 		wrapper.appendChild(canvas)
-		
+
 		canvas.width = width;
 		canvas.height = height;
 		canvas.style.width = width + "px";

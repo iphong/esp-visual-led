@@ -1,4 +1,5 @@
 import unzip from 'unzip-js'
+import { LIGHT } from './data'
 
 const led_nums = 36
 const rgbFrameRegex = /(\t+)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
@@ -8,10 +9,6 @@ const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
 export async function parseLTP(file) {
 	return new Promise(resolve => {
 		$('.tracks').forEach(el => {
-			el.width = '100%';
-			el.innerHTML = '<div class="loading">loading...</div>'
-		})
-		$('.track.waveform').forEach(el => {
 			el.width = '100%';
 			el.innerHTML = '<div class="loading">loading...</div>'
 		})
@@ -31,6 +28,7 @@ export async function parseLTP(file) {
 						stream.on('end', async () => {
 							const file = new Blob(content)
 							if (name == "project.lt3") {
+								LIGHT.file = file
 								const reader = new FileReader
 								reader.readAsText(file)
 								reader.addEventListener('loadend', () => {
@@ -207,7 +205,7 @@ export function renderShow() {
 	})
 	$('.tracks').forEach($tracks => {
 		$tracks.innerHTML = ''
-		$tracks.style.width = LIGHT.params.end / 50 + 'px'
+		$tracks.style.width = LIGHT.params.end + 'px'
 		LIGHT.tracks.forEach(track => {
 			const $track = document.createElement('div')
 			const { elements, ...params } = track
@@ -222,10 +220,10 @@ export function renderShow() {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '40px'
+			container.style.height = '60px'
 			break;
 		case 2:
-			container.style.height = '20px'
+			container.style.height = '30px'
 			break;
 		default:
 			return console.log('unsupported device type:', track.device)
@@ -240,8 +238,8 @@ export function renderLight(container, track) {
 		if (color) color = convertColor(color)
 		if (colorStart) colorStart = convertColor(colorStart)
 		if (colorEnd) colorEnd = convertColor(colorEnd)
-		$el.style.left = `${start / 50}px`
-		$el.style.width = `${duration / 50}px`
+		$el.style.left = `${start}px`
+		$el.style.width = `${duration}px`
 		let color1, color2
 		switch (params.type) {
 			case 2: // solid
@@ -257,20 +255,20 @@ export function renderLight(container, track) {
 				color2 = toCssColor(colorEnd)
 				const { period, ratio } = params
 				$el.style.backgroundImage = `url(${drawFlash(color1, color2, period, ratio)})`
-				$el.style.backgroundSize = '20%'
+				// $el.style.backgroundSize = '20%'
 				break
 			case 5: // rainbow
 				$el.style.backgroundImage = `url(${drawRainbow(params.period)})`
-				$el.style.backgroundSize = '20%'
+				// $el.style.backgroundSize = '20%'
 				// $el.style.backgroundImage = `linear-gradient(to right, red, orange , yellow, green, cyan, blue, violet)`
 				break
 			case 6: // dots
 				$el.style.backgroundImage = `url(${drawDots(toCssColor(color), params.spacing)})`
-				$el.style.backgroundSize = '20%'
+				// $el.style.backgroundSize = '20%'
 				break
 			case 7: // pulse
 				$el.style.backgroundImage = `url(${drawPulse(toCssColor(color), params.period)})`
-				$el.style.backgroundSize = '20%'
+				// $el.style.backgroundSize = '20%'
 				break
 			default:
 				console.log("unhandled light type:", params.type)
@@ -304,7 +302,6 @@ function drawFlash(color1, color2, period, ratio) {
 	ctx.fillRect(len1, 0, len2, 1);
 	return tmpCanvas.toDataURL()
 }
-
 function drawDots(color, spacing) {
 	tmpCanvas.width = spacing + 2
 	tmpCanvas.height = 1
@@ -315,7 +312,6 @@ function drawDots(color, spacing) {
 	ctx.fillRect(1, 0, 1, 1);
 	return tmpCanvas.toDataURL()
 }
-
 function drawPulse(color, period) {
 	tmpCanvas.width = period
 	tmpCanvas.height = 1
@@ -328,7 +324,6 @@ function drawPulse(color, period) {
 	ctx.fillRect(12, 0, 2, 1);
 	return tmpCanvas.toDataURL()
 }
-
 function drawRainbow(period) {
 	tmpCanvas.width = period
 	tmpCanvas.height = 1

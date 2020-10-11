@@ -1,10 +1,8 @@
 // #define MESH_RC_DEBUG_ALL_MSG
 // #define SEND_FILE_LOGS
-#define RECV_FILE_LOGS
+// #define RECV_FILE_LOGS
 // #define SYNC_LOGS
-// #ifdef MASTER
-// #define USE_SD_CARD
-// #endif
+// #ifdef MAST≈
 
 #include "app.h"
 
@@ -13,7 +11,7 @@
 #include <Button.h>
 
 #include "api.h"
-#include "hmi.h"
+// #include "hmi.h"
 #include "led.h"
 #include "net.h"
 #ifdef USE_SD_CARD
@@ -28,36 +26,7 @@ Button::callback_t buttonPressHandler = [](u8 repeats) {
 	LOGD("Button pressed.\n");
 	switch (repeats) {
 		case 1:
-			if (!LED::running) {
-				LED::begin();
-			} else {
-				LOGD("play next show\n");
-				LED::end();
-				Net::sendSync();
-				if (App::data.show == 8)
-					App::data.show = 0;
-				else
-					App::data.show++;
-				App::save();
-				LED::begin();
-				Net::sendSync();
-			}
-			break;
-		case 2:
-			if (!LED::running)
-				LED::begin();
-			else {
-				LOGD("play prev show\n");
-				LED::end();
-				Net::sendSync();
-				if (App::data.show == 0)
-					App::data.show = 8;
-				else
-					App::data.show--;
-				App::save();
-				LED::begin();
-				Net::sendSync();
-			}
+			Net::sendPing();
 			break;
 	}
 };
@@ -81,17 +50,12 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 			LOGD("mode = %i\n", App::mode);
 #endif
 			break;
-		case 1:
-			Net::wifiToggle();
-			break;
 	}
 };
 
 void setup() {
 	pinMode(LED_PIN, OUTPUT);
 	sprintf(App::chipID, "%06X", system_get_chip_id());
-
-	App::startBlink(200);
 
 	Serial.begin(921600);
 
@@ -104,28 +68,19 @@ void setup() {
 	Net::apAddr = {10, 1, 1, 1};
 	Net::apMask = {255, 255, 255, 0};
 
-	LED::onBegin = []() {
-		Net::sendSync();
-	};
-	LED::onEnd = []() {
-		Net::sendSync();
-	};
-
-	// SD::setup();
 	App::setup();
 	LED::setup();
 	Net::setup();
 	Api::setup();
 #ifdef MASTER
-	Hmi::setup();
+	// Hmi::setup();
 	Net::wifiOn();
+	MeshRC::delayMs(2000);
 	Net::sendPing();
 #else
-	// Net::wifiOff();
 	if (App::isPaired()) {
 		Net::sendPing();
 	}
-	App::stopBlink();
 #endif
 #ifdef USE_SD_CARD
 	SD::setup();
@@ -136,7 +91,7 @@ void loop() {
 	App::loop();
 	Api::loop();
 	Net::loop();
-#ifdef MASTER
-	Hmi::loop();
-#endif
+// #ifdef MASTER
+// 	Hmi::loop();
+// #endif
 }

@@ -3,7 +3,6 @@
 	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 	font-family: "system-ui", "Helvetica Neue", Verdana, Geneva, Tahoma, sans-serif;
 }
-
 *:not(input) {
 	user-select: none;
 	-webkit-user-select: none;
@@ -11,10 +10,11 @@
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
+
 body {
 	padding: 53px 0 0 0;
 	margin: 0;
-	background: #111111;
+	background: #000000;
 	color: #ffffff;
 }
 
@@ -33,7 +33,7 @@ header {
 }
 @media screen and (min-width: 601px) {
 	body {
-		padding: 50px 0 0 0;
+		padding: 53px 0 0 0;
 	}
 	header > *:first-child {
 		margin-left: 30px;
@@ -57,7 +57,8 @@ header label {
     padding: 4px 8px;
     border-radius: 1.25em;
 	text-transform: uppercase;
-	user-select: all !important;
+	user-select: none !important;
+	cursor: pointer;
 }
 header strong {
 	font-size: 30px;
@@ -85,11 +86,22 @@ button.selected {
 	font-weight: bold;
 }
 
+section.audio {
+	padding: 10px;
+}
+
+section.audio audio {
+	width: 100%;
+	margin: 0;
+	height: 30px;
+	outline: none;
+}
+
 section.timeline {
 	width: 100%;
 	display: grid;
 	grid-gap: 2px;
-	overflow-x: auto;
+	overflow-x: hidden;
 }
 
 div.tracks {
@@ -101,25 +113,27 @@ div.tracks {
 div.track {
 	position: relative;;
 	width: auto;
-	background: #222222;
+	background: #111111;
 }
 div.track > span {
 	display: block;
 	position: absolute;
 	height: 100%;
 	box-sizing: border-box;
+	background-color: #000000;
 }
 
 section.nodes:not(:empty) {
 	display: block;
-    background: #222222;
+    background: #111111;
 	padding: 10px;
 	margin: 2px 0;
+	text-align: center;
 }
 article.node {
 	display: inline-block;
     padding: 10px;
-    background: #222222;
+    background: #111111;
 	border: 2px solid blueviolet;
 	color: #ddd;
     font-weight: bold;
