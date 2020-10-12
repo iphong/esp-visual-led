@@ -6,7 +6,8 @@ export const CONFIG = {
 	time: 0,
 	running: 0,
 	paused: 0,
-	nodes: []
+	nodes: [],
+	syncing: true
 }
 
 // store audio configs for current show

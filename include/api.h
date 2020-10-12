@@ -164,7 +164,8 @@ String nodesListJSON() {
 		json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\",";
 		json += "\"name\":\"" + String(Net::nodesList[i].name).substring(0, 20) + "\",";
 		json += "\"type\":" + String(Net::nodesList[i].type) + ",";
-		json += "\"vbat\":" + String(Net::nodesList[i].vbat) + "";
+		json += "\"vbat\":" + String(Net::nodesList[i].vbat) + ",";
+		json += "\"hidden\":" + String(millis() - Net::nodesList[i].lastUpdate > 10000 ? 1:0) + "";
 		json += "}";
 		if (i < Net::nodesCount - 1) json += ",";
 	}

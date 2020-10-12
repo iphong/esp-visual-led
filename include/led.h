@@ -7,22 +7,6 @@
 
 namespace LED {
 
-bool running = false;
-bool paused = false;
-bool repeat = false;
-
-void pause() {
-	paused = true;
-}
-
-void resume() {
-	paused = false;
-}
-
-void toggle() {
-	paused = !paused;
-}
-
 enum FrameType {
 	RGB_FRAME = 0x01,
 	END_FRAME = 0x02,
@@ -33,23 +17,19 @@ class RGB {
 	u8 r;
 	u8 g;
 	u8 b;
-
 	void set(u8* d) {
 		memcpy(this, d, 3);
 	}
-
 	void set(RGB* c) {
 		r = c->r;
 		g = c->g;
 		b = c->b;
 	}
-
 	void set(App::RGB* c) {
 		r = c->r;
 		g = c->g;
 		b = c->b;
 	}
-
 	void set(u8 red, u8 green, u8 blue) {
 		r = red;
 		g = green;
@@ -81,10 +61,8 @@ class Show {
 	Ticker tmr;
 	File file;
 
-	Frame frame;   // Active frame
-	u32 playTime;  // Current playing time
-	u32 startTime;
-	u32 holdTime;
+	Frame frame;	  // Active frame
+	u32 currentTime;  // Current playing time
 
 	Frame loopFrame;
 	u32 loopTime;
@@ -93,21 +71,37 @@ class Show {
 
 	float ratio;
 
-	App::Output* data;
-
    public:
-	Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin, App::Output* d)
-		: id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin), data(d) {
+	bool running = false;
+	bool paused = false;
+	bool repeat = false;
+
+	Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin)
+		: id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) {
 	}
 
-	u32 getTime() {
-		return playTime;
-	}
 	u32 readUint32(unsigned char* buffer) {
 		return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 	}
-	bool isInLoop = false;
+	Frame next() {
+		u8 b[16];
+		Frame f;
+		if (file.available()) {
+			file.readBytes((char*)b, 16);
+			f.type = b[0];
+			f.start = readUint32(&b[1]);
+			f.duration = readUint32(&b[5]);
+			f.transition = readUint32(&b[9]);
+			f.r = b[13];
+			f.g = b[14];
+			f.b = b[15];
+			// for (auto b : b) LOGD("%02X ", b);
+			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+		}
+		return f;
+	}
 	Frame prev() {
+		static bool isInLoop = 0;
 		u8 b[16];
 		Frame f;
 		size_t pos = file.position();
@@ -133,25 +127,8 @@ class Show {
 		}
 		return f;
 	}
-	Frame next() {
-		u8 b[16];
-		Frame f;
-		if (file.available()) {
-			file.readBytes((char*)b, 16);
-			f.type = b[0];
-			f.start = readUint32(&b[1]);
-			f.duration = readUint32(&b[5]);
-			f.transition = readUint32(&b[9]);
-			f.r = b[13];
-			f.g = b[14];
-			f.b = b[15];
-			// for (auto b : b) LOGD("%02X ", b);
-			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
-		}
-		return f;
-	}
 
-	void setColor(Frame* frame, u32 lapsed) {
+	void setTransition(Frame* frame, u32 lapsed) {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
 			ratio = (float)lapsed / frame->transition;
@@ -185,14 +162,30 @@ class Show {
 	void end() {
 		if (file) file.close();
 		tmr.detach();
-		playTime = 0;
+		currentTime = 0;
 		loopTime = 0;
+		running = 0;
+		paused = 0;
 		setRGB(0, 0, 0);
 	}
 
+	void pause() {
+		paused = true;
+	}
+
+	void resume() {
+		paused = false;
+	}
+
+	void toggle() {
+		paused = !paused;
+	}
+
+	u32 getTime() {
+		return currentTime;
+	}
 	void setTime(u32 time) {
-		static u32 count;
-		int offset = (int)playTime - (int)time;
+		int offset = (int)currentTime - (int)time;
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
 #endif
@@ -203,37 +196,32 @@ class Show {
 		if (offset > 1) {
 			while (frame.start >= time) {
 				frame = prev();
-				playTime = frame.start;
+				currentTime = frame.start;
 			}
-			// holdTime = playTime - time;
-			while (playTime < time) {
-				if (!tick(false))
+			while (currentTime < time) {
+				if (!tick(true))
 					continue;
 			}
 		} else if (offset < -1) {
 			while (frame.start + frame.duration < time) {
 				frame = next();
-				playTime = frame.start;
+				currentTime = frame.start;
 			}
-			while (playTime < time) {
-				if (!tick(false))
+			while (currentTime < time) {
+				if (!tick(true))
 					continue;
 			}
 		}
 	}
 	// true = playing
 	// false = ended
-	bool tick(bool shouldSetColor = true) {
-		if (holdTime && shouldSetColor) {
-			holdTime--;
-			return true;
-		}
-		if (paused & shouldSetColor)
+	bool tick(bool shouldUpdate = true) {
+		if (paused & shouldUpdate)
 			return false;
 		switch (frame.type) {
 			case RGB_FRAME:
-				if (shouldSetColor)
-					setColor(&frame, playTime - frame.start);
+				if (shouldUpdate)
+					setTransition(&frame, currentTime - frame.start);
 				break;
 			case LOOP_FRAME:
 				if (loopTime == 0) {
@@ -241,8 +229,8 @@ class Show {
 					loopStart = file.position();
 					loopFrame = next();
 				}
-				if (shouldSetColor && loopFrame.type == RGB_FRAME) {
-					setColor(&loopFrame, loopTime - loopFrame.start);
+				if (shouldUpdate && loopFrame.type == RGB_FRAME) {
+					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
 				if (++loopTime >= loopFrame.start + loopFrame.duration) {
 					// LOGD(" * ");
@@ -261,7 +249,7 @@ class Show {
 				// LOGL("ended");
 				repeat ? begin() : end();
 		}
-		if (++playTime >= frame.start + frame.duration) {
+		if (++currentTime >= frame.start + frame.duration) {
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
 				loopTime = 0;
@@ -298,47 +286,25 @@ class Show {
 
 	void begin() {
 		end();
-		if (App::data.show != 0) {
-			String path = "/show/" + String(App::data.show) + (id) + ".lsb";
-			if (!App::fs->exists(path)) {
-				LOGD("Show not found: %s\n", path.c_str());
-				return;
-			}
-			LOGD("Playing show: %s\n", path.c_str());
-			file = App::fs->open(path, "r");
-			file.setTimeout(0);
-			frame = next();
-			tmr.attach_ms_scheduled_accurate(1, [this]() {
-				tick(true);
-			});
-			startTime = millis();
-		} else {
-			setRGB(data->color.r, data->color.g, data->color.b);
+		running = 1;
+		paused = 0;
+		String path = "/show/" + String(App::data.show) + (id) + ".lsb";
+		if (!App::fs->exists(path)) {
+			LOGD("Show not found: %s\n", path.c_str());
+			return;
 		}
-		startTime = millis();
+		LOGD("Playing show: %s\n", path.c_str());
+		file = App::fs->open(path, "r");
+		file.setTimeout(0);
+		frame = next();
+		tmr.attach_ms_scheduled_accurate(1, [this]() {
+			tick(true);
+		});
 	}
 };
 
-Show A('A', R1_PIN, G1_PIN, B1_PIN, &App::data.a);
-Show B('B', R2_PIN, G2_PIN, B2_PIN, &App::data.b);
-
-u32 getTime() {
-	return _max(A.getTime(), B.getTime());
-}
-
-using callback_t = std::function<void()>;
-
-callback_t onBegin;
-callback_t onEnd;
-
-void setTime(u32 time) {
-#ifndef MASTER
-	if (App::data.show) {
-		A.setTime(time);
-		B.setTime(time);
-	}
-#endif
-}
+Show A('A', R1_PIN, G1_PIN, B1_PIN);
+Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 void setup() {
 #ifndef MASTER
@@ -348,27 +314,35 @@ void setup() {
 	B.setup();
 #endif
 }
-
 void end() {
-	running = false;
-	paused = false;
 	A.end();
 	B.end();
-	if (onEnd) onEnd();
 }
-
 void begin() {
-	running = true;
-	paused = false;
 	A.begin();
 	B.begin();
-	if (onBegin) onBegin();
+}
+void pause() {
+	A.pause();
+	B.pause();
+}
+void resume() {
+	A.resume();
+	B.resume();
+}
+void toggle() {
+	A.toggle();
+	B.toggle();
+}
+void setTime(u32 time) {
+	A.setTime(time);
+	B.setTime(time);
 }
 bool isRunning() {
-	return running;
+	return A.running || B.running;
 }
 bool isPaused() {
-	return paused;
+	return A.paused && B.paused;
 }
 }  // namespace LED
 

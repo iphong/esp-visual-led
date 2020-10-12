@@ -60,7 +60,14 @@ FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
 
-u8 led_pin = R1_PIN;
+u8 led_pin = LED_PIN;
+
+bool equals(u8* a, u8* b, u8 size, u8 offset = 0) {
+	for (auto i = offset; i < offset + size; i++)
+		if (a[i] != b[i])
+			return false;
+	return true;
+}
 
 // bool blinking = false;
 // u8 blinkColor[] = {255,255,255};
@@ -84,16 +91,21 @@ static void stopBlink() {
 	LED_HIGH();
 	if (blinkTimer.active()) blinkTimer.detach();
 }
-static void startBlink(u32 time = 1000) {
+static void startBlink(u32 time = 1000, u8 pin = LED_PIN) {
+	LED_HIGH();
+	led_pin = pin;
+	pinMode(led_pin, OUTPUT);
 	LED_LOW();
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
 static void toggleBlink(u32 time = 1000) {
-	if (blinkTimer.active()) stopBlink();
-	else startBlink(time);
+	if (blinkTimer.active())
+		stopBlink();
+	else
+		startBlink(time);
 }
 bool isPaired() {
-	return !MeshRC::equals(data.master, MeshRC::broadcast, 6);
+	return !equals(data.master, MeshRC::broadcast, 6);
 }
 bool isPairing() {
 	return mode == BIND;
@@ -147,7 +159,6 @@ void loadData() {
 	}
 }
 void save() {
-	saveTimer.detach();
 	saveTimer.once(1, saveData);
 }
 void setMode(Mode newMode) {
@@ -170,21 +181,13 @@ void setMaster(u8* addr) {
 	}
 }
 void setup() {
-	pinMode(led_pin, OUTPUT);
 	loadData();
-
 	fsOK = fs->begin();
 	LOGL(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
-
-	if (!fs->exists("/show")) {
-		fs->mkdir("/show");
-	}
-	if (!fs->exists("/tmp")) {
-		fs->mkdir("/tmp");
-	}
+	if (!fs->exists("/show")) fs->mkdir("/show");
+	if (!fs->exists("/tmp")) fs->mkdir("/tmp");
 }
 void loop() {
-	
 }
 }  // namespace App
 

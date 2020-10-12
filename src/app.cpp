@@ -34,12 +34,9 @@ Button::callback_t buttonPressHandler = [](u8 repeats) {
 Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 	switch (repeats) {
 		case 0:
-#ifdef MASTER
-			Net::sendPair();
-#else
 			if (!App::isPairing()) {
 				LED::end();
-				App::startBlink(200);
+				App::startBlink(200, LED_PIN);
 				App::mode = App::BIND;
 				MeshRC::master = NULL;
 			} else {
@@ -48,13 +45,11 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 				MeshRC::master = App::data.master;
 			}
 			LOGD("mode = %i\n", App::mode);
-#endif
 			break;
 	}
 };
 
 void setup() {
-	pinMode(LED_PIN, OUTPUT);
 	sprintf(App::chipID, "%06X", system_get_chip_id());
 
 	Serial.begin(921600);
@@ -91,7 +86,7 @@ void loop() {
 	App::loop();
 	Api::loop();
 	Net::loop();
-// #ifdef MASTER
-// 	Hmi::loop();
-// #endif
+	// #ifdef MASTER
+	// 	Hmi::loop();
+	// #endif
 }

@@ -10,17 +10,14 @@
 <link rel="stylesheet" href="css/grid.css">
 <div hidden>
 	<input type="file" id="select-file" />
+	<audio id="player" controls></audio>
 </div>
 <header>
 	<div>
 		<strong>LIGHT</strong>
 		<small>MASTER</small>
 	</div>
-	<div>
-		<label id=id>-</label>
-		<!-- <label id="ip">-</label> -->
-		<!-- <label id="mac">-</label> -->
-	</div>
+	<div id="toolbar"></div>
 	<div>
 		<button data-show="1">1</button>
 		<button data-show="2">2</button>
@@ -29,9 +26,6 @@
 	</div>
 </header>
 <main>
-	<section class="audio">
-		<audio id="player" controls></audio>
-	</section>
 	<div class="track waveform"></div>
 	<section class="timeline">
 		<div class="tracks"></div>

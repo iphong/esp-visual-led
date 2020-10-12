@@ -220,10 +220,10 @@ export function renderShow() {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '60px'
+			container.style.height = '15px'
 			break;
 		case 2:
-			container.style.height = '30px'
+			container.style.height = '15px'
 			break;
 		default:
 			return console.log('unsupported device type:', track.device)

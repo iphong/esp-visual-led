@@ -16,11 +16,14 @@ namespace Net {
 
 #ifdef MASTER
 WebSocketsServer webSocket(81);
+#else
+Ticker pingTimer;
 #endif
 
 bool receivingFiles;
 bool sendingFiles;
-bool IS_WIFI_ON = false;
+bool fsReplyOK;
+bool IS_WIFI_ON;
 
 String staSSID;
 String staPSK;
@@ -119,6 +122,7 @@ struct NodeInfo {
 	u8 type;
 	u16 vbat;
 	char name[20];
+	u32 lastUpdate;
 };
 NodeInfo nodesList[255];
 size_t nodesCount = 0;
@@ -142,6 +146,7 @@ void recvPing(u8* data, u8 size) {
 	memcpy(&n.id, &data[0], 6);
 	n.type = data[7];
 	n.vbat = readUint16(&data[8]);
+	n.lastUpdate = millis();
 	memcpy(&n.name, &data[10], 20);
 	bool isNew = true;
 	int i = 0;
@@ -163,11 +168,6 @@ void recvPing(u8* data, u8 size) {
 #endif
 }
 
-void sendPair() {
-	LOGD("Sending pair without channel\n");
-	MeshRC::send("#>PAIR");
-}
-
 void recvPair() {
 	if (App::isPairing() && !receivingFiles) {
 		App::stopBlink();
@@ -186,6 +186,26 @@ void waitDelay(u32 time) {
 		yield();
 }
 
+void sendFile2(String path, String target = "#") {
+	File file = LittleFS.open(path, "r");
+	MeshRC::send(target + ">FS1" + path);
+	MeshRC::wait();
+	MeshRC::delayMs(5);
+	while (file.available()) {
+		// u16 pos = file.position();
+		u8 len = _min(16, file.available());
+		u8 data[len];
+		for (auto i = 0; i < len; i++) {
+			data[i] = file.read();
+		}
+		MeshRC::send(target + ">FS2", data, len);
+		MeshRC::wait();
+		MeshRC::delayMs(5);
+	}
+	MeshRC::send(target + ">FS3");
+	MeshRC::wait();
+	MeshRC::delayMs(1);
+}
 void sendFile(String path, String targetID = "******") {
 #ifdef USE_SD_CARD
 	LOGD("send file: %s -- ", path.c_str());
@@ -317,9 +337,6 @@ void recvFile(u8* buf, u8 len) {
 			if (MeshRC::equals(data, (u8*)App::chipID, 6) || MeshRC::equals(data, broadcastWildCard, 6)) {
 				receivingFiles = true;
 				LED::end();
-				// wifiOff();
-				// WiFi.disconnect();
-				// App::stopBlink();
 				App::LED_LOW();
 				name = "";
 				crc = 0x00;
@@ -346,8 +363,8 @@ void recvFile(u8* buf, u8 len) {
 		case '+':
 			if (file) {
 				App::LED_BLINK();
-				u16 pos = data[0] << 8 | data[1];
-				u16 pos2 = file.position();
+				// u16 pos = data[0] << 8 | data[1];
+				// u16 pos2 = file.position();
 #ifdef RECV_FILE_LOGS
 				LOGD("%04X %04X :: %u bytes :: ", pos, pos2, size);
 #endif
@@ -395,18 +412,12 @@ void restart() {
 	ESP.restart();
 }
 void recvBlink(u8* data, u8 size) {
-	char action = data[0];
-	char speed = data[1];
-	u8* id = &data[2];
-	if (size > 2 && !MeshRC::equals(id, (u8*)App::chipID, size)) {
-		return;
-	}
-	if (action == '+') {
-		App::startBlink(String(speed).toInt() * 100);
-	} else if (action == '-') {
-		App::stopBlink();
-	} else {
-		App::toggleBlink(String(speed).toInt() * 100);
+	if (!size) {
+		App::toggleBlink(200);
+	} else if (size == 1) {
+		data[0] ? App::startBlink(data[0] * 100) : App::stopBlink();
+	} else if (size == 2) {
+		data[0] ? App::startBlink(data[0] * 100, data[1]) : App::stopBlink();
 	}
 }
 #ifdef MASTER
@@ -414,26 +425,22 @@ bool activeSockets[8];
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
 	switch (type) {
 		case WStype_DISCONNECTED:
-			LOGD("[%u] Disconnected!\n", num);
+			LOGD("WS[%u] Disconnected!\n", num);
 			if (num < 8) activeSockets[num] = false;
 			break;
 		case WStype_CONNECTED: {
 			IPAddress ip = webSocket.remoteIP(num);
 			if (num < 8) activeSockets[num] = true;
-			LOGD("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+			LOGD("WS[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
 		} break;
 		case WStype_TEXT:
-			LOGD("[%u] get Text: %s\n", num, payload);
-			if (payload[0] == '#') {
-				if (payload[1] == '<') MeshRC::recvHandler(NULL, payload, length);
-				if (payload[1] == '>') MeshRC::send(payload, length);
-			}
-			break;
 		case WStype_BIN:
-			LOGD("[%u] get binary length: %u\n", num, length);
+			LOGD("WS[%u] >> %s\n", num, payload);
 			if (payload[0] == '#') {
 				if (payload[1] == '<') MeshRC::recvHandler(NULL, payload, length);
 				if (payload[1] == '>') MeshRC::send(payload, length);
+			} else {
+				MeshRC::send(payload, length);
 			}
 			break;
 		case WStype_ERROR:
@@ -441,7 +448,6 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 		case WStype_FRAGMENT_BIN_START:
 		case WStype_FRAGMENT:
 		case WStype_FRAGMENT_FIN:
-			break;
 		case WStype_PING:
 		case WStype_PONG:
 			break;
@@ -450,50 +456,22 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 #endif
 
 void setName(u8* buf, u8 len) {
-	if (MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
-		memset(App::data.name, 0, 20);
-		memcpy(App::data.name, &buf[6], len - 6);
-		App::save();
-	}
+	memset(App::data.name, 0, 20);
+	memcpy(App::data.name, buf, len);
+	App::save();
 }
 void setAlpha(u8* buf, u8 len) {
-	if (len == 7 && MeshRC::equals(&buf[0], (u8*)App::chipID, 6)) {
-		App::data.brightness = buf[6];
-		App::save();
-	} else if (len == 1) {
-		App::data.brightness = buf[0];
-		App::save();
-	}
+	App::data.brightness = buf[0];
+	App::save();
 }
 void setColor(u8* buf, u8 len) {
-	u8* color;
-	char segment;
-	if (len == 10)
-		if (!MeshRC::equals(&buf[0], (u8*)App::chipID, 6))
-			return;
-		else {
-			segment = (char)buf[6];
-			color = &buf[7];
-		}
-	else if (len == 4) {
-		segment = (char)buf[0];
-		color = &buf[1];
-	}
-	App::data.show = 0;
-	if (segment == 'A' || segment == '0') {
-		LED::A.setRGB(color[0], color[1], color[2]);
-	} else if (segment == 'B' || segment == '1') {
-		LED::B.setRGB(color[0], color[1], color[2]);
-	}
+	char segment = buf[0];
+	u8 r = buf[1];
+	u8 g = buf[2];
+	u8 b = buf[3];
+	if (segment == 'A' || segment == '*') LED::A.setRGB(r, g, b);
+	if (segment == 'B' || segment == '*') LED::B.setRGB(r, g, b);
 }
-
-#ifdef MASTER
-void handleAll(u8* data, u8 size) {
-	for (u8 i = 0; i < 8; i++) {
-		webSocket.sendBIN(i, data, size);
-	}
-}
-#endif
 
 void setup() {
 	WiFi.mode(WIFI_AP_STA);
@@ -514,8 +492,13 @@ void setup() {
 	MeshRC::on("#<RESET", Net::restart);
 	MeshRC::on("#<WIFI:ON", Net::wifiOn);
 	MeshRC::on("#<WIFI:OFF", Net::wifiOff);
-	MeshRC::on("", Net::handleAll);
+
+	MeshRC::on("#<FSOK", []() {
+		fsReplyOK = true;
+	});
 #else
+	pingTimer.attach(10, Net::sendPing);
+
 	MeshRC::on("#>BLINK", Net::recvBlink);
 	MeshRC::on("#>PING", Net::recvPing);
 	MeshRC::on("#>SYNC", Net::recvSync);
@@ -523,21 +506,62 @@ void setup() {
 	MeshRC::on("#>FILE", Net::recvFile);
 
 	MeshRC::on("#>NAME", Net::setName);
-	MeshRC::on("#>COLOR", Net::setColor);
-	MeshRC::on("#>ALPHA", Net::setAlpha);
+	MeshRC::on("#>SET", Net::setColor);
+	MeshRC::on("#>DIM", Net::setAlpha);
 
-	MeshRC::on("#>SHOW:START", LED::begin);
-	MeshRC::on("#>SHOW:BEGIN", LED::begin);
-	MeshRC::on("#>SHOW:PAUSE", LED::pause);
-	MeshRC::on("#>SHOW:RESUME", LED::resume);
-	MeshRC::on("#>SHOW:TOGGLE", LED::toggle);
-	MeshRC::on("#>SHOW:STOP", LED::end);
-	MeshRC::on("#>SHOW:END", LED::end);
+	MeshRC::on("#>START", LED::begin);
+	MeshRC::on("#>BEGIN", LED::begin);
+	MeshRC::on("#>PAUSE", LED::pause);
+	MeshRC::on("#>RESUME", LED::resume);
+	MeshRC::on("#>TOGGLE", LED::toggle);
+	MeshRC::on("#>STOP", LED::end);
+	MeshRC::on("#>END", LED::end);
 
-	MeshRC::on("#>RESET", restart);
+	MeshRC::on("#>RESET", Net::restart);
 	MeshRC::on("#>WIFI:ON", Net::wifiOn);
 	MeshRC::on("#>WIFI:OFF", Net::wifiOff);
+
+	MeshRC::on("#>FS", [](u8* buf, u8 len) {
+		u8 action = buf[0];
+		if (action == '1') {
+			String name = "";
+			for (auto i = 1; i < len; i++) {
+				name += String((char)buf[i]);
+			}
+			if (file) file.close();
+			file = LittleFS.open(name, "w");
+			MeshRC::send("#<FSOK");
+			App::LED_LOW();
+		}
+		if (action == '2') {
+			u8* data = &buf[1];
+			if (file) {
+				file.write((const char*)data, len - 1);
+			}
+			App::LED_BLINK();
+			delay(2);
+			MeshRC::send("#<FSOK");
+		}
+		if (action == '3') {
+			if (file) file.close();
+			MeshRC::send("#<FSOK");
+			App::LED_HIGH();
+		}
+	});
+
 #endif
+	MeshRC::on("", [](u8* data, u8 size) {
+		if (size > 6 && equals(data, (u8*)App::chipID, 6) && (data[6] == '>' || data[6] == '<')) {
+			u8* newData = &data[5];
+			newData[0] = '#';
+			MeshRC::recvHandler(MeshRC::sender, newData, size - 5);
+		}
+#ifdef MASTER
+		for (u8 i = 0; i < 8; i++) {
+			webSocket.sendBIN(i, data, size);
+		}
+#endif
+	});
 	MeshRC::begin();
 }
 

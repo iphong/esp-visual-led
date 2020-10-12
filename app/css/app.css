@@ -12,7 +12,7 @@
 }
 
 body {
-	padding: 53px 0 0 0;
+	padding: 55px 0 0 0;
 	margin: 0;
 	background: #000000;
 	color: #ffffff;
@@ -31,23 +31,24 @@ header {
 	align-items: center;
 	z-index: 10;
 }
+header > *:first-child {
+	margin-left: 10px;
+}
 @media screen and (min-width: 601px) {
-	body {
+	/* body {
 		padding: 53px 0 0 0;
-	}
-	header > *:first-child {
-		margin-left: 30px;
-	}
+	} */
+	
 }
 @media screen and (max-width: 600px) {
-	body {
+	/* body {
 		padding: 150px 0 0 0;
-	}
-	header {
+	} */
+	/* header {
 		grid-template-columns: auto;
 		text-align: center;
 		font-size: 30px;
-	}
+	} */
 }
 header label {
 	line-height: 1em;
@@ -101,7 +102,7 @@ section.timeline {
 	width: 100%;
 	display: grid;
 	grid-gap: 2px;
-	overflow-x: hidden;
+	overflow-x: auto;
 }
 
 div.tracks {
@@ -149,6 +150,7 @@ article.node {
 }
 article.node > * {
 	pointer-events: none;
+	user-select: text !important;
 }
 article.node.active,
 article.node.selected {

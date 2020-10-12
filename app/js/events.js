@@ -1,16 +1,18 @@
-import { $ } from "./api"
-import { render } from "./app"
-import { AUDIO, CONFIG } from "./data"
-import { send, sendSync } from "./ws"
+import { $, call, setProp } from "./api"
+import { render, renderHead, renderNodes } from "./app"
+import { AUDIO, CONFIG, SHOW } from "./data"
+import { send, sendFile, sendSync } from "./ws"
 
 const { parseAudio, renderAudio } = require("./audio")
-const { parseLSF, parseLTP, parseIPX, renderShow } = require("./light")
+const { parseLSF, parseLTP, parseIPX } = require("./light")
 
 export function handleError() {
 	console.error(...arguments)
 }
 
 async function handleFile(file, event) {
+	CONFIG.syncing = false
+	send('#>STOP')
 	console.debug(`select file: ${file.name}`)
 	if (file.name.endsWith('.bin')) {
 		await uploadFile('firmware/' + filename, file)
@@ -21,6 +23,8 @@ async function handleFile(file, event) {
 	} else if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
 		const target = event.target.dataset.device
+		
+		// await sendFile(target, `/show/${CONFIG.show}A.lsb`, new Blob(data[0]))
 		const sync = !!target
 		if (data.length == 1) {
 			await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
@@ -37,6 +41,7 @@ async function handleFile(file, event) {
 	} else {
 		console.error('unsupported file format')
 	}
+	CONFIG.syncing = true
 }
 
 function handleChange(e) {
@@ -49,25 +54,33 @@ function handleChange(e) {
 
 async function handleClick(e) {
 	if (e.target.dataset.device) {
-		if (e.target.classList.contains('selected')) {
-			e.target.classList.remove('selected')
-			send('BLINK-1' + e.target.dataset.device)
-		} else {
-			e.target.classList.add('selected')
-			send('BLINK+1' + e.target.dataset.device)
-		}
+		CONFIG.nodes.forEach(node => {
+			if (node.id == e.target.dataset.device) {
+				node.selected = !node.selected
+				send(e.target.dataset.device, 'BLINK', node.selected ? 1 : 0, 2)
+			}
+		})
+		renderNodes()
 	} else if (e.target.dataset.show) {
 		CONFIG.show = parseInt(e.target.dataset.show) || 0
-		await post(`show?id=${CONFIG.show}`)
+		// await post(`show?id=${CONFIG.show}`)
 		render()
 	} else if (e.target.dataset.action) {
 		switch (e.target.dataset.action) {
 			case 'show-file-select-dialog':
 				click('#select-file')
 				break
+			case 'show-start':
+				call('#player', 'play')
+				break
+			case 'show-stop':
+				call('#player', 'pause')
+				setProp('#player', 'currentTime', 0)
+				CONFIG.running = 0
+				CONFIG.paused = 0
+				send('#>STOP')
+				break
 		}
-	} else if (e.target.dataset.command) {
-		await post(`exec?cmd=${e.target.dataset.command}`)
 	}
 }
 function handleDragOver(e) {
@@ -105,25 +118,39 @@ async function handleInit() {
 
 let audio;
 async function handlePlay(e) {
+	audio = e.target
 	CONFIG.running = 1
 	CONFIG.paused = 0
 	CONFIG.time = 0
+	renderHead()
 }
 async function handlePlaying(e) {
+	audio = e.target
 	CONFIG.paused = 0
+	renderHead()
 }
 async function handlePause(e) {
+	audio = e.target
 	CONFIG.paused = 1
+	renderHead()
 }
 async function handleEnd(e) {
+	audio = e.target
 	CONFIG.running = 0
 	CONFIG.time = 0
+	renderHead()
 }
 async function handleTimeUpdate(e) {
-	audio = e.target
-	CONFIG.time = Math.round(e.target.currentTime * 1000)
-	await sendSync()
+	// audio = e.target
 }
+
+setTimeout(async function sync() {
+	if (audio && CONFIG.syncing) {
+		CONFIG.time = Math.round(audio.currentTime * 1000)
+		await sendSync()
+	}
+	setTimeout(sync, 1000)
+})
 
 const $timeline = $('.timeline')
 requestAnimationFrame(function draw() {
@@ -131,6 +158,7 @@ requestAnimationFrame(function draw() {
 		const ratio = audio.currentTime / audio.duration
 		$timeline.forEach(el => {
 			el.scrollLeft = el.scrollWidth * ratio
+			// el.style.transform = `translateX(-${ratio*100}%)`
 		})
 	}
 	requestAnimationFrame(draw)

@@ -1,6 +1,8 @@
+import { reject } from "lodash"
 import { renderNodes } from "./app"
 
 let socket
+let fsResponsed
 
 (function createSocket() {
 	console.log('SOCKET initialize ...')
@@ -14,12 +16,16 @@ let socket
 			reader.addEventListener('loadend', async e => {
 				const buf = e.target.result
 				const view = new DataView(buf)
-				if (equals('#<PING', view)) {
+				if (equals('#<FSOK', view)) {
+					fsResponsed = true;
+				}
+				else if (equals('#<PING', view)) {
 					const n1 = {
 						id: readStr(view, 6, 6),
-						type: view.getUint8(6+7),
-						vbat: view.getUint16(6+8),
-						name: readStr(view, 20, 6+10)
+						type: view.getUint8(6 + 7),
+						vbat: view.getUint16(6 + 8),
+						name: readStr(view, 20, 6 + 10),
+						lastUpdated: Date.now()
 					}
 					let exist = false
 					CONFIG.nodes.forEach(n2 => {
@@ -42,6 +48,46 @@ let socket
 	window.socket = socket
 })()
 
+setInterval(async function check() {
+	// const maxTime = Date.now() - 15000;
+	// CONFIG.nodes = CONFIG.nodes.filter(node => node.lastUpdated < maxTime)
+}, 10000)
+
+async function waitFileResponse(timeout = 1000) {
+	const expired = Date.now + 1000
+	fsResponsed = false
+	return new Promise((resolve, reject) => {
+		setTimeout(function check() {
+			if (fsResponsed) resolve()
+			else if (Date.now() > expired) reject()
+			else setTimeout(check, 1)
+		})
+	})
+}
+export async function sendFile(target, path, file) {
+	await send(target, 'FS1' + path)
+	await waitFileResponse()
+	console.log('file send open')
+	const reader = new FileReader
+	reader.readAsArrayBuffer(file)
+	reader.addEventListener('loadend', async e => {
+		let offset = 0;
+		const buf = e.target.result
+		while (offset < buf.byteLength) {
+			console.log('file sent chunk')
+			const size = Math.min(buf.byteLength - offset, 240)
+			await send(target, 'FS2', ...new Uint8Array(buf.slice(offset, size)))
+			await waitFileResponse()
+			offset += 240
+		}
+
+		await send(target, 'FS3')
+		await waitFileResponse()
+		console.log('file send done')
+	})
+
+}
+
 export async function sendSync() {
 	const payload = new Uint8Array(13)
 	const view = new DataView(payload.buffer)
@@ -60,7 +106,7 @@ export function equals(text = '', view, offset = 0) {
 export function readStr(view, size, offset = 0) {
 	let output = ''
 	let byte
-	for (let i=0; i<size;i ++) {
+	for (let i = 0; i < size; i++) {
 		byte = view.getUint8(i + offset)
 		if (byte >= 30 && byte < 127) {
 			output += String.fromCharCode(byte)
@@ -76,9 +122,10 @@ export function print(view, str, pos = 0) {
 	})
 	return offset + 1
 }
-export async function send(header = '', ...payload) {
+export async function send(target = '#', header = '', ...payload) {
+	const targetBytes = target.split('').map(c => c.charCodeAt(0))
 	const headerBytes = header.split('').map(c => c.charCodeAt(0))
-	socket.send(new Uint8Array([35, 62, ...headerBytes, ...payload]))
+	socket.send(new Uint8Array([...targetBytes, 62, ...headerBytes, ...payload]))
 }
 
 // const debounceGetNodes = debounce(async function () {
