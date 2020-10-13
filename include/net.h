@@ -1,11 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WebSocketsServer.h>
-// #include <WiFiServer.h>
 #include <MeshRC.h>
-// #include <ESP8266mDNS.h>
-// #include <DNSServer.h>
-// #include <WiFiUdp.h>
 #include "led.h"
 #include "sd.h"
 
@@ -42,7 +38,7 @@ u8 crc = 0x00;
 
 void wifiOn() {
 	IS_WIFI_ON = true;
-	WiFi.softAP(apSSID, apPSK, 0, 0, 8);
+	WiFi.softAP(apSSID, apPSK, 0, 0, 4);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 }
 
@@ -481,7 +477,10 @@ void setup() {
 
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 
-	ArduinoOTA.onProgress([](int percent, int total) { App::LED_BLINK(); });
+	ArduinoOTA.onProgress([](int percent, int total) {
+		App::led_pin = R1_PIN;
+		App::LED_BLINK(); 
+	});
 	ArduinoOTA.begin();
 
 #ifdef MASTER
@@ -497,7 +496,7 @@ void setup() {
 		fsReplyOK = true;
 	});
 #else
-	pingTimer.attach(10, Net::sendPing);
+	pingTimer.attach_ms_scheduled_accurate(10000, Net::sendPing);
 
 	MeshRC::on("#>BLINK", Net::recvBlink);
 	MeshRC::on("#>PING", Net::recvPing);

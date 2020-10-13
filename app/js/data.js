@@ -22,7 +22,9 @@ export const LIGHT = {
 	tracks: []
 }
 
-export const SHOW = {}
+export const SHOW = {
+	map: {}
+}
 
 // store color data for current segment
 global.color = {

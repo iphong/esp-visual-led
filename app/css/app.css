@@ -12,7 +12,7 @@
 }
 
 body {
-	padding: 55px 0 0 0;
+	padding: 65px 0 0 0;
 	margin: 0;
 	background: #000000;
 	color: #ffffff;
@@ -26,10 +26,11 @@ header {
 	display: grid;
     padding: 5px;
     grid-gap: 10px;
-    background: blueviolet;
-	grid-template-columns: 150px 1fr auto;
+    background: #555555;
+	grid-template-columns: 90px 1fr auto;
 	align-items: center;
 	z-index: 10;
+	height: 50px;
 }
 header > *:first-child {
 	margin-left: 10px;
@@ -49,6 +50,9 @@ header > *:first-child {
 		text-align: center;
 		font-size: 30px;
 	} */
+}
+header .toolbar {
+	text-align: center;
 }
 header label {
 	line-height: 1em;
@@ -73,12 +77,13 @@ header small {
 	line-height: 1em;
 }
 button {
-	padding: .5em; 
+	padding: .4em .8em; 
 	font-size: 18px;
 	border: none;
 	outline: none;
 	cursor: pointer;
-	background-color: blueviolet;
+	border-radius: 4px;
+	background-color: #555555;
 	color: white;
 }
 button.selected {
@@ -126,36 +131,42 @@ div.track > span {
 
 section.nodes:not(:empty) {
 	display: block;
-    background: #111111;
 	padding: 10px;
 	margin: 2px 0;
 	text-align: center;
 }
 article.node {
 	display: inline-block;
-    padding: 10px;
+    padding: 0px;
     background: #111111;
-	border: 2px solid blueviolet;
+	border: 2px solid #555555;
 	color: #ddd;
     font-weight: bold;
     margin: 5px;
-    font-size: 14px;
+    font-size: 11px;
     /* height: 60px; */
     width: 60px;
     /* line-height: 60px; */
     text-align: center;
-	/* border-radius: 50%; */
+	border-radius: 6px;
 	cursor: pointer;
 	text-align: center;
 }
-article.node > * {
-	pointer-events: none;
+article.node > small {
+	user-select: text !important;
+	font-size: 8px;
+	opacity: 0.3;
+}
+article.node > div {
 	user-select: text !important;
 }
 article.node.active,
 article.node.selected {
 	border-color: white;
 	color: white;
+}
+article.node progress {
+	width: 54px;
 }
 
 .loading {

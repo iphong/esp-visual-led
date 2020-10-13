@@ -1,7 +1,8 @@
-import { $, call, setProp } from "./api"
+import { debounce } from "lodash"
+import { $, call, get, setProp, uploadFile } from "./api"
 import { render, renderHead, renderNodes } from "./app"
-import { AUDIO, CONFIG, SHOW } from "./data"
-import { send, sendFile, sendSync } from "./ws"
+import { CONFIG, SHOW } from "./data"
+import { send, sendSync } from "./ws"
 
 const { parseAudio, renderAudio } = require("./audio")
 const { parseLSF, parseLTP, parseIPX } = require("./light")
@@ -11,8 +12,7 @@ export function handleError() {
 }
 
 async function handleFile(file, event) {
-	CONFIG.syncing = false
-	send('#>STOP')
+	if (CONFIG.running) await handleEnd()
 	console.debug(`select file: ${file.name}`)
 	if (file.name.endsWith('.bin')) {
 		await uploadFile('firmware/' + filename, file)
@@ -22,16 +22,22 @@ async function handleFile(file, event) {
 		await render()
 	} else if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
-		const target = event.target.dataset.device
-		
-		// await sendFile(target, `/show/${CONFIG.show}A.lsb`, new Blob(data[0]))
-		const sync = !!target
-		if (data.length == 1) {
-			await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[0]), sync, target);
-			await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[0]), sync, target);
-		} else if (data.length === 3) {
-			await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[1]), sync, target);
-			await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[2]), sync, target);
+		let target = event.target.closest('[data-device]')
+		target && (target = target.dataset.device)
+		if (target) {
+			SHOW.map[target] = file.name
+			await uploadFile(`/show/${CONFIG.show}.json`, new Blob([JSON.stringify(SHOW)]))
+		}
+		for (let id in SHOW.map) {
+			if (SHOW.map[id] == file.name) {
+				if (data.length == 1) {
+					await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[0]), true, id);
+					await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[0]), true, id);
+				} else if (data.length === 3) {
+					await uploadFile(`/show/${CONFIG.show}A.lsb`, new Blob(data[1]), true, id);
+					await uploadFile(`/show/${CONFIG.show}B.lsb`, new Blob(data[2]), true, id);
+				}
+			}
 		}
 	} else if (file.name.endsWith('.ipx')) {
 		await parseIPX(file)
@@ -41,74 +47,94 @@ async function handleFile(file, event) {
 	} else {
 		console.error('unsupported file format')
 	}
-	CONFIG.syncing = true
 }
 
-function handleChange(e) {
+async function handleChange(e) {
 	if (e.type === 'change' && e.target.id === 'select-file') {
 		for (let file of e.target.files) {
-			handleFile(file)
+			await handleFile(file)
 		}
 	}
 }
 
 async function handleClick(e) {
-	if (e.target.dataset.device) {
+	if (e.target.closest('[data-device]')) {
+		const target = e.target.closest('[data-device]')
 		CONFIG.nodes.forEach(node => {
-			if (node.id == e.target.dataset.device) {
+			if (node.id == target.dataset.device) {
 				node.selected = !node.selected
-				send(e.target.dataset.device, 'BLINK', node.selected ? 1 : 0, 2)
+				send(target.dataset.device, 'BLINK', node.selected ? 1 : 0, 2)
 			}
 		})
 		renderNodes()
 	} else if (e.target.dataset.show) {
-		CONFIG.show = parseInt(e.target.dataset.show) || 0
-		// await post(`show?id=${CONFIG.show}`)
-		render()
+		selectShow(parseInt(e.target.dataset.show) || 0)
 	} else if (e.target.dataset.action) {
 		switch (e.target.dataset.action) {
-			case 'show-file-select-dialog':
+			case 'show-add':
 				click('#select-file')
 				break
 			case 'show-start':
+				handleStart()
+				break
+			case 'show-pause':
+				call('#player', 'pause')
+				break
+			case 'show-resume':
 				call('#player', 'play')
 				break
 			case 'show-stop':
 				call('#player', 'pause')
 				setProp('#player', 'currentTime', 0)
-				CONFIG.running = 0
-				CONFIG.paused = 0
-				send('#>STOP')
+				handleEnd()
 				break
 		}
 	}
 }
 function handleDragOver(e) {
 	e.preventDefault()
-	const droppable = e.target.closest('[data-dropppable]')
+	const droppable = e.target.closest('[data-droppable]')
 	if (droppable) {
 		droppable.classList.add('active')
 	}
 }
 function handleDragLeave(e) {
 	e.preventDefault()
-	const droppable = e.target.closest('[data-dropppable]')
+	const droppable = e.target.closest('[data-droppable]')
 	if (droppable) {
 		droppable.classList.remove('active')
 	}
 }
-function handleDragDrop(e) {
+async function handleDragDrop(e) {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
-		handleFile(file, e)
+		await handleFile(file, e)
 	}
 }
 
-function handleScroll(e) {
+const scrollStart = debounce(() => {
+	if (CONFIG.running) call('#player', 'pause')
+}, 500, { leading: true })
+const scrollEnd = debounce(() => {
+	if (CONFIG.running) call('#player', 'play')
+}, 500, { trailing: true })
 
+function handleScroll(e) {
+	scrollStart()
+	const timeline = e.target.closest('.timeline')
+	if (timeline) {
+		const ratio = timeline.scrollLeft / timeline.scrollWidth
+		if (CONFIG.running) {
+			$('#player').forEach(player => {
+				player.currentTime = player.duration * ratio
+			})
+		}
+	}
+	scrollEnd()
 }
 async function fetchData() {
 	Object.assign(CONFIG, await get('stat'))
+	selectShow(CONFIG.show)
 	// Object.assign(SHOW, await get(`show?id=${CONFIG.show}`))
 }
 async function handleInit() {
@@ -118,30 +144,52 @@ async function handleInit() {
 
 let audio;
 async function handlePlay(e) {
+	console.log('play')
 	audio = e.target
-	CONFIG.running = 1
 	CONFIG.paused = 0
-	CONFIG.time = 0
 	renderHead()
 }
 async function handlePlaying(e) {
+	console.log('playing')
 	audio = e.target
-	CONFIG.paused = 0
+	CONFIG.running = 1
 	renderHead()
 }
 async function handlePause(e) {
+	console.log('paused')
 	audio = e.target
-	CONFIG.paused = 1
-	renderHead()
+	if (e.target.currentTime === e.target.duration) {
+		handleEnd(e)
+	} else {
+		CONFIG.paused = 1
+		renderHead()
+	}
 }
-async function handleEnd(e) {
-	audio = e.target
+async function handleStart() {
+	console.log('start')
+	setProp('#player', 'currentTime', 0)
+	call('#player', 'play')
+}
+async function handleEnd() {
+	console.log('end')
 	CONFIG.running = 0
+	CONFIG.paused = 0
 	CONFIG.time = 0
+	await send('#>END')
 	renderHead()
 }
 async function handleTimeUpdate(e) {
 	// audio = e.target
+}
+async function selectShow(id) {
+	if (CONFIG.show !== id) {
+		await post(`show?id=${id}`)
+	}
+	CONFIG.show = id
+	try {
+		Object.assign(SHOW, await get(`/show/${id}.json`))
+	} catch(e) {}
+	await render()
 }
 
 setTimeout(async function sync() {
@@ -154,7 +202,7 @@ setTimeout(async function sync() {
 
 const $timeline = $('.timeline')
 requestAnimationFrame(function draw() {
-	if (audio) {
+	if (audio && !CONFIG.paused) {
 		const ratio = audio.currentTime / audio.duration
 		$timeline.forEach(el => {
 			el.scrollLeft = el.scrollWidth * ratio
@@ -164,7 +212,7 @@ requestAnimationFrame(function draw() {
 	requestAnimationFrame(draw)
 })
 
-window.addEventListener('scroll', handleScroll, true)
+window.addEventListener('mousewheel', handleScroll, true)
 window.addEventListener('dragover', handleDragOver, true)
 window.addEventListener('dragleave', handleDragLeave, true)
 window.addEventListener('drop', handleDragDrop, true)
@@ -178,7 +226,7 @@ window.addEventListener('pause', handlePause, true)
 window.addEventListener('playing', handlePlaying, true)
 window.addEventListener('timeupdate', handleTimeUpdate, true)
 window.addEventListener('seeked', handleTimeUpdate, true)
-window.addEventListener('seeking', handlePause, true)
+// window.addEventListener('seeking', handlePause, true)
 window.addEventListener('end', handleEnd, true)
 
 window.addEventListener('touchstart', new Function(), true)

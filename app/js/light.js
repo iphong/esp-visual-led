@@ -220,7 +220,7 @@ export function renderShow() {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '15px'
+			container.style.height = '25px'
 			break;
 		case 2:
 			container.style.height = '15px'

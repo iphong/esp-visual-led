@@ -69,9 +69,8 @@ void setup() {
 	Api::setup();
 #ifdef MASTER
 	// Hmi::setup();
-	Net::wifiOn();
-	MeshRC::delayMs(2000);
 	Net::sendPing();
+	Net::wifiOn();
 #else
 	if (App::isPaired()) {
 		Net::sendPing();
