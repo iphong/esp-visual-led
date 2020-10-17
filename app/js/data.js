@@ -2,7 +2,7 @@
 export const CONFIG = {
 	brightness: 255,
 	channel: 0,
-	show: 0,
+	show: 1,
 	time: 0,
 	running: 0,
 	paused: 0,
@@ -12,18 +12,19 @@ export const CONFIG = {
 
 // store audio configs for current show
 export const AUDIO = {
-	filename: null,
+	file: null,
 	channels: [],
 	duration: 0
 }
 
 export const LIGHT = {
-	params: {},
-	tracks: []
+	file: null
 }
 
 export const SHOW = {
-	map: {}
+	map: {},
+	params: {},
+	tracks: [],
 }
 
 // store color data for current segment
@@ -47,5 +48,7 @@ global.updateHSL = function updateHSL() {
 	const { r, g, b } = color.rgb
 	color.hsl = rgbToHsl(r, g, b)
 }
+
+export default { CONFIG, AUDIO, LIGHT, SHOW }
 
 Object.assign(global, { CONFIG, AUDIO, LIGHT, SHOW })

@@ -3,7 +3,12 @@
 	"files.associations": {
 		"*.yaml": "yaml",
 		"cstdio": "cpp",
-		"functional": "cpp"
+		"functional": "cpp",
+		"map": "cpp",
+		"random": "cpp",
+		"limits": "cpp",
+		"*.tcc": "cpp",
+		"type_traits": "cpp"
 	},
 	"python.pythonPath": "/usr/local/opt/python@3.8/bin/python3.8"
 }

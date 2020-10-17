@@ -109,6 +109,17 @@ section.timeline {
 	grid-gap: 2px;
 	overflow-x: auto;
 }
+section.timeline .handle {
+    position: fixed;
+    background: rgb(255 0 0);
+    left: 0;
+    top: 0;
+    width: 3px;
+    transform: translate(-50%, 0px);
+    z-index: 10;
+    /* border: 1px solid #ff6363; */
+    box-shadow: 1px 0px 0 black;
+}
 
 div.tracks {
 	width: auto;
@@ -144,13 +155,15 @@ article.node {
     font-weight: bold;
     margin: 5px;
     font-size: 11px;
-    /* height: 60px; */
     width: 60px;
-    /* line-height: 60px; */
     text-align: center;
 	border-radius: 6px;
 	cursor: pointer;
 	text-align: center;
+}
+article.node.hidden {
+	opacity: 0.3;
+	pointer-events: none !important;
 }
 article.node > small {
 	user-select: text !important;
@@ -174,4 +187,8 @@ article.node progress {
 	text-align: center;
 	display: block;
 	padding: 10px;
+}
+
+#time {
+	font-family: 'Courier New', Courier, monospace;
 }

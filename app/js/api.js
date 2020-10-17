@@ -10,6 +10,15 @@
  * @param b Number
  */
 
+import { CONFIG } from "./data"
+
+export function constrain(value, min, max) {
+	return value < min ? min : value > max ? max : value
+}
+export function map(value, fromMin, fromMax, toMin, toMax) {
+	return toMin + (toMax - toMin) * ((value - fromMin) / (fromMax - fromMin))
+}
+
 export function rgbToHsl(r, g, b) {
 	r /= 255
 	g /= 255
@@ -222,14 +231,16 @@ export function request(method = 'POST', path = '', args = {}, body = null) {
 		const params = Object.entries(args)
 		const uri = path + (params.length ? '?' + params.map(([key, value]) => `${key}=${value}`).join('&') : '')
 		const size = body ? ` [${body.size || body.length} Kb]` : ''
-		const output = console.log(`${method} ${uri} ${size}... `)
+		const output = console.debug(`${method} ${uri} ${size}... `)
 
 		req.open(method, uri, true)
 		req.send(body)
-		req.addEventListener('load', () => {
+		req.addEventListener('loadend', () => {
 			if (output) {
 				// output.innerHTML += `[${req.status} ${req.statusText}] ${req.responseText.split("\n")[0]}`
-				output.innerHTML += req.statusText
+				output.innerHTML += `[${req.status} ${req.statusText}]`
+			} else {
+				console.log('--', `[${req.status} ${req.statusText}]`)
 			}
 			if (req.status === 200) {
 				if (req.getResponseHeader('Content-Type') === 'application/json') {
@@ -242,19 +253,79 @@ export function request(method = 'POST', path = '', args = {}, body = null) {
 		req.addEventListener('error', reject)
 	})
 }
+
+export function fetchFile(path, type = '') {
+	const $progress = document.createElement('span')
+	const $output = console.debug(`FETCH ${path} ... `)
+	if ($output) $output.appendChild($progress)
+	let canceled
+	let progress
+	let response
+	let stream
+	let bytesRead = 0
+	const data = []
+	const promise = new Promise(async (resolve, reject) => {
+		response = await fetch(path)
+		stream = response.body.getReader()
+		async function next() {
+			try {
+				const { done, value } = await stream.read()
+				if (!done) {
+					if (canceled) {
+						stream.cancel()
+					}
+					else {
+						bytesRead += value.length
+						data.push(value)
+						if (progress) progress(bytesRead)
+						if ($progress) {
+							$progress.innerText = `${formatBytes(bytesRead)}`
+						}
+					}
+					setTimeout(next)
+				} else {
+					if (canceled) {
+						$progress.innerText += ' CANCELED'
+						reject()
+					} else {
+						const file = new Blob(data, { type })
+						$progress.innerText += ' OK'
+						resolve(file)
+					}
+				}
+			} catch (e) {
+				console.log(e)
+				reject()
+			}
+		}
+		setTimeout(next)
+	})
+	promise.progress = (callback) => {
+		progress = callback
+		return promise
+	}
+	promise.cancel = () => {
+		canceled = true
+		// if (stream) stream.cancel()
+		return promise
+	}
+	return promise
+}
 export async function uploadFile(path, body, sync = false, target = null, useSD = false) {
 	const file = new Blob([body])
-	const output = console.log(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
+	const output = console.debug(`UPLOAD ${path} [${(file.size / 1000).toFixed(2)} KB] ... `)
 	return new Promise((resolve, reject) => {
 		const form = new FormData()
 		const req = new XMLHttpRequest()
 		form.append('filename', path)
 		form.append('file', file)
-		req.open('POST', `edit?${sync ? 'sync' : 'nosync'}${target ? `&target=${target}` : ''}${useSD ? '&storage=sd':''}`, true)
+		req.open('POST', `edit?${sync ? 'sync' : 'nosync'}${target ? `&target=${target}` : ''}${useSD ? '&storage=sd' : ''}`, true)
 		req.send(form)
 		req.onloadend = (e) => {
 			if (output) {
-				output.innerHTML += req.statusText
+				output.innerHTML += `[${req.status} ${req.statusText}]`
+			} else {
+				console.log('--', `[${req.status} ${req.statusText}]`)
 			}
 			if (req.status === 200) {
 				resolve(req)
@@ -275,6 +346,41 @@ export function exec(cmd) {
 	return request('POST', 'exec', { cmd })
 }
 
+export function formatBytes(bytes) {
+	if (bytes >= 1000000000) return (bytes / 1000000000).toPrecision(3) + ' GB'
+	if (bytes >= 1000000) return (bytes / 1000000).toPrecision(3) + ' MB'
+	if (bytes >= 1000) return (bytes / 1000).toPrecision(3) + ' KB'
+	return '0.00 B'
+}
+
+export function formatTime(duration, showHour = false) {
+	const hour = Math.floor(duration / 3600)
+	const hourLeft = duration % 3600
+	const minute = Math.floor(hourLeft / 60)
+	const second = Math.floor(hourLeft % 60)
+	const ms = Math.floor((duration % 1) * 100)
+	if (showHour || hour)
+		return [
+			hour.toString().padStart(2, '0'),
+			minute.toString().padStart(2, '0'),
+			second.toString().padStart(2, '0'),
+			ms.toString().padStart(2, '0'),
+		].join(':')
+	else
+		return [
+			minute.toString().padStart(2, '0'),
+			second.toString().padStart(2, '0'),
+			ms.toString().padStart(2, '0')
+		].join(':')
+}
+export async function sendCommand(command = '', ...data) {
+	console.log('SEND ' + command + ' ' + data.join(' '))
+	let selected = CONFIG.nodes.filter(n => n.selected).map(n => n.id)
+	if (!selected.length) selected = ['#']
+	for (let id of selected) {
+		await send(id, command.toUpperCase(), ...data)
+	}
+}
 Object.assign(global, {
 	$,
 	setText,
@@ -286,5 +392,7 @@ Object.assign(global, {
 	request,
 	get,
 	post,
-	uploadFile
+	uploadFile,
+	fetchFile,
+	sendCommand
 })

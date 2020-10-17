@@ -1,5 +1,6 @@
-import { reject } from "lodash"
+import isEqual from "lodash/isEqual"
 import { renderNodes } from "./app"
+import { CONFIG } from "./data"
 
 let socket
 let fsResponsed
@@ -7,51 +8,62 @@ let fsResponsed
 (function createSocket() {
 	console.log('SOCKET initialize ...')
 	socket = new WebSocket(`ws://${location.hostname}:81`)
+	socket.binaryType = 'arraybuffer'
 	socket.addEventListener('message', async (e) => {
 		if (typeof e.data === 'string') {
 			// handleMessage(e.data)
-		} else {
-			const reader = new FileReader()
-			reader.readAsArrayBuffer(e.data)
-			reader.addEventListener('loadend', async e => {
-				const buf = e.target.result
-				const view = new DataView(buf)
-				if (equals('#<FSOK', view)) {
-					fsResponsed = true;
+		}
+		if (e.data instanceof ArrayBuffer) {
+			let changed = false
+			let view = new DataView(e.data)
+			const id = readStr(view, 6, 0);
+			if (readStr(view, 1, 6) !== '<') {
+				console.warn("wrong format XXXXXX<CMD...");
+			} else if (equals('<PING', view, 6)) {
+				const n1 = {
+					id,
+					type: view.getUint8(11),
+					vbat: view.getUint16(12),
+					name: readStr(view, 20, 14),
+					hidden: false,
+					lastUpdated: Date.now()
 				}
-				else if (equals('#<PING', view)) {
-					const n1 = {
-						id: readStr(view, 6, 6),
-						type: view.getUint8(6 + 7),
-						vbat: view.getUint16(6 + 8),
-						name: readStr(view, 20, 6 + 10),
-						lastUpdated: Date.now()
-					}
-					let exist = false
-					CONFIG.nodes.forEach(n2 => {
-						if (n1.id == n2.id) {
+				let exist = false
+				CONFIG.nodes.forEach(n2 => {
+					if (n1.id == n2.id) {
+						if (!isEqual(n1, n2)) {
 							Object.assign(n2, n1)
-							exist = true
+							changed = true
 						}
-					})
-					if (!exist) {
-						CONFIG.nodes.push(n1)
+						exist = true
 					}
-					renderNodes()
-				}
-			})
+				})
+				if (!exist) CONFIG.nodes.push(n1)
+			} else {
+				CONFIG.nodes.forEach(node => {
+					if (id == node.id) {
+						view = new DataView(e.data.slice(7))
+						if (equals('SELECT', view)) {
+							node.selected = !node.selected;
+							node.lastUpdated = Date.now()
+							changed = true
+							if (node.selected) send(node.id, 'BLINK', 5)
+							else send(node.id, 'BLINK', 0)
+						}
+					}
+				})
+			}
+			if (changed) renderNodes()
 		}
 	})
 	socket.addEventListener('close', () => {
 		setTimeout(createSocket, 1000)
 	})
+	socket.addEventListener('open', () => {
+
+	})
 	window.socket = socket
 })()
-
-setInterval(async function check() {
-	// const maxTime = Date.now() - 15000;
-	// CONFIG.nodes = CONFIG.nodes.filter(node => node.lastUpdated < maxTime)
-}, 10000)
 
 async function waitFileResponse(timeout = 1000) {
 	const expired = Date.now + 1000
@@ -80,7 +92,6 @@ export async function sendFile(target, path, file) {
 			await waitFileResponse()
 			offset += 240
 		}
-
 		await send(target, 'FS3')
 		await waitFileResponse()
 		console.log('file send done')

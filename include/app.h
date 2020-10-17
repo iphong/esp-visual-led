@@ -4,6 +4,8 @@
 #include "MeshRC.h"
 #include "Ticker.h"
 
+#include "def.h"
+
 #ifndef __APP_H__
 #define __APP_H__
 
@@ -17,40 +19,10 @@
 #define LOGD(x...) Serial.print("")
 #endif
 
-#define HEADER '$'
-#define VERSION 4
-
 namespace App {
-enum Mode {
-	SHOW = 0,
-	BIND = 1
-};
-struct RGB {
-	u8 r;
-	u8 g;
-	u8 b;
-};
-struct Output {
-	RGB color = {0, 0, 0};
-	u8 ratio;
-	u32 period;
-	u32 spacing;
-};
-struct Data {
-	u8 header = HEADER;
-	u8 version = VERSION;
-	u8 master[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-	u8 brightness = 255;
-	u8 channel = 0;
-	u8 show = 0;
-	char name[20];
-	Output a;
-	Output b;
-};
 
-Data data;
-Mode mode;
-
+u8 mode;
+SaveData data;
 Ticker saveTimer;
 Ticker blinkTimer;
 
@@ -60,99 +32,84 @@ FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
 
-u8 led_pin = LED_PIN;
+u8 led_pin = B1_PIN;
 
-bool equals(u8* a, u8* b, u8 size, u8 offset = 0) {
-	for (auto i = offset; i < offset + size; i++)
-		if (a[i] != b[i])
-			return false;
-	return true;
-}
-
-// bool blinking = false;
-// u8 blinkColor[] = {255,255,255};
 static void LED_HIGH() {
-	digitalWrite(led_pin, 1);
-	// LED::A.setRGB(blinkColor[0], blinkColor[1], blinkColor[2]);
-	// LED::B.setRGB(blinkColor[0], blinkColor[1], blinkColor[2]);
+	digitalWrite(led_pin, 0);
 }
 static void LED_LOW() {
-	digitalWrite(led_pin, 0);
-	// LED::A.setRGB(0, 0, 0);
-	// LED::B.setRGB(0, 0, 0);
+	digitalWrite(led_pin, 1);
 }
 static void LED_BLINK() {
-	bool state = !digitalRead(led_pin);
-	digitalWrite(led_pin, state);
-	// state ? LED_LOW() : LED_HIGH();
+	digitalWrite(led_pin, !digitalRead(led_pin));
 }
 
 static void stopBlink() {
 	LED_HIGH();
 	if (blinkTimer.active()) blinkTimer.detach();
 }
-static void startBlink(u32 time = 1000, u8 pin = LED_PIN) {
-	LED_HIGH();
-	led_pin = pin;
-	pinMode(led_pin, OUTPUT);
-	LED_LOW();
+static void startBlink(u32 time = 1000, u8 pin = 0) {
+	if (pin && pin != led_pin) {
+		stopBlink();
+		led_pin = pin;
+		pinMode(led_pin, OUTPUT);
+	}
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
-static void toggleBlink(u32 time = 1000) {
+static void toggleBlink(u32 time = 1000, u8 pin = led_pin) {
 	if (blinkTimer.active())
 		stopBlink();
 	else
-		startBlink(time);
+		startBlink(time, pin);
 }
 bool isPaired() {
 	return !equals(data.master, MeshRC::broadcast, 6);
 }
 bool isPairing() {
-	return mode == BIND;
+	return mode == MODE_BIND;
 }
-
 void saveData() {
-	EEPROM.begin(512);
+	static SaveData tmp;
+	static char buf[sizeof(tmp)];
 	uint8_t crc = 255;
-	char buf[sizeof(data)];
-	memcpy(buf, &data, sizeof(data));
-	LOG("Saving config ... [ ");
 	size_t pos = 0;
+	EEPROM.begin(512);
+	memcpy(buf, &data, sizeof(data));
+	LOG(F("Saving config ... [ "));
 	while (pos < sizeof(data)) {
 		crc += buf[pos];
 		EEPROM.write(pos, buf[pos]);
-		Serial.printf("%02X ", buf[pos]);
+		LOGD("%02X ", buf[pos]);
 		pos++;
 	}
 	EEPROM.write(pos, crc);
 	if (EEPROM.commit())
-		LOGL("] - OK");
+		LOGL(F("] - OK"));
 	else
-		LOGL("] - FAIL");
+		LOGL(F("] - FAIL"));
 	EEPROM.end();
 }
-
 void loadData() {
-	size_t pos = 0;
-	uint8_t crc = 255;
-	Data tmp;
-	char buf[sizeof(tmp)];
+	static SaveData tmp;
+	static char buf[sizeof(tmp)];
+	uint8_t pos = 0;
+	size_t crc = 255;
 	EEPROM.begin(512);
-	LOG("Loading config ... [ ");
+	LOG(F("Loading config ... [ "));
 	while (pos < sizeof(tmp)) {
 		buf[pos] = EEPROM.read(pos);
 		crc += buf[pos];
-		Serial.printf("%02X ", buf[pos]);
+		LOGD("%02X ", buf[pos]);
 		pos++;
 	}
 	EEPROM.end();
 	memcpy(&tmp, buf, sizeof(tmp));
 	if (tmp.header != HEADER || tmp.version != VERSION) {
-		LOGL("] - INVALID");
+		LOGL(F("] - INVALID"));
 		saveData();
 	} else {
 		memcpy(&data, &tmp, sizeof(tmp));
-		LOGL("] - OK");
+		LOGL(F("] - OK"));
 	}
 	if (isPaired()) {
 		MeshRC::setMaster(data.master);
@@ -161,7 +118,7 @@ void loadData() {
 void save() {
 	saveTimer.once(1, saveData);
 }
-void setMode(Mode newMode) {
+void setMode(u8 newMode) {
 	mode = newMode;
 }
 void setShow(u8 show) {

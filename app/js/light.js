@@ -33,8 +33,8 @@ export async function parseLTP(file) {
 								reader.readAsText(file)
 								reader.addEventListener('loadend', () => {
 									const data = JSON.parse(reader.result)
-									LIGHT.params = data.solution
-									LIGHT.tracks = data.tracks
+									SHOW.params = data.solution
+									SHOW.tracks = data.tracks
 								})
 							} else if (name.endsWith('.mp3')) {
 								AUDIO.file = file
@@ -42,7 +42,7 @@ export async function parseLTP(file) {
 								console.log(name)
 							}
 							if (++ended === entries.length) {
-								resolve()
+								resolve(SHOW)
 							}
 						})
 					})
@@ -90,14 +90,13 @@ export async function parseLSF(file) {
 						if (type === 1 && lines[index + 1]) {
 							duration = lines[index + 1].start - start
 						}
-
-						view.setUint8(0, type)
-						view.setUint32(1, start)
-						view.setUint32(5, duration)
-						view.setUint32(9, transition)
-						view.setUint8(13, r)
-						view.setUint8(14, g)
-						view.setUint8(15, b)
+						view.setUint8(0, type, true)
+						view.setUint8(1, r, true)
+						view.setUint8(2, g, true)
+						view.setUint8(3, b, true)
+						view.setUint32(4, start, true)
+						view.setUint32(8, duration, true)
+						view.setUint32(12, transition, true)
 						// let hex = ''
 						// frame.forEach(byte => (hex += (byte.toString(16).padStart(2, '0') + ' ')))
 						// console.log(hex)
@@ -196,17 +195,10 @@ export async function parseIPX(file) {
 	}
 }
 export function renderShow() {
-	$('[data-show]').forEach(el => {
-		if (parseInt(el.dataset.show) === CONFIG.show) {
-			el.classList.add('selected')
-		} else {
-			el.classList.remove('selected')
-		}
-	})
 	$('.tracks').forEach($tracks => {
 		$tracks.innerHTML = ''
-		$tracks.style.width = LIGHT.params.end + 'px'
-		LIGHT.tracks.forEach(track => {
+		$tracks.style.width = (SHOW.params.end/10) + 'px'
+		SHOW.tracks.forEach(track => {
 			const $track = document.createElement('div')
 			const { elements, ...params } = track
 			$track.classList.add('track')
@@ -220,7 +212,7 @@ export function renderShow() {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '25px'
+			container.style.height = '15px'
 			break;
 		case 2:
 			container.style.height = '15px'
@@ -238,8 +230,8 @@ export function renderLight(container, track) {
 		if (color) color = convertColor(color)
 		if (colorStart) colorStart = convertColor(colorStart)
 		if (colorEnd) colorEnd = convertColor(colorEnd)
-		$el.style.left = `${start}px`
-		$el.style.width = `${duration}px`
+		$el.style.left = `${start / 10}px`
+		$el.style.width = `${duration / 10}px`
 		let color1, color2
 		switch (params.type) {
 			case 2: // solid

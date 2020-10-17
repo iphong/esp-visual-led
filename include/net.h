@@ -1,7 +1,10 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <WebSocketsServer.h>
 #include <MeshRC.h>
+#include <WebSocketsServer.h>
+
+#include "app.h"
+#include "def.h"
 #include "led.h"
 #include "sd.h"
 
@@ -38,8 +41,8 @@ u8 crc = 0x00;
 
 void wifiOn() {
 	IS_WIFI_ON = true;
-	WiFi.softAP(apSSID, apPSK, 0, 0, 4);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
+	WiFi.softAP(apSSID, apPSK, 1, 0, 4);
 }
 
 void wifiOff() {
@@ -49,41 +52,10 @@ void wifiOff() {
 void wifiToggle() {
 	!IS_WIFI_ON ? wifiOn() : wifiOff();
 }
-
-struct SyncState {
-	u8 show;
-	u8 running;
-	u8 paused;
-	u32 time;
-};
-bool equals(u8* a, u8* b, u8 size, u8 offset = 0) {
-	for (auto i = offset; i < offset + size; i++)
-		if (a[i] != b[i])
-			return false;
-	return true;
-}
-u32 readUint32(unsigned char* buffer) {
-	return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
-}
-u16 readUint16(unsigned char* buffer) {
-	return (u16)buffer[0] << 8 | buffer[1];
-}
-u8* setUint16(u8* buffer, u16 value, size_t offset = 0) {
-	buffer[offset + 1] = value & 0xff;
-	buffer[offset + 0] = (value >> 8);
-	return &buffer[offset + 2];
-}
-u8* setUint32(u8* buffer, u16 value, size_t offset = 0) {
-	buffer[offset + 3] = (value & 0x000000ff);
-	buffer[offset + 2] = (value & 0x0000ff00) >> 8;
-	buffer[offset + 1] = (value & 0x00ff0000) >> 16;
-	buffer[offset + 0] = (value & 0xff000000) >> 24;
-	return &buffer[offset + 4];
-}
 void recvSync(u8* data, u8 size) {
 #ifndef MASTER
 	if (!receivingFiles && !App::isPairing()) {
-		SyncState state;
+		SyncData state;
 		state.show = data[0];
 		state.running = data[1];
 		state.paused = data[2];
@@ -113,32 +85,25 @@ void recvSync(u8* data, u8 size) {
 	}
 #endif
 }
-struct NodeInfo {
-	char id[6];
-	u8 type;
-	u16 vbat;
-	char name[20];
-	u32 lastUpdate;
-};
-NodeInfo nodesList[255];
+PingData nodesList[255];
 size_t nodesCount = 0;
 
 void sendPing() {
 #ifdef MASTER
-	MeshRC::send("#>PING");
+	MeshRC::send(F("#>PING"));
 #else
-	u8 data[30];
-	memcpy(&data[0], App::chipID, 6);
-	data[7] = 2;
-	setUint16(&data[8], ESP.getVcc());
-	memcpy(&data[10], App::data.name, 20);
-	MeshRC::send("#<PING", data, 30);
-	LOGL("sent ping");
+	size_t size = sizeof(App::data.name) + 3;
+	u8 data[size];
+	data[0] = 2;
+	setUint16(&data[1], ESP.getVcc());
+	memcpy(&data[3], App::data.name, sizeof(App::data.name));
+	MeshRC::send(String(App::chipID) + "<PING", data, size);
+	LOGL(F("sent ping"));
 #endif
 }
 void recvPing(u8* data, u8 size) {
 #ifdef MASTER
-	NodeInfo n;
+	PingData n;
 	memcpy(&n.id, &data[0], 6);
 	n.type = data[7];
 	n.vbat = readUint16(&data[8]);
@@ -156,7 +121,7 @@ void recvPing(u8* data, u8 size) {
 	if (isNew) {
 		nodesList[nodesCount++] = n;
 	}
-	LOG("received ping:");
+	LOG(F("received ping:"));
 	LOG(n.type);
 	LOGL();
 #else
@@ -168,7 +133,7 @@ void recvPair() {
 	if (App::isPairing() && !receivingFiles) {
 		App::stopBlink();
 		App::setMaster(MeshRC::sender);
-		App::setMode(App::SHOW);
+		App::setMode(MODE_SHOW);
 		App::save();
 	}
 }
@@ -211,7 +176,7 @@ void sendFile(String path, String targetID = "******") {
 	}
 	sendingFiles = true;
 	App::LED_LOW();
-	LOGD("OK\n");
+	LOG(F("OK\n"));
 	SD::open(path);
 #else
 	// static u8 delayTime;
@@ -222,7 +187,7 @@ void sendFile(String path, String targetID = "******") {
 	}
 	sendingFiles = true;
 	App::LED_LOW();
-	LOGD("OK\n");
+	LOG(F("OK\n"));
 	file = App::fs->open(path, "r");
 #endif
 	crc = 0x00;
@@ -255,7 +220,6 @@ void sendFile(String path, String targetID = "******") {
 #ifdef SEND_FILE_LOGS
 		LOGD("\n");
 #endif
-
 		for (auto i = 0; i < 1; i++) {
 			MeshRC::send("#>FILE+", data, sizeof(data));
 			App::LED_BLINK();
@@ -305,7 +269,7 @@ void sendFile(String path, String targetID = "******") {
 	}
 #endif
 	App::LED_HIGH();
-	LOGD("Sent\n\n");
+	LOG(F("Sent\n\n"));
 	sendingFiles = false;
 }
 
@@ -322,11 +286,11 @@ void sendDir(String path) {
 }
 
 void recvFile(u8* buf, u8 len) {
-	if (!App::isPaired()) return;
+	// if (!App::isPaired()) return;
 	char type = buf[0];
 	u8* data = &buf[1];
 	u8 size = len - 1;
-	u32 tmr = millis();
+	u32 timer = millis();
 	switch (type) {
 		// FILE STREAM HEADER
 		case '^':
@@ -350,8 +314,8 @@ void recvFile(u8* buf, u8 len) {
 				} else {
 					LOGD("receiving file: %s - ", name.c_str());
 				}
-				LOG(millis() - tmr);
-				LOGL(" us");
+				LOG(millis() - timer);
+				LOGL(F(" us"));
 			}
 			break;
 
@@ -369,10 +333,8 @@ void recvFile(u8* buf, u8 len) {
 					file.write(data[i]);
 					// LOGD("%02X ", data[i]);
 				}
-#ifdef RECV_FILE_LOGS
-				LOG(millis() - tmr);
-				LOGL(" us");
-#endif
+				LOG(millis() - timer);
+				LOGL(F(" us"));
 			} else {
 				receivingFiles = false;
 			}
@@ -394,8 +356,8 @@ void recvFile(u8* buf, u8 len) {
 						App::fs->remove(tmpName);
 					}
 				}
-				LOG(millis() - tmr);
-				LOGL(" us");
+				LOG(millis() - timer);
+				LOGL(F(" us"));
 			}
 			receivingFiles = false;
 			break;
@@ -411,9 +373,11 @@ void recvBlink(u8* data, u8 size) {
 	if (!size) {
 		App::toggleBlink(200);
 	} else if (size == 1) {
-		data[0] ? App::startBlink(data[0] * 100) : App::stopBlink();
+		// App::toggleBlink(data[0] * 10);
+		data[0] ? App::startBlink(data[0] * 10) : App::stopBlink();
 	} else if (size == 2) {
-		data[0] ? App::startBlink(data[0] * 100, data[1]) : App::stopBlink();
+		// App::toggleBlink(data[0] * 10, data[1]);
+		data[0] ? App::startBlink(data[0] * 10, data[1]) : App::stopBlink();
 	}
 }
 #ifdef MASTER
@@ -470,16 +434,9 @@ void setColor(u8* buf, u8 len) {
 }
 
 void setup() {
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.setAutoConnect(false);
-	WiFi.setAutoReconnect(false);
-	WiFi.disconnect();
-
-	WiFi.softAPConfig(apAddr, apAddr, apMask);
-
 	ArduinoOTA.onProgress([](int percent, int total) {
 		App::led_pin = R1_PIN;
-		App::LED_BLINK(); 
+		App::LED_BLINK();
 	});
 	ArduinoOTA.begin();
 

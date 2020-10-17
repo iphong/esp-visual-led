@@ -1,53 +1,13 @@
-#include "Arduino.h"
-#include "Ticker.h"
-#include "espnow.h"
+#include <Arduino.h>
+#include <Ticker.h>
+#include <espnow.h>
+
+#include "def.h"
 
 #ifndef __LED_H__
 #define __LED_H__
 
 namespace LED {
-
-enum FrameType {
-	RGB_FRAME = 0x01,
-	END_FRAME = 0x02,
-	LOOP_FRAME = 0x03
-};
-class RGB {
-   public:
-	u8 r;
-	u8 g;
-	u8 b;
-	void set(u8* d) {
-		memcpy(this, d, 3);
-	}
-	void set(RGB* c) {
-		r = c->r;
-		g = c->g;
-		b = c->b;
-	}
-	void set(App::RGB* c) {
-		r = c->r;
-		g = c->g;
-		b = c->b;
-	}
-	void set(u8 red, u8 green, u8 blue) {
-		r = red;
-		g = green;
-		b = blue;
-	}
-};
-
-class Frame : public RGB {
-   public:
-	u8 type;
-	u32 start = 0;
-	u32 duration = 0;
-	u32 transition = 0;
-	u8 r = 0;
-	u8 g = 0;
-	u8 b = 0;
-};
-
 class Show {
    protected:
 	const char id;
@@ -61,10 +21,10 @@ class Show {
 	Ticker tmr;
 	File file;
 
-	Frame frame;	  // Active frame
+	FrameData frame;  // Active frame
 	u32 currentTime;  // Current playing time
 
-	Frame loopFrame;
+	FrameData loopFrame;
 	u32 loopTime;
 	u32 loopStart;
 	u32 loopEnd;
@@ -83,40 +43,24 @@ class Show {
 	u32 readUint32(unsigned char* buffer) {
 		return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 	}
-	Frame next() {
-		u8 b[16];
-		Frame f;
+	FrameData f;
+	u8 b[16];
+	FrameData next() {
 		if (file.available()) {
 			file.readBytes((char*)b, 16);
-			f.type = b[0];
-			f.start = readUint32(&b[1]);
-			f.duration = readUint32(&b[5]);
-			f.transition = readUint32(&b[9]);
-			f.r = b[13];
-			f.g = b[14];
-			f.b = b[15];
-			// for (auto b : b) LOGD("%02X ", b);
-			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+			memcpy(&f, b, 16);
 		}
+		LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
 	}
-	Frame prev() {
-		static bool isInLoop = 0;
-		u8 b[16];
-		Frame f;
+	bool isInLoop;
+	FrameData prev() {
+		isInLoop = 0;
 		size_t pos = file.position();
 		if (pos >= 32) {
 			file.seek(pos - 32);
 			file.readBytes((char*)b, 16);
-			f.type = b[0];
-			f.start = readUint32(&b[1]);
-			f.duration = readUint32(&b[5]);
-			f.transition = readUint32(&b[9]);
-			f.r = b[13];
-			f.g = b[14];
-			f.b = b[15];
-			// for (auto b : b) LOGD("%02X ", b);
-			// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+			memcpy(&f, b, 16);
 		}
 		if (!isInLoop && f.type == END_FRAME) {
 			isInLoop = true;
@@ -125,10 +69,56 @@ class Show {
 		if (isInLoop && f.type == LOOP_FRAME) {
 			isInLoop = false;
 		}
+		LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
 	}
+	// FrameData next() {
+	// 	u8 b[16];
+	// 	FrameData f;
+	// 	if (file.available()) {
+	// 		file.readBytes((char*)b, 16);
+	// 		f.type = b[0];
+	// 		f.start = readUint32(&b[1]);
+	// 		f.duration = readUint32(&b[5]);
+	// 		f.transition = readUint32(&b[9]);
+	// 		f.r = b[13];
+	// 		f.g = b[14];
+	// 		f.b = b[15];
+	// 		// for (auto b : b) LOGD("%02X ", b);
+	// 		// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+	// 	}
+	// 	return f;
+	// }
+	// FrameData prev() {
+	// 	static bool isInLoop = 0;
+	// 	u8 b[16];
+	// 	FrameData f;
+	// 	size_t pos = file.position();
+	// 	if (pos >= 32) {
+	// 		file.seek(pos - 32);
+	// 		file.readBytes((char*)b, 16);
+	// 		f.type = b[0];
+	// 		f.start = readUint32(&b[1]);
+	// 		f.duration = readUint32(&b[5]);
+	// 		f.transition = readUint32(&b[9]);
+	// 		f.r = b[13];
+	// 		f.g = b[14];
+	// 		f.b = b[15];
+	// 		// for (auto b : b) LOGD("%02X ", b);
+	// 		// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
+	// 	}
+	// 	if (!isInLoop && f.type == END_FRAME) {
+	// 		isInLoop = true;
+	// 		while (isInLoop) prev();
+	// 	}
+	// 	if (isInLoop && f.type == LOOP_FRAME) {
+	// 		isInLoop = false;
+	// 	}
+	// 	return f;
+	// }
 
-	void setTransition(Frame* frame, u32 lapsed) {
+	void
+	setTransition(FrameData* frame, u32 lapsed) {
 		if (frame->transition && lapsed <= frame->transition) {
 			// Compute color value during transition
 			ratio = (float)lapsed / frame->transition;
@@ -162,11 +152,11 @@ class Show {
 	void end() {
 		if (file) file.close();
 		tmr.detach();
+		setRGB(0, 0, 0);
 		currentTime = 0;
 		loopTime = 0;
 		running = 0;
 		paused = 0;
-		setRGB(0, 0, 0);
 	}
 
 	void pause() {
@@ -301,7 +291,7 @@ class Show {
 			tick(true);
 		});
 	}
-};
+};	// namespace LED
 
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);

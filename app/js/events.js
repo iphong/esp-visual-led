@@ -1,25 +1,31 @@
-import { debounce } from "lodash"
-import { $, call, get, setProp, uploadFile } from "./api"
-import { render, renderHead, renderNodes } from "./app"
-import { CONFIG, SHOW } from "./data"
+import debounce from "lodash/debounce"
+import { $, call, get, setProp, setText, uploadFile, fetchFile, formatTime, sendCommand } from "./api"
+import { render, renderHead, renderNodes, checkNodes, selectShow } from "./app"
+import { AUDIO, CONFIG, SHOW } from "./data"
 import { send, sendSync } from "./ws"
+import * as actions from './action'
 
 const { parseAudio, renderAudio } = require("./audio")
-const { parseLSF, parseLTP, parseIPX } = require("./light")
+const { parseLSF, parseLTP, parseIPX, renderShow } = require("./light")
 
 export function handleError() {
 	console.error(...arguments)
 }
 
-async function handleFile(file, event) {
-	if (CONFIG.running) await handleEnd()
+export async function handleFile(file, event) {
+	if (CONFIG.running) {
+		call('#player', 'pause')
+		setProp('#player', 'currentTime', 0)
+		await handleEnd()
+	}
 	console.debug(`select file: ${file.name}`)
 	if (file.name.endsWith('.bin')) {
 		await uploadFile('firmware/' + filename, file)
 	} else if (file.name.endsWith('.ltp')) {
-		setAttr('#player', 'src', ``)
-		await parseLTP(file)
+		const show = JSON.stringify(await parseLTP(file))
 		await render()
+		await uploadFile(`show/${CONFIG.show}.json`, show);
+		await uploadFile(`show/${CONFIG.show}.mp3`, AUDIO.file);
 	} else if (file.name.endsWith('.lsf')) {
 		const data = await parseLSF(file)
 		let target = event.target.closest('[data-device]')
@@ -49,7 +55,7 @@ async function handleFile(file, event) {
 	}
 }
 
-async function handleChange(e) {
+export async function handleChange(e) {
 	if (e.type === 'change' && e.target.id === 'select-file') {
 		for (let file of e.target.files) {
 			await handleFile(file)
@@ -57,38 +63,33 @@ async function handleChange(e) {
 	}
 }
 
-async function handleClick(e) {
+export async function handleClick(e) {
+	const { show, action, command, bytes } = e.target.dataset
 	if (e.target.closest('[data-device]')) {
 		const target = e.target.closest('[data-device]')
 		CONFIG.nodes.forEach(node => {
 			if (node.id == target.dataset.device) {
 				node.selected = !node.selected
-				send(target.dataset.device, 'BLINK', node.selected ? 1 : 0, 2)
+				if (node.selected) send(node.id, 'BLINK', 5)
+				else send(node.id, 'BLINK', 0)
 			}
 		})
 		renderNodes()
-	} else if (e.target.dataset.show) {
+	}
+	if (e.target.dataset.show) {
 		selectShow(parseInt(e.target.dataset.show) || 0)
-	} else if (e.target.dataset.action) {
-		switch (e.target.dataset.action) {
-			case 'show-add':
-				click('#select-file')
-				break
-			case 'show-start':
-				handleStart()
-				break
-			case 'show-pause':
-				call('#player', 'pause')
-				break
-			case 'show-resume':
-				call('#player', 'play')
-				break
-			case 'show-stop':
-				call('#player', 'pause')
-				setProp('#player', 'currentTime', 0)
-				handleEnd()
-				break
+	}
+	if (action) {
+		if (typeof actions[action] !== 'function') {
+			console.error(`ACTION ${action}() is undefined.`)
+		} else {
+			actions[action].call(e.target, e)
 		}
+	}
+	if (e.target.dataset.command) {
+		let rest = []
+		try { rest = eval(`[${e.target.dataset.body || ''}]`) } catch (e) { console.log(e) }
+		sendCommand(e.target.dataset.command, ...rest)
 	}
 }
 function handleDragOver(e) {
@@ -105,57 +106,61 @@ function handleDragLeave(e) {
 		droppable.classList.remove('active')
 	}
 }
-async function handleDragDrop(e) {
+export async function handleDragDrop(e) {
 	e.preventDefault()
 	for (let file of e.dataTransfer.files) {
 		await handleFile(file, e)
 	}
 }
 
+let scrolling = false;
+let scrollEnded = 0;
 const scrollStart = debounce(() => {
-	if (CONFIG.running) call('#player', 'pause')
-}, 500, { leading: true })
+	if (Date.now() - scrollEnded > 10) {
+		scrolling = true
+		if (CONFIG.running && !CONFIG.paused) call('#player', 'pause')
+	}
+}, 300, { leading: true })
 const scrollEnd = debounce(() => {
-	if (CONFIG.running) call('#player', 'play')
-}, 500, { trailing: true })
+	$('#player').forEach(player => {
+		player.play()
+	})
+	scrolling = false
+	scrollEnded = Date.now();
+}, 300, { trailing: true })
 
 function handleScroll(e) {
-	scrollStart()
-	const timeline = e.target.closest('.timeline')
-	if (timeline) {
-		const ratio = timeline.scrollLeft / timeline.scrollWidth
-		if (CONFIG.running) {
+	if (CONFIG.running && e.target.closest('.timeline')) {
+		scrollStart()
+		$('.timeline').forEach(timeline => {
+			const ratio = timeline.scrollLeft / (timeline.scrollWidth - timeline.offsetWidth)
 			$('#player').forEach(player => {
-				player.currentTime = player.duration * ratio
+				player.currentTime = (SHOW.params.end / 1000) * ratio
 			})
-		}
+		})
+
+		scrollEnd()
 	}
-	scrollEnd()
-}
-async function fetchData() {
-	Object.assign(CONFIG, await get('stat'))
-	selectShow(CONFIG.show)
-	// Object.assign(SHOW, await get(`show?id=${CONFIG.show}`))
-}
-async function handleInit() {
-	await fetchData()
-	await render()
 }
 
 let audio;
-async function handlePlay(e) {
-	console.log('play')
+export async function handlePlay(e) {
+	// console.log('play')
 	audio = e.target
 	CONFIG.paused = 0
-	renderHead()
-}
-async function handlePlaying(e) {
-	console.log('playing')
-	audio = e.target
 	CONFIG.running = 1
 	renderHead()
+	handleTimeUpdate(e)
 }
-async function handlePause(e) {
+export async function handlePlaying(e) {
+	console.log('playing')
+	audio = e.target
+	CONFIG.paused = 0
+	CONFIG.running = 1
+	renderHead()
+	handleTimeUpdate(e)
+}
+export async function handlePause(e) {
 	console.log('paused')
 	audio = e.target
 	if (e.target.currentTime === e.target.duration) {
@@ -163,54 +168,82 @@ async function handlePause(e) {
 	} else {
 		CONFIG.paused = 1
 		renderHead()
+		handleTimeUpdate(e)
 	}
 }
-async function handleStart() {
+export async function handleStart() {
 	console.log('start')
-	setProp('#player', 'currentTime', 0)
+	CONFIG.running = 1
+	await sendCommand('begin')
 	call('#player', 'play')
 }
-async function handleEnd() {
-	console.log('end')
+export async function handleEnd() {
+	console.log('ended')
 	CONFIG.running = 0
 	CONFIG.paused = 0
 	CONFIG.time = 0
-	await send('#>END')
+	sendCommand('end')
 	renderHead()
+	handleTimeUpdate()
 }
-async function handleTimeUpdate(e) {
-	// audio = e.target
+export async function handleTimeSeeking(e) {
+	audio = e.target
+	// console.log('seeking')
 }
-async function selectShow(id) {
-	if (CONFIG.show !== id) {
-		await post(`show?id=${id}`)
+export async function handleTimeSeeked(e) {
+	audio = e.target
+	// console.log('seeked')
+	if (scrolling) return
+	const timeline = $('.timeline')
+	if (timeline) {
+		const ratio = e.currentTime / (SHOW.params.end / 1000)
+		$timeline.forEach(el => {
+			el.scrollLeft = (el.scrollWidth - el.offsetWidth) * ratio
+			const $handle = el.querySelector('.handle')
+			if ($handle) {
+				$handle.style.left = Math.round(el.offsetWidth * ratio) + 'px'
+				$handle.style.top = el.offsetTop + 'px'
+				$handle.style.height = el.offsetHeight + 'px'
+			}
+		})
 	}
-	CONFIG.show = id
-	try {
-		Object.assign(SHOW, await get(`/show/${id}.json`))
-	} catch(e) {}
-	await render()
+}
+
+export async function handleTimeUpdate() {
+	audio && setText('#time', formatTime(audio.currentTime))
 }
 
 setTimeout(async function sync() {
 	if (audio && CONFIG.syncing) {
-		CONFIG.time = Math.round(audio.currentTime * 1000)
+		CONFIG.time = Math.min(Math.round(audio.currentTime * 1000), SHOW.params.end)
 		await sendSync()
 	}
-	setTimeout(sync, 1000)
+	setTimeout(sync, 100)
 })
-
 const $timeline = $('.timeline')
 requestAnimationFrame(function draw() {
-	if (audio && !CONFIG.paused) {
-		const ratio = audio.currentTime / audio.duration
+	if (audio && CONFIG.running && !CONFIG.paused) {
+		const ratio = audio.currentTime / (SHOW.params.end / 1000)
+		handleTimeUpdate()
 		$timeline.forEach(el => {
-			el.scrollLeft = el.scrollWidth * ratio
+			el.scrollLeft = (el.scrollWidth - el.offsetWidth) * ratio
+			const $handle = el.querySelector('.handle')
+			if ($handle) {
+				$handle.style.left = Math.round(el.offsetWidth * ratio) + 'px'
+				$handle.style.top = el.offsetTop + 'px'
+				$handle.style.height = el.offsetHeight + 'px'
+			}
 			// el.style.transform = `translateX(-${ratio*100}%)`
 		})
 	}
 	requestAnimationFrame(draw)
 })
+
+export async function handleInit() {
+	Object.assign(CONFIG, await get('stat'))
+	// setTimeout(() => selectShow(CONFIG.show), 1000)
+	setInterval(checkNodes, 1000)
+}
 
 window.addEventListener('mousewheel', handleScroll, true)
 window.addEventListener('dragover', handleDragOver, true)
@@ -225,8 +258,8 @@ window.addEventListener('play', handlePlay, true)
 window.addEventListener('pause', handlePause, true)
 window.addEventListener('playing', handlePlaying, true)
 window.addEventListener('timeupdate', handleTimeUpdate, true)
-window.addEventListener('seeked', handleTimeUpdate, true)
-// window.addEventListener('seeking', handlePause, true)
+window.addEventListener('seeked', handleTimeSeeked, true)
+window.addEventListener('seeking', handleTimeSeeking, true)
 window.addEventListener('end', handleEnd, true)
 
 window.addEventListener('touchstart', new Function(), true)
