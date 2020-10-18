@@ -86,14 +86,51 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./app/ts/audio.ts":
+/*!*************************!*\
+  !*** ./app/ts/audio.ts ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+eval("\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.player = void 0;\nexports.player = document.createElement('audio');\n\n\n//# sourceURL=webpack:///./app/ts/audio.ts?");
+
+/***/ }),
+
+/***/ "./app/ts/controller.ts":
+/*!******************************!*\
+  !*** ./app/ts/controller.ts ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+eval("\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.syncShow = exports.resumeShow = exports.pauseShow = exports.endShow = exports.startShow = void 0;\nconst socket_1 = __webpack_require__(/*! ./socket */ \"./app/ts/socket.ts\");\nconst audio_1 = __webpack_require__(/*! ./audio */ \"./app/ts/audio.ts\");\nasync function startShow() {\n    await socket_1.send('#>BEGIN');\n    audio_1.player.play();\n}\nexports.startShow = startShow;\nasync function endShow() {\n    await socket_1.send('#>END');\n    audio_1.player.currentTime = audio_1.player.duration;\n}\nexports.endShow = endShow;\nasync function pauseShow() {\n    await socket_1.send('#>PAUSE');\n    audio_1.player.pause();\n}\nexports.pauseShow = pauseShow;\nasync function resumeShow() {\n    await socket_1.send('#>RESUME');\n    audio_1.player.play();\n}\nexports.resumeShow = resumeShow;\nasync function syncShow() {\n    await socket_1.send('#>SYNC');\n}\nexports.syncShow = syncShow;\n\n\n//# sourceURL=webpack:///./app/ts/controller.ts?");
+
+/***/ }),
+
 /***/ "./app/ts/entry.ts":
 /*!*************************!*\
   !*** ./app/ts/entry.ts ***!
   \*************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-eval("throw new Error(\"Module build failed (from ./node_modules/ts-loader/index.js):\\nError: \\u001b[31merror while parsing tsconfig.json\\u001b[39m\\n    at Object.loader (/Users/phong/Projects/things/esp-visual-led/node_modules/ts-loader/dist/index.js:19:18)\");\n\n//# sourceURL=webpack:///./app/ts/entry.ts?");
+"use strict";
+eval("\nvar __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {\n    if (k2 === undefined) k2 = k;\n    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });\n}) : (function(o, m, k, k2) {\n    if (k2 === undefined) k2 = k;\n    o[k2] = m[k];\n}));\nvar __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {\n    Object.defineProperty(o, \"default\", { enumerable: true, value: v });\n}) : function(o, v) {\n    o[\"default\"] = v;\n});\nvar __importStar = (this && this.__importStar) || function (mod) {\n    if (mod && mod.__esModule) return mod;\n    var result = {};\n    if (mod != null) for (var k in mod) if (k !== \"default\" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);\n    __setModuleDefault(result, mod);\n    return result;\n};\nObject.defineProperty(exports, \"__esModule\", { value: true });\nconst actions = __importStar(__webpack_require__(/*! ./controller */ \"./app/ts/controller.ts\"));\naddEventListener('click', (e) => {\n    if (e.target) {\n        const actionTarget = e.target.closest('*[data-action]');\n        if (actionTarget) {\n            const { action } = actionTarget.dataset;\n            if (typeof actions[action] === 'function') {\n                actions[action].call(actionTarget, e);\n            }\n        }\n    }\n});\n\n\n//# sourceURL=webpack:///./app/ts/entry.ts?");
+
+/***/ }),
+
+/***/ "./app/ts/socket.ts":
+/*!**************************!*\
+  !*** ./app/ts/socket.ts ***!
+  \**************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+eval("\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports.send = void 0;\nasync function send(header, ...bytes) {\n}\nexports.send = send;\n\n\n//# sourceURL=webpack:///./app/ts/socket.ts?");
 
 /***/ })
 

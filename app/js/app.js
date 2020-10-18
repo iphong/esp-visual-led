@@ -32,6 +32,7 @@ export function renderHead() {
 	// setText('#ip', ip)
 	// setText('#mac', mac)
 }
+
 export function renderNodes() {
 	$('section.nodes').forEach(section => {
 		section.innerHTML = ''

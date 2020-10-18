@@ -1,13 +1,15 @@
 module.exports = {
 	mode: 'development',
 	entry: {
-		main: './app/js/index.js'
+		main: './app/js/index.js',
+		app: './app/ts/entry.ts'
 	},
 	output: {
-		filename: 'bundle.js',
-		path: __dirname + '/app/dist',
-		libraryTarget: 'global',
-		library: 'ledc'
+		filename: '[name].js',
+		path: __dirname + '/app/dist'
+	},
+	resolve: {
+		extensions: ['.js', '.ts', '.json']
 	},
 	module: {
 		rules: [
@@ -17,4 +19,4 @@ module.exports = {
 		]
 	},
 	target: 'web'
-};
+}

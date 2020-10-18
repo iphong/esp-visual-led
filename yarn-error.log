@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /usr/local/bin/yarn add lodash
+  /usr/local/bin/node /usr/local/bin/yarn add --dev ts-loader
 
 PATH: 
   /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/VMware Fusion.app/Contents/Public:/opt/X11/bin:/Library/Apple/usr/bin:/usr/local/CrossPack-AVR/bin
@@ -14,8 +14,10 @@ Platform:
   darwin x64
 
 Trace: 
-  Error: getaddrinfo ENOTFOUND registry.yarnpkg.com
-      at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:64:26)
+  Error: https://registry.yarnpkg.com/ts-loader: ETIMEDOUT
+      at Timeout._onTimeout (/usr/local/lib/node_modules/yarn/lib/cli.js:135339:19)
+      at listOnTimeout (internal/timers.js:549:17)
+      at processTimers (internal/timers.js:492:7)
 
 npm manifest: 
   {
@@ -23,6 +25,8 @@ npm manifest:
       "@babel/core": "^7.11.6",
       "babel-loader": "^8.1.0",
       "css-loader": "^4.3.0",
+      "jquery": "^3.5.1",
+      "lodash": "^4.17.20",
       "ts-loader": "^8.0.3",
       "unzip-js": "^1.0.0",
       "webpack": "^4.44.1"
@@ -1495,6 +1499,10 @@ Lockfile:
     version "3.0.1"
     resolved "https://registry.yarnpkg.com/isobject/-/isobject-3.0.1.tgz#4e431e92b11a9731636aa1f9c8d1ccbcfdab78df"
   
+  jquery@^3.5.1:
+    version "3.5.1"
+    resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.5.1.tgz#d7b4d08e1bfdb86ad2f1a3d039ea17304717abb5"
+  
   js-tokens@^4.0.0:
     version "4.0.0"
     resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
@@ -1570,7 +1578,7 @@ Lockfile:
       p-locate "^3.0.0"
       path-exists "^3.0.0"
   
-  lodash@^4.17.19:
+  lodash@^4.17.19, lodash@^4.17.20:
     version "4.17.20"
     resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
   

@@ -241,7 +241,7 @@ requestAnimationFrame(function draw() {
 
 export async function handleInit() {
 	Object.assign(CONFIG, await get('stat'))
-	// setTimeout(() => selectShow(CONFIG.show), 1000)
+	setTimeout(() => selectShow(CONFIG.show), 1000)
 	setInterval(checkNodes, 1000)
 }
 
