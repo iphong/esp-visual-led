@@ -10,12 +10,52 @@
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
+grid {
+	display: grid;
+	grid-gap: 5px;
+
+}
+
+grid.two {
+	grid: auto / 1fr 1fr;
+}
+grid.three {
+	grid-template-columns: 1fr 1fr 1fr;
+}
+grid.four {
+	grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+grid.five {
+	grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+}
+grid.eight {
+	grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+grid.item {
+	grid-template-columns: 1fr 8fr 1fr;
+	grid-gap: 10px;
+	margin: 0;
+}
+grid.item > *:not(grid) {
+	line-height: 40px;
+	text-align: center;
+	font-size: 20px;
+	font-weight: bold;
+}
+grid.item > span {
+	font-weight: normal;
+	font-size: 90%;
+}
+
 
 body {
-	padding: 65px 0 0 0;
+	padding: 65px 0 85px 0;
 	margin: 0;
 	background: #000000;
 	color: #ffffff;
+}
+button, input, select {
+	-webkit-app-region: no-drag;
 }
 
 header {
@@ -27,10 +67,19 @@ header {
     padding: 5px;
     grid-gap: 10px;
     background: #555555;
-	grid-template-columns: 90px 1fr auto;
+	grid-template-columns: 100px 1fr auto;
 	align-items: center;
 	z-index: 10;
 	height: 50px;
+	-webkit-app-region: drag;
+}
+footer {
+	position: fixed;
+	bottom: 0;
+    left: 0;
+    right: 0;
+	height: 80px;
+    background: #555555;
 }
 header > *:first-child {
 	margin-left: 10px;
@@ -191,4 +240,8 @@ article.node progress {
 
 #time {
 	font-family: 'Courier New', Courier, monospace;
+}
+
+#waveform {
+	overflow: auto;
 }

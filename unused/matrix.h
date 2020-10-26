@@ -13,10 +13,10 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-WS2812FX light1 = WS2812FX(LED_COUNT, D5, NEO_RGB + NEO_KHZ800);
-WS2812FX light2 = WS2812FX(LED_COUNT, D6, NEO_RGB + NEO_KHZ800);
-WS2812FX light3 = WS2812FX(LED_COUNT, D7, NEO_RGB + NEO_KHZ800);
-WS2812FX light4 = WS2812FX(LED_COUNT, D8, NEO_RGB + NEO_KHZ800);
+WS2812FX light1 = WS2812FX(LED_COUNT, D5, NEO_GRB + NEO_KHZ800);
+WS2812FX light2 = WS2812FX(LED_COUNT, D6, NEO_GRB + NEO_KHZ800);
+WS2812FX light3 = WS2812FX(LED_COUNT, D7, NEO_GRB + NEO_KHZ800);
+WS2812FX light4 = WS2812FX(LED_COUNT, D8, NEO_GRB + NEO_KHZ800);
 
 unsigned long last_change = 0;
 unsigned long now = 0;

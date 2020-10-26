@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<title>SDC LED TECHNOLOGY</title>
+<meta charset="UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="LED">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+<link rel="stylesheet" href="css/app.css">
+
+<header>
+	<div>
+		<strong>LIGHT</strong>
+		<small>MASTER</small>
+	</div>
+	<nav>
+		<!-- <button data-action="openShow">New</button> -->
+		<button data-action="openShow">Open</button>
+		<button data-action="startShow">Start</button>
+		<button data-action="exitApp">Exit</button>
+		<!-- <button data-action="saveShow">Save</button> -->
+	</nav>
+	<nav id="serial-toolbar">
+		<select data-key="serial_port" id="serial-dev-select" style="width: 150px;"></select>
+		<button id="serial-connect" data-action="serialConnect">Connect</button>
+		<button id="serial-disconnect" data-action="serialDisconnect">Disconnect</button>
+		<!-- <button role="manage" data-action="serialManage">Manage</button> -->
+	</nav>
+</header>
+<main>
+	<section id="timeline" class="timeline">
+		<div id="tracks" class="tracks"></div>
+		<div id="handle" class="handle"></div>
+	</section>
+	<section id="nodes" class="nodes"></section>
+</main>
+<footer>
+	<div id="waveform" class="waveform"></div>
+</footer>
+<script src="dist/app.js"></script>

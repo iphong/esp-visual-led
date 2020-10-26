@@ -1,7 +1,9 @@
 module.exports = {
+	devtool: 'inline-source-map',
 	mode: 'development',
 	entry: {
 		main: './app/js/index.js',
+		bg: './app/ts/bg.ts',
 		app: './app/ts/entry.ts'
 	},
 	output: {

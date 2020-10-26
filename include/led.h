@@ -1,7 +1,3 @@
-#include <Arduino.h>
-#include <Ticker.h>
-#include <espnow.h>
-
 #include "def.h"
 
 #ifndef __LED_H__

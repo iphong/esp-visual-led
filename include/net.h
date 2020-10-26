@@ -1,17 +1,18 @@
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <MeshRC.h>
-#include <WebSocketsServer.h>
-
 #include "app.h"
 #include "def.h"
 #include "led.h"
 #include "sd.h"
+#include "transport.h"
 
 #ifndef __NET_H__
 #define __NET_H__
 
 namespace Net {
+
+// SoftwareSerial ss(12, 13);
+// Transport _transports[2] = {&Serial, &ss};
+
+Transport t1(&Serial);
 
 #ifdef MASTER
 WebSocketsServer webSocket(81);
@@ -308,14 +309,18 @@ void recvFile(u8* buf, u8 len) {
 				file = App::fs->open(tmpName, "w");
 				file.write((const char*)0);
 				file.seek(0);
+#ifdef RECV_FILE_LOGS
 				if (!file) {
 					LOG(F("CREATE FAILED - "));
-					receivingFiles = false;
 				} else {
 					LOGD("receiving file: %s - ", name.c_str());
 				}
-				LOG(millis() - timer);
 				LOGL(F(" us"));
+				LOG(millis() - timer);
+#else
+				if (!file)
+					receivingFiles = false;
+#endif
 			}
 			break;
 
@@ -323,18 +328,22 @@ void recvFile(u8* buf, u8 len) {
 		case '+':
 			if (file) {
 				App::LED_BLINK();
-				// u16 pos = data[0] << 8 | data[1];
-				// u16 pos2 = file.position();
 #ifdef RECV_FILE_LOGS
+				u16 pos = data[0] << 8 | data[1];
+				u16 pos2 = file.position();
 				LOGD("%04X %04X :: %u bytes :: ", pos, pos2, size);
 #endif
 				for (auto i = 2; i < size; i++) {
 					crc += data[i];
 					file.write(data[i]);
-					// LOGD("%02X ", data[i]);
+#ifdef RECV_FILE_LOGS
+					LOGD("%02X ", data[i]);
 				}
 				LOG(millis() - timer);
 				LOGL(F(" us"));
+#else
+				}
+#endif
 			} else {
 				receivingFiles = false;
 			}
@@ -343,9 +352,10 @@ void recvFile(u8* buf, u8 len) {
 		// FILE STREAM END
 		case '$':
 			if (receivingFiles && file) {
-				// wifiOn();
 				App::LED_HIGH();
+#ifdef RECV_FILE_LOGS
 				LOGD("EOF %02X = %02X - ", crc, data[0]);
+#endif
 				file.close();
 				if (data[0] == crc) {
 					if (App::fs->exists(name)) {
@@ -356,15 +366,17 @@ void recvFile(u8* buf, u8 len) {
 						App::fs->remove(tmpName);
 					}
 				}
+#ifdef RECV_FILE_LOGS
 				LOG(millis() - timer);
 				LOGL(F(" us"));
+#endif
 			}
 			receivingFiles = false;
 			break;
 		default:
 			break;
 	}
-}
+}  // namespace Net
 
 void restart() {
 	ESP.restart();
@@ -402,6 +414,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
 			} else {
 				MeshRC::send(payload, length);
 			}
+			// for (auto x = 0; x < 2; x++) {
+			// 	_transports[x].send(payload, length);
+			// }
 			break;
 		case WStype_ERROR:
 		case WStype_FRAGMENT_TEXT_START:
@@ -434,11 +449,27 @@ void setColor(u8* buf, u8 len) {
 }
 
 void setup() {
+	// ss.begin(9600);
 	ArduinoOTA.onProgress([](int percent, int total) {
 		App::led_pin = R1_PIN;
 		App::LED_BLINK();
 	});
 	ArduinoOTA.begin();
+// 	for (auto i = 0; i < 2; i++) {
+// 		_transports[i].receive([i](u8* data, u8 size) {
+// 			MeshRC::send(data, size);
+// 			for (auto x = 0; x < 2; x++) {
+// 				if (i != x) {
+// 					_transports[x].send(data, size);
+// 				}
+// 			}
+// #ifdef MASTER
+// 			for (u8 i = 0; i < 8; i++) {
+// 				webSocket.sendBIN(i, data, size);
+// 			}
+// #endif
+// 		});
+// 	}
 
 #ifdef MASTER
 	webSocket.begin();
@@ -448,10 +479,6 @@ void setup() {
 	MeshRC::on("#<RESET", Net::restart);
 	MeshRC::on("#<WIFI:ON", Net::wifiOn);
 	MeshRC::on("#<WIFI:OFF", Net::wifiOff);
-
-	MeshRC::on("#<FSOK", []() {
-		fsReplyOK = true;
-	});
 #else
 	pingTimer.attach_ms_scheduled_accurate(10000, Net::sendPing);
 
@@ -512,6 +539,7 @@ void setup() {
 			newData[0] = '#';
 			MeshRC::recvHandler(MeshRC::sender, newData, size - 5);
 		}
+		t1.send(data, size);
 #ifdef MASTER
 		for (u8 i = 0; i < 8; i++) {
 			webSocket.sendBIN(i, data, size);
@@ -519,9 +547,14 @@ void setup() {
 #endif
 	});
 	MeshRC::begin();
+	t1.send("Hello");
+	t1.receive([](u8 *data, u8 size) {
+		MeshRC::send(data, size);
+	});
 }
 
 void loop() {
+	t1.loop();
 	ArduinoOTA.handle();
 #ifdef MASTER
 	webSocket.loop();

@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /usr/local/bin/yarn add --dev ts-loader
+  /usr/local/bin/node /usr/local/bin/yarn add --dev @types/unzip-js
 
 PATH: 
   /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/VMware Fusion.app/Contents/Public:/opt/X11/bin:/Library/Apple/usr/bin:/usr/local/CrossPack-AVR/bin
@@ -14,24 +14,33 @@ Platform:
   darwin x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/ts-loader: ETIMEDOUT
-      at Timeout._onTimeout (/usr/local/lib/node_modules/yarn/lib/cli.js:135339:19)
-      at listOnTimeout (internal/timers.js:549:17)
-      at processTimers (internal/timers.js:492:7)
+  Error: https://registry.yarnpkg.com/@types%2funzip-js: Not found
+      at Request.params.callback [as _callback] (/usr/local/lib/node_modules/yarn/lib/cli.js:65656:18)
+      at Request.self.callback (/usr/local/lib/node_modules/yarn/lib/cli.js:134675:22)
+      at Request.emit (events.js:311:20)
+      at Request.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:135658:10)
+      at Request.emit (events.js:311:20)
+      at IncomingMessage.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:135578:12)
+      at Object.onceWrapper (events.js:417:28)
+      at IncomingMessage.emit (events.js:323:22)
+      at endReadableNT (_stream_readable.js:1204:12)
+      at processTicksAndRejections (internal/process/task_queues.js:84:21)
 
 npm manifest: 
   {
     "dependencies": {
-      "@babel/core": "^7.11.6",
-      "babel-loader": "^8.1.0",
-      "css-loader": "^4.3.0",
       "jquery": "^3.5.1",
+      "jquery-slim": "^3.0.0",
       "lodash": "^4.17.20",
-      "ts-loader": "^8.0.3",
       "unzip-js": "^1.0.0",
       "webpack": "^4.44.1"
     },
     "devDependencies": {
+      "@babel/core": "^7.11.6",
+      "babel-loader": "^8.1.0",
+      "css-loader": "^4.3.0",
+      "ts-loader": "^8.0.5",
+      "typescript": "^4.0.3",
       "webpack-cli": "^3.3.12"
     }
   }
@@ -1499,6 +1508,10 @@ Lockfile:
     version "3.0.1"
     resolved "https://registry.yarnpkg.com/isobject/-/isobject-3.0.1.tgz#4e431e92b11a9731636aa1f9c8d1ccbcfdab78df"
   
+  jquery-slim@^3.0.0:
+    version "3.0.0"
+    resolved "https://registry.yarnpkg.com/jquery-slim/-/jquery-slim-3.0.0.tgz#87ab2fa10501798e93124a4b5eb953c85379707e"
+  
   jquery@^3.5.1:
     version "3.5.1"
     resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.5.1.tgz#d7b4d08e1bfdb86ad2f1a3d039ea17304717abb5"
@@ -2470,9 +2483,9 @@ Lockfile:
       regex-not "^1.0.2"
       safe-regex "^1.1.0"
   
-  ts-loader@^8.0.3:
-    version "8.0.3"
-    resolved "https://registry.yarnpkg.com/ts-loader/-/ts-loader-8.0.3.tgz#56858f4296edf1ed55e01f8520552984d3f0911c"
+  ts-loader@^8.0.5:
+    version "8.0.5"
+    resolved "https://registry.yarnpkg.com/ts-loader/-/ts-loader-8.0.5.tgz#fa42b9305247eb964843df1ecb0e589b1bff0f77"
     dependencies:
       chalk "^2.3.0"
       enhanced-resolve "^4.0.0"
@@ -2491,6 +2504,10 @@ Lockfile:
   typedarray@^0.0.6:
     version "0.0.6"
     resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
+  
+  typescript@^4.0.3:
+    version "4.0.3"
+    resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.0.3.tgz#153bbd468ef07725c1df9c77e8b453f8d36abba5"
   
   union-value@^1.0.0:
     version "1.0.1"

@@ -15,14 +15,14 @@ namespace SD {
 	sdfat::File open(const char *path) {
 		if (file.isOpen()) file.close();
 		file = fs.open(path, (O_RDWR | O_CREAT));
-		Serial.printf("File openned: %s.\n", path);
+		LOGD("File openned: %s.\n", path);
 		return file;
 	}
 
 	sdfat::File openWrite(const char *path) {
 		if (file.isOpen()) file.close();
 		file = fs.open(path, (O_RDWR | O_CREAT | O_TRUNC));
-		Serial.printf("File openned: %s.\n", path);
+		LOGD("File openned: %s.\n", path);
 		return file;
 	}
 
@@ -34,15 +34,15 @@ namespace SD {
 		return openWrite(path.c_str());
 	}
 	size_t write(uint8_t *buf, size_t size) {
-		Serial.printf("File write: %i.\n", size);
+		// LOGD("File write: %i.\n", size);
 		return file.write((char *)buf, size);
 	}
 	size_t write(const char *buf, size_t size) {
-		Serial.printf("File write: %i.\n", size);
+		// LOGD("File write: %i.\n", size);
 		return file.write((char *)buf, size);
 	}
 	bool close() {
-		Serial.printf("File closed.\n");
+		// LOGD("File closed.\n");
 		return file.close();
 	}
 	void setup() {

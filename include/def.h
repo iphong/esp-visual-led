@@ -1,22 +1,28 @@
-#include <c_types.h>
+#include <Arduino.h>
 
 #ifndef __DEF_H__
 #define __DEF_H__
 
-#define HEADER '$'
-#define VERSION 5
+#define HEADER 		(u8)0x36 // character '$'
+#define VERSION 	(u8)0x05
 
-#define RGB_FRAME 	0x01
-#define END_FRAME 	0x02
-#define LOOP_FRAME 	0x03
+#define RGB_FRAME 	(u8)0x01
+#define END_FRAME 	(u8)0x02
+#define LOOP_FRAME 	(u8)0x03
 
-#define MODE_SHOW 	0x00
-#define MODE_BIND 	0x01
+#define MODE_SHOW 	(u8)0x00
+#define MODE_BIND 	(u8)0x01
+
 
 struct RGB {
 	u8 r;
 	u8 g;
 	u8 b;
+	void set(u32 c) {
+		r = (c & 0xFF0000) >> 16;
+		g = (c & 0x00FF00) >> 8;
+		b = (c & 0x0000FF) >> 0;
+	}
 	void set(u8* d) {
 		r = d[0];
 		g = d[1];
@@ -66,15 +72,24 @@ struct SaveData {
 };
 
 bool equals(u8* a, u8* b, u8 size, u8 offset = 0) {
-	for (auto i = offset; i < offset + size; i++)
+	for (auto i = offset; i < (offset + size); i++)
 		if (a[i] != b[i])
 			return false;
 	return true;
 }
-u32 readUint32(unsigned char* buffer) {
+bool equals(const char* a, const char* b, u8 size, u8 offset = 0) {
+	return equals((u8*)a, (u8*)b, size, offset);
+}
+bool equals(u8* a, const char* b, u8 size, u8 offset = 0) {
+	return equals(a, (u8*)b, size, offset);
+}
+bool equals(const char* a, u8* b, u8 size, u8 offset = 0) {
+	return equals((u8*)a, b, size, offset);
+}
+u32 readUint32(u8* buffer) {
 	return (u32)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 }
-u16 readUint16(unsigned char* buffer) {
+u16 readUint16(u8* buffer) {
 	return (u16)buffer[0] << 8 | buffer[1];
 }
 u8* setUint16(u8* buffer, u16 value, size_t offset = 0) {
