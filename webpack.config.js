@@ -20,5 +20,5 @@ module.exports = {
 			{ test: /\.js$/, use: 'babel-loader' }
 		]
 	},
-	target: 'web'
+	target: 'webworker'
 }

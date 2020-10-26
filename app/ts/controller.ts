@@ -51,21 +51,25 @@ export async function restoreShow() {
 	})
 }
 
-
 export async function startShow() {
 	player.play()
 }
+
 export async function endShow() {
 	player.currentTime = player.duration
 }
+
 export async function pauseShow() {
 	player.pause()
 }
+
 export async function resumeShow() {
 	player.play()
 }
+
 export async function syncShow() {
 }
+
 export async function serialConnect() {
 	return new Promise(resolve => {
 		if (store.serial_connection_id) {
@@ -120,7 +124,6 @@ export async function sendText(text: string) {
 		resolve(sendBinary(new Uint8Array(text.split('').map(c => c.charCodeAt(0))).buffer))
 	})
 }
-
 
 export async function sendBinary(data: ArrayBuffer) {
 	return new Promise(resolve => {

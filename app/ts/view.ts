@@ -1,9 +1,10 @@
-import { waveformData } from "./audio"
+import { player, waveformData } from "./audio"
 import { store } from "./model"
 
-const $tracks = document.getElementById('tracks') as HTMLDivElement
 const $devices = document.getElementById('serial-dev-select') as HTMLSelectElement
 const $waveform = document.getElementById('waveform') as HTMLDivElement
+const $timeline = document.getElementById('timeline') as HTMLDivElement
+const $tracks = $timeline.querySelector('.tracks') as HTMLDivElement
 
 
 export function renderSerial() {
@@ -52,7 +53,7 @@ export async function renderWaveform(audio: any) {
 		const size = 10
 		const wave = audio.waveform
 		const width = wave.length * size
-		const height = 80
+		const height = $waveform.offsetHeight
 		const halfHeight = height / 2
 
 		$waveform.innerHTML = ''
@@ -66,7 +67,7 @@ export async function renderWaveform(audio: any) {
 		wave.forEach(([max, min, pos, neg], i) => {
 			const x = i * size
 			const p1 = neg/100 * halfHeight + halfHeight;
-				ctx.fillStyle = '#333333';
+				ctx.fillStyle = '#444444';
 				ctx.fillRect(x+1, p1, size-2, (pos/100 * halfHeight + halfHeight) - p1);
 
 			const p2 = min/100 * halfHeight + halfHeight;
@@ -76,79 +77,17 @@ export async function renderWaveform(audio: any) {
 	}
 }
 
-export async function renderWaveform2(audio: any) {
-	console.log('render audio waveform...')
-	const canvas = document.createElement('canvas')
-	const ctx = canvas.getContext("2d");
-	if (ctx) {
-		const waveData = audio.channels[0].data
-		const height = 80;
-		const halfHeight = height / 2;
-		const length = waveData.length;
-		const width = Math.round(length / 1000)
-		// const width = window.innerWidth * 2
-		const size = 5
-		const step = Math.round(length / width * size);
-
-		$waveform.innerHTML = ''
-		$waveform.appendChild(canvas)
-
-		canvas.width = width;
-		canvas.height = height;
-		canvas.style.width = width + "px";
-		canvas.style.height = height + "px";
-
-		const data:[number,number][] = []
-
-		let x = 0,
-			sumPositive = 0,
-			sumNegative = 0,
-			maxPositive = 0,
-			maxNegative = 0,
-			kNegative = 0,
-			kPositive = 0,
-			drawIdx = step;
-		for (let i = 0; i < length; i++) {
-			if (i == drawIdx) {
-				// const p1 = maxNegative * halfHeight + halfHeight;
-				// ctx.fillStyle = '#444444';
-				// ctx.fillRect(x+1, p1, size-2, (maxPositive * halfHeight + halfHeight) - p1);
-
-				const p2 = sumNegative / kNegative * halfHeight + halfHeight;
-				ctx.fillStyle = '#000000';
-				ctx.fillRect(x+1, p2, size-2, (sumPositive / kPositive * halfHeight + halfHeight) - p2);
-				x+=size;
-				drawIdx += step;
-				sumPositive = 0;
-				sumNegative = 0;
-				maxPositive = 0;
-				maxNegative = 0;
-				kNegative = 0;
-				kPositive = 0;
-			} else {
-				if (waveData[i] < 0) {
-					sumNegative += waveData[i];
-					kNegative++;
-					if (maxNegative > waveData[i]) maxNegative = waveData[i];
-				} else {
-					sumPositive += waveData[i];
-					kPositive++;
-					if (maxPositive < waveData[i]) maxPositive = waveData[i];
-				}
-
-			}
-		}
-		console.log(data)
-	}
+export async function updateTime() {
+	const ratio = player.currentTime / player.duration
+	$timeline.scrollLeft = ($timeline.scrollWidth - $timeline.offsetWidth) * ratio
+	$waveform.scrollLeft = ($waveform.scrollWidth - $waveform.offsetWidth) * ratio
 }
-
-
 
 export async function renderShow(show: any) {
 	console.log('render light show...')
 	$tracks.innerHTML = ''
 	$waveform.innerHTML = ''
-	$tracks.style.width = (show.params.end / 10) + 'px'
+	$tracks.style.width = (show.audio.duration * 100) + 'px'
 	show.tracks.forEach(track => {
 		const $track = document.createElement('div')
 		const { elements, ...params } = track
@@ -157,6 +96,7 @@ export async function renderShow(show: any) {
 		$tracks.appendChild($track)
 		renderLight($track, track)
 	})
+	$timeline.scrollLeft = 0
 	renderWaveform(show.audio)
 	return show
 }
@@ -164,10 +104,10 @@ export async function renderShow(show: any) {
 export function renderLight(container, track) {
 	switch (track.device) {
 		case 1:
-			container.style.height = '30px'
+			// container.style.height = '30px'
 			break;
 		case 2:
-			container.style.height = '30px'
+			// container.style.height = '30px'
 			break;
 		default:
 			return console.log('unsupported device type:', track.device)
