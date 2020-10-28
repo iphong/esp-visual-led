@@ -64,8 +64,10 @@ addEventListener('drop', async (e: DragEvent) => {
 })
 
 addEventListener('wheel', (e) => {
-	if (player.duration)
-		player.currentTime = Math.max(0, Math.min(player.duration, player.currentTime + (e.deltaX / 100)))
+	if (player.duration) {
+		const delta = (e.deltaX + e.deltaY) / 2
+		player.currentTime = Math.max(0, Math.min(player.duration, player.currentTime + (delta / 100)))
+	}
 })
 
 addEventListener('keydown', (e) => {

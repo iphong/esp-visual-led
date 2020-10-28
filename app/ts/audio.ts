@@ -56,7 +56,7 @@ export async function parseAudio(file:File|Blob): Promise<ShowAudio> {
 			const { sampleRate, duration } = result
 			const { beats } = new MusicTempo(data)
 			audio.beats = beats.map(t => Math.round(t * 1000))
-			audio.duration = duration
+			audio.duration = Math.round(duration * 1000)
 			audio.sampleRate = sampleRate
 			audio.waveform = waveformData(data, duration * 10)
 			resolve(audio)

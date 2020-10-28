@@ -9,19 +9,26 @@ export async function handleJsonFile(file: File | Blob) {
 	console.log('handle show file')
 	const show = JSON.parse(await (new Blob([file]).text()))
 	await set('show', show)
+	await set('show_duration', Math.max(store.show_duration, show.solution.end))
+	if (show.tracks) {
+		await set('show_tracks', convertTracks(show.tracks))
+	}
 	renderShow(show)
+	return show
 }
 export async function handleAudioFile(file: File | Blob, force = false) {
 	let audio = store.audio || {}
 	player.src = URL.createObjectURL(file)
 	cache.audio = file
-	await set('show_duration', Math.max(store.show_duration, audio.duration * 1000))
 	console.log('handle audio file')
 	if (force || !audio.waveform) {
 		audio = await parseAudio(file)
 	}
+	if (audio.duration)
+		await set('show_duration', Math.max(store.show_duration, audio.duration))
 	await set('audio', audio)
 	renderAudio(audio)
+	return audio
 }
 export async function handleImageFile(file: File | Blob) {
 
@@ -51,8 +58,6 @@ export async function openShowEntry(entry: FileEntry) {
 									await handleAudioFile(new Blob(content, { type: 'audio/mp3' }))
 								}
 								if (++ended === entries.length) {
-									const end = Math.max(store.show.solution.end, store.audio.duration * 1000)
-									await set('show_duration', end)
 									resolve()
 								}
 							})
@@ -63,14 +68,41 @@ export async function openShowEntry(entry: FileEntry) {
 		})
 	})
 }
-export async function newShow() {
-	return new Promise(async (resolve) => {
-		player.src = ''
-		await set('show', {})
-		await set('audio', {})
-		await set('show_file', '')
-		resolve()
+
+export function convertTracks(tracks: any[]) {
+	function rgb({ r, g, b }: { r: number, g: number, b: number }) {
+		return [r, g, b].map(v => Math.round(v * 255))
+	}
+	function hex(num: number) {
+		return num.toString(16).padStart(2, '0').toUpperCase()
+	}
+	function frame({ type, startTime: start, endTime: end, color, colorEnd, colorStart, period, spacing, ratio }: any) {
+		const data:any = {
+			type,
+			start,
+			duration: end - start,
+			color: []
+		}
+		if (color) data.color[0] = '#' + rgb(color).map(hex).join('')
+		if (colorStart) data.color[0] = '#' + rgb(colorStart).map(hex).join('')
+		if (colorEnd) data.color[1] = '#' + rgb(colorEnd).map(hex).join('')
+		if (typeof period !== 'undefined') data.period = period
+		if (typeof ratio !== 'undefined') data.ratio = ratio
+		if (typeof spacing !== 'undefined') data.spacing = spacing
+		return data
+	}
+	return tracks.map(({ name, trackType: type, device, elements }: any) => {
+		return {
+			type,
+			name,
+			device,
+			frames: elements.map(frame)
+		}
 	})
+}
+export async function newShow() {
+	player.src = ''
+	await set({ show: {}, audio: {}, show_file: '', show_duration: 60000, show_tracks: [] })
 }
 
 export async function saveShowEntry(entry: FileEntry) {
@@ -125,7 +157,7 @@ export async function openShow() {
 	})
 }
 export async function syncShow() {
-	if (!player.duration) return
+	if (!store.show_selected || !player.duration) return
 	const data = new Uint8Array(8)
 	const view = new DataView(data.buffer)
 	view.setUint32(0, Math.round(player.currentTime * 1000), true)
@@ -134,7 +166,6 @@ export async function syncShow() {
 	view.setUint8(6, player.paused ? 1 : 0)
 	view.setUint8(7, 0xFF)
 	send('#', 'SYNC', ...data);
-
 }
 
 export async function serialConnect(force = false) {
@@ -184,10 +215,11 @@ export async function serialDisconnect() {
 }
 
 export async function serialSend(data: ArrayBuffer) {
-	if (store.serial_connected)
-		return new Promise(resolve => {
+	return new Promise(resolve => {
+		if (store.serial_connected)
 			chrome.serial.send(store.serial_connection, data, resolve)
-		})
+			else resolve()
+	})	
 }
 
 export async function send(id: string, head: string, ...bytes: number[]): Promise<any> {

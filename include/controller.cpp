@@ -22,11 +22,9 @@ void setup() {
 	btn.onPressHold(buttonPressHoldHandler);
 
 	WiFi.mode(WIFI_AP_STA);
-	WiFi.setAutoConnect(true);
-	WiFi.setAutoReconnect(true);
-	WiFi.setPhyMode(WIFI_PHY_MODE_11N);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	WiFi.disconnect();
+	Net::wifiOff();
 
 	ArduinoOTA.onProgress([](int percent, int total) {
 		App::LED_BLINK();

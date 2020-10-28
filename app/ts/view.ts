@@ -1,6 +1,7 @@
 import { parseAudio, player, waveformData } from "./audio"
 import { store } from "./model"
 
+const $shows = document.getElementById('show-select') as HTMLSelectElement
 const $devices = document.getElementById('serial-dev-select') as HTMLSelectElement
 const $tempo = document.getElementById('tempo') as HTMLDivElement
 const $waveform = document.getElementById('waveform') as HTMLDivElement
@@ -10,7 +11,7 @@ const $tracks = document.getElementById('tracks') as HTMLDivElement
 
 
 export async function updateTime() {
-	if (store.show.solution) {
+	if (store.show_duration) {
 		const width = store.show_duration / 10
 		$tracks.style.width = width + 'px'
 		$waveform.style.width = width + 'px'
@@ -52,6 +53,7 @@ export async function renderSerial() {
 
 export async function renderDevicesList() {
 	console.log('render serial devices')
+	$shows.value = store.show_selected
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
 			$devices.innerHTML = '<option value="">...</option>'
@@ -78,8 +80,8 @@ export async function renderAudio(audio: ShowAudio) {
 }
 
 export async function renderTempo(audio: ShowAudio) {
+	$tempo.innerHTML = ''
 	if (audio.beats) {
-		$tempo.innerHTML = ''
 		audio.beats.reduce((start, end, index) => {
 			const width = end - start
 			const $block = document.createElement('span')
@@ -140,14 +142,12 @@ export async function renderWaveform(audio: ShowAudio) {
 
 export async function renderShow(show: ShowData) {
 	$tracks.innerHTML = ''
-	$waveform.innerHTML = ''
-	if (!show.solution || !show.tracks) return
-	console.log('render light show')
+
 	updateTime()
 
-	show.tracks.forEach(track => {
+	store.show_tracks.forEach(track => {
 		const $track = document.createElement('div')
-		const { elements, ...params } = track
+		const { frames, ...params } = track
 		$track.classList.add('track')
 		Object.assign($track.dataset, params)
 		$tracks.appendChild($track)
@@ -155,76 +155,51 @@ export async function renderShow(show: ShowData) {
 	})
 }
 
-export function renderLight(container, track) {
+export function renderLight(container: any, track: any) {
 	switch (track.device) {
 		case 1:
-			break;
 		case 2:
-			break;
+			track.frames.forEach(el => {
+				const $el = document.createElement('span')
+				const { color, ...params } = el
+				const { start, duration, ratio, spacing, period } = params
+				Object.assign($el.dataset, params)
+				$el.style.left = `${start / 10}px`
+				$el.style.width = `${duration / 10}px`
+				switch (params.type) {
+					case 2: // solid
+						$el.style.backgroundColor = color[0]
+						break
+					case 3: // gradient
+						$el.style.background = `linear-gradient(90deg, ${color[0]} 0%, ${color[1]} 100%)`
+						break
+					case 4: // flash
+						$el.style.backgroundImage = `url(${drawFlash(color[0], color[1], period, ratio)})`
+						// $el.style.backgroundSize = '20%'
+						break
+					case 5: // rainbow
+						$el.style.backgroundImage = `url(${drawRainbow(period)})`
+						// $el.style.backgroundSize = period / 10 + 'px'
+						break
+					case 6: // dots
+						$el.style.backgroundImage = `url(${drawDots(color[0], spacing)})`
+						// $el.style.backgroundSize = (spacing + 2) + 'px'
+						break
+					case 7: // pulse
+						$el.style.backgroundImage = `url(${drawPulse(color[0], period)})`
+						// $el.style.backgroundSize = period / 10 + 'px'
+
+						break
+					default:
+						console.log("unhandled light type:", params.type)
+				}
+				container.appendChild($el)
+			})
+			break
 		default:
 			return console.log('unsupported device type:', track.device)
 	}
-
-	track.elements.forEach(el => {
-		const $el = document.createElement('span')
-		let { color, colorStart, colorEnd, ...params } = el
-		Object.assign($el.dataset, params)
-		const start = params.startTime
-		const duration = params.endTime - el.startTime
-		if (color) color = convertColor(color)
-		if (colorStart) colorStart = convertColor(colorStart)
-		if (colorEnd) colorEnd = convertColor(colorEnd)
-		$el.style.left = `${start / 10}px`
-		$el.style.width = `${duration / 10}px`
-		let color1, color2
-		switch (params.type) {
-			case 2: // solid
-				$el.style.backgroundColor = toCssColor(color)
-				break
-			case 3: // gradient
-				color1 = toCssColor(colorStart)
-				color2 = toCssColor(colorEnd)
-				$el.style.background = `linear-gradient(90deg, ${color1} 0%, ${color2} 100%)`
-				break
-			case 4: // flash
-				color1 = toCssColor(colorStart)
-				color2 = toCssColor(colorEnd)
-				const { period, ratio } = params
-				$el.style.backgroundImage = `url(${drawFlash(color1, color2, period, ratio)})`
-				// $el.style.backgroundSize = '20%'
-				break
-			case 5: // rainbow
-				$el.style.backgroundImage = `url(${drawRainbow(params.period)})`
-				// $el.style.backgroundSize = params.period / 10 + 'px'
-				break
-			case 6: // dots
-				$el.style.backgroundImage = `url(${drawDots(toCssColor(color), params.spacing)})`
-				// $el.style.backgroundSize = (params.spacing + 2) + 'px'
-				break
-			case 7: // pulse
-				$el.style.backgroundImage = `url(${drawPulse(toCssColor(color), params.period)})`
-				// $el.style.backgroundSize = params.period / 10 + 'px'
-
-				break
-			default:
-				console.log("unhandled light type:", params.type)
-		}
-		container.appendChild($el)
-	})
 }
-
-function convertColor({ r, g, b }) {
-	return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) }
-}
-
-function toCssColor({ r, g, b }) {
-	return `rgb(${r}, ${g}, ${b})`
-}
-
-function toCssHSL({ h, s, l }) {
-	return `hsl(${h * 360}, ${s * 100}%, ${l * 100}%)`
-}
-
 const tmpCanvas = document.createElement('canvas')
 function drawFlash(color1, color2, period, ratio) {
 	tmpCanvas.width = period / 10
