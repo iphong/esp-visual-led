@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#ifdef CONTROLER
+#ifdef CONTROLLER
 #include "controller.cpp"
 #endif
 

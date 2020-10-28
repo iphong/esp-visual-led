@@ -20,12 +20,14 @@ interface ShowAudio {
 	filename?: string
 	duration?: number
 	sampleRate?: number
-	waveform?: [number, number][]
+	beats?: number[]
+	waveform?: number[][]
+	url?: string
 }
 
 interface ShowData {
 	filename?: string
-	params: {
+	solution: {
 		[key: string]: any
 	},
 	tracks: Track[],

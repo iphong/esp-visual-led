@@ -6,7 +6,7 @@
 	"app": {
 		"background": {
 			"scripts": [
-				"dist/bg.js"
+				"dist/background.js"
 			]
 		}
 	},
@@ -17,6 +17,12 @@
 		"usb",
 		"serial",
 		"storage",
-		"fileSystem"
+		{
+			"fileSystem": [
+				"write",
+				"retainEntries",
+				"directory"
+			]
+		}
 	]
 }

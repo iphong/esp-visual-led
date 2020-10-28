@@ -2,9 +2,10 @@ module.exports = {
 	devtool: 'inline-source-map',
 	mode: 'development',
 	entry: {
-		main: './app/js/index.js',
-		bg: './app/ts/bg.ts',
-		app: './app/ts/entry.ts'
+		app: './app/ts/app.ts',
+		utils: './app/ts/utils.ts',
+		remote: './app/ts/remote.ts',
+		background: './app/ts/background.ts'
 	},
 	output: {
 		filename: '[name].js',

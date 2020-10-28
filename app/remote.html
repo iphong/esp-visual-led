@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<title>Utils</title>
+<meta charset="UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="LED">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+
+<style>
+	html {
+		height: 100%;
+		width: 100%;
+	}
+
+	body {
+		display: grid;
+		grid-template: auto / 1fr 1fr 1fr 1fr;
+		grid-gap: 5px;
+		height: 100%;
+		width: 100%;
+		padding: 5px;
+		margin: 0;
+		box-sizing: border-box;
+	}
+
+	button {
+		font-weight: bold;
+		font-size: 16px;
+	}
+</style>
+
+<button data-send="53 45 54 2A FF FF FF" style="background: #FFF;">ON</button>
+<button data-send="53 45 54 2A 00 00 00" style="background: #222; color: white;">OFF</button>
+
+<button data-send="50 41 49 52" style="background: #222; color: white;">PAIR</button>
+<button data-send="57 49 46 49 2B" style="background: #222; color: white;">WIFI</button>
+
+<button data-send="53 45 54 2A FF 00 00" style="background: #F00;">F00</button>
+<button data-send="53 45 54 2A 00 FF 00" style="background: #0F0;">0F0</button>
+<button data-send="53 45 54 2A 00 00 FF" style="background: #00F;">00F</button>
+<button data-send="57 49 46 49 2D" style="background: #777;">FADE</button>
+
+<button data-send="53 45 54 2A FF 44 00" style="background: #F40;">F40</button>
+<button data-send="53 45 54 2A 00 FF 44" style="background: #0F4;">0F4</button>
+<button data-send="53 45 54 2A 44 00 FF" style="background: #40F;">40F</button>
+<button data-send="4C 4F 4F 50 01" style="background: #777;">SOLID</button>
+
+<button data-send="53 45 54 2A FF 88 00" style="background: #F80;">F80</button>
+<button data-send="53 45 54 2A 00 FF 88" style="background: #0F8;">0F8</button>
+<button data-send="53 45 54 2A 88 00 FF" style="background: #80F;">80F</button>
+<button data-send="4C 4F 4F 50 02" style="background: #777;">FLASH</button>
+
+<button data-send="53 45 54 2A FF CC 00" style="background: #FC0;">FC0</button>
+<button data-send="53 45 54 2A 00 FF CC" style="background: #0FC;">0FC</button>
+<button data-send="53 45 54 2A CC 00 FF" style="background: #C0F;">C0F</button>
+<button data-send="4C 4F 4F 50 03" style="background: #777;">PULSE</button>
+
+<button data-send="53 45 54 2A FF FF 00" style="background: #FF0;">FF0</button>
+<button data-send="53 45 54 2A 00 FF FF" style="background: #0FF;">0FF</button>
+<button data-send="53 45 54 2A FF 00 FF" style="background: #F0F;">F0F</button>
+<button data-send="4C 4F 4F 50 04" style="background: #777;">DOTS</button>
+
+<button data-send="44 49 4D 2D" style="background: #777;">DIM-</button>
+<button data-send="44 49 4D 2B" style="background: #777;">DIM+</button>
+<button data-send="53 50 44 2D" style="background: #777;">SPD-</button>
+<button data-send="53 50 44 2B" style="background: #777;">SPD+</button>
+
+<script src="dist/remote.js"></script>

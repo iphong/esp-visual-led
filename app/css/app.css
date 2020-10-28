@@ -24,38 +24,22 @@ html {
 }
 body {
 	display: grid;
-	grid-template: 60px auto 60px / 100%;
-	grid-gap: 1px;
-	background: #000000;
+	grid-template-rows: 60px auto 10px;
+	grid-gap: 2px;
+	background: #000;
 	color: #ffffff;
 	height: 100%;
 	width: 100%;
     margin: 0;
     padding: 0;
 }
-
-header {
-	display: grid;
-    padding: 5px 20px;
-    grid-gap: 10px;
-    background: #555555;
-	grid-template-columns: 120px 1fr auto;
-	align-items: center;
-}
-footer {
-    background: #555555;
-}
 nav {
 	white-space: nowrap;
 }
-@media screen and (min-width: 601px) {
-	
-}
-@media screen and (max-width: 600px) {
-	
-}
-button {
-	padding: .5em 1em; 
+button,
+select,
+input {
+	padding: .5em 1em;
 	font-size: 14px;
 	font-weight: normal;
 	border: none;
@@ -64,17 +48,22 @@ button {
 	border-radius: 4px;
 	background-color: #444444;
 	color: white;
+	-webkit-appearance: none;
 }
+button:active,
 button.selected {
-	background-color: white;
-	color: black;
-	font-weight: bold;
+	background-color: #222;
 }
 
-
-
-#logo {
-	/* margin: 0 15px; */
+#header {
+	position: relative;
+	display: grid;
+    padding: 5px 20px;
+    grid-gap: 10px;
+    background: #555555;
+	grid-template-columns: 120px 1fr 1fr auto;
+	align-items: center;
+	justify-content: center;
 }
 #logo strong {
 	font-size: 30px;
@@ -87,90 +76,53 @@ button.selected {
     letter-spacing: 0.5em;
 	line-height: 1em;
 }
-#timeline {
+#main {
+	position: relative;
 	width: 100%;
 	display: grid;
+	grid-template-rows: auto 20px 60px;
 	grid-gap: 1px;
 	overflow-x: hidden;
-	height: 100%;
 }
-#timeline .handle {
-    position: fixed;
-    background: rgb(255 0 0);
-    left: 0;
-    top: 0;
-    width: 3px;
-    transform: translate(-50%, 0px);
-    z-index: 10;
-    /* border: 1px solid #ff6363; */
-    box-shadow: 1px 0px 0 black;
-}
-
-#timeline .tracks {
+#tracks {
 	display: grid;
 	grid: auto / auto;
-	grid-gap: 1px;
+	grid-gap: 2px;
 }
-#timeline .track {
+#tracks .track {
 	position: relative;
 }
-#timeline .track > span {
+#tracks .track > span {
 	display: block;
 	position: absolute;
 	height: 100%;
 }
+#tempo {
+	background: #444;
+	white-space: nowrap;
+}
 #waveform {
-	width: 100%;
-	overflow: hidden ;
-	height: 60px;
+    background: #444;
 }
-
-
-section.nodes:not(:empty) {
-	display: block;
-	padding: 10px;
-	margin: 2px 0;
-	text-align: center;
+#handle {
+	position: fixed;
+	left: 0;
+	top: 60px;
+	bottom: 10px;
+	width: 4px;
+	background-color: white;
+	box-shadow: 1px 1px 0 #000000;
+	transform: translateX(-50%);
 }
-article.node {
+.block {
 	display: inline-block;
-    padding: 0px;
-    background: #111111;
-	border: 2px solid #555555;
-	color: #ddd;
-    font-weight: bold;
-    margin: 5px;
-    font-size: 11px;
-    width: 60px;
-    text-align: center;
-	border-radius: 6px;
-	cursor: pointer;
+	height: 100%;
+	border: 1px solid #000;
+	box-sizing: border-box;
+	background-color: greenyellow;
+	font-size: 14px;
+	line-height: 20px;
 	text-align: center;
-}
-article.node.hidden {
-	opacity: 0.3;
-	pointer-events: none !important;
-}
-article.node > small {
-	user-select: text !important;
-	font-size: 8px;
-	opacity: 0.3;
-}
-article.node > div {
-	user-select: text !important;
-}
-article.node.active,
-article.node.selected {
-	border-color: white;
-	color: white;
-}
-article.node progress {
-	width: 54px;
-}
-
-.loading {
-	color: white;
-	text-align: center;
-	display: block;
-	padding: 10px;
+	font-weight: bold;
+	color: black;
 }

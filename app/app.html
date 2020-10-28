@@ -8,33 +8,44 @@
 <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
 <link rel="stylesheet" href="css/app.css">
 
-<header>
+<header id="header">
 	<div id="logo">
 		<strong>LIGHT</strong>
 		<small>MASTER</small>
 	</div>
 	<nav>
-		<!-- <button data-action="openShow">New</button> -->
+		<button data-action="newShow">New</button>
+		<button data-action="saveShow">Save</button>
 		<button data-action="openShow">Open</button>
+	</nav>
+	<nav>
+		<select data-key="show_selected" id="show-select">
+			<option>1</option>
+			<option>2</option>
+			<option>3</option>
+			<option>4</option>
+			<option>5</option>
+			<option>6</option>
+			<option>7</option>
+			<option>8</option>
+		</select>
 		<button data-action="startShow">Start</button>
-		<!-- <button data-action="saveShow">Save</button> -->
+		<button data-action="stopShow">Stop</button>
 	</nav>
 	<nav id="serial-toolbar">
 		<select data-key="serial_port" id="serial-dev-select" style="width: 150px;"></select>
-		<button id="serial-connect" data-action="serialConnect">Connect</button>
-		<button id="serial-disconnect" data-action="serialDisconnect">Disconnect</button>
-		<button data-action="exitApp">Exit</button>
-		<!-- <button role="manage" data-action="serialManage">Manage</button> -->
+		<button id="serial-connect" data-action="serialConnect" hidden>Connect</button>
+		<button id="serial-disconnect" data-action="serialDisconnect" hidden>Disconnect</button>
 	</nav>
 </header>
-<main>
-	<section id="timeline">
-		<div class="tracks"></div>
-		<div class="handle"></div>
-	</section>
-	<section id="nodes"></section>
-</main>
-<footer>
+<main id="main">
+	<div id="tracks"></div>
+	<div id="tempo"></div>
 	<div id="waveform"></div>
+</main>
+<footer id="footer">
 </footer>
+
+<div id="handle"></div>
+
 <script src="dist/app.js"></script>

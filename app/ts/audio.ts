@@ -1,14 +1,10 @@
-// import MusicTempo from 'music-tempo'
+import MusicTempo from 'music-tempo'
 
 const AudioContext = window['AudioContext'] || window['webkitAudioContext']
 
-function handleError(e) {
-	console.error(e)
-}
-
 export const player: HTMLAudioElement = document.createElement('audio')
 
-export function waveformData(waveData:number[], duration:number):any[] {
+export function waveformData(waveData:Float32Array, duration:number):any[] {
 	const step = Math.round(waveData.length / duration);
 	const data:any[] = []
 	let x = 0,
@@ -51,39 +47,20 @@ export function waveformData(waveData:number[], duration:number):any[] {
 	return data
 }
 
-export async function parseAudio(file:File): Promise<ShowAudio> {
-	const result:ShowAudio = {}
-	player.src = URL.createObjectURL(file)
-	return new Promise(resolve => {
+export async function parseAudio(file:File|Blob): Promise<ShowAudio> {
+	return new Promise(async (resolve, reject) => {
+		const audio:ShowAudio = {}
 		const ctx = new AudioContext()
-		const reader = new FileReader()
-		reader.readAsArrayBuffer(file)
-		reader.addEventListener('loadend', e => {
-			console.log(`decoding ${file.type}...`)
-			if (reader.result) {
-				const data = reader.result as ArrayBuffer
-				function handle(audio) {
-					const { sampleRate, duration } = audio
-					// const channels: any[] = []
-					// for (let i = 0; i < audio.numberOfChannels; i++) {
-					// 	const data = audio.getChannelData(i)
-					// 	const { tempo, beats, peaks, spectralFlux: flux, ...other } = new MusicTempo(data)
-					// 	beats.forEach((t, i, b) => (b[i] = Math.round(t * 1000)))
-					// 	channels[i] = { data, beats, tempo }
-					// }
-					const d = audio.getChannelData(0)
-					result.duration = duration
-					result.sampleRate = sampleRate
-					result.waveform = waveformData(d, duration * 10)
-					resolve(result)
-				}
-				if ('chrome' in window) {
-					ctx.decodeAudioData(data).catch(handleError).then(handle)
-				} else {
-					ctx.decodeAudioData(data, handle, handleError)
-				}
-			}
-		})
+		ctx.decodeAudioData(await (new Blob([file]).arrayBuffer()), function(result) {
+			const data = result.getChannelData(0)
+			const { sampleRate, duration } = result
+			const { beats } = new MusicTempo(data)
+			audio.beats = beats.map(t => Math.round(t * 1000))
+			audio.duration = duration
+			audio.sampleRate = sampleRate
+			audio.waveform = waveformData(data, duration * 10)
+			resolve(audio)
+		}, reject)
 	})
 }
 

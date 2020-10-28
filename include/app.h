@@ -40,7 +40,7 @@ FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
 
-u8 led_pin = B1_PIN;
+u8 led_pin = LED_PIN;
 
 static void LED_HIGH() {
 	digitalWrite(led_pin, 0);

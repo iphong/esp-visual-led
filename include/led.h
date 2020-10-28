@@ -46,7 +46,7 @@ class Show {
 			file.readBytes((char*)b, 16);
 			memcpy(&f, b, 16);
 		}
-		LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
+		// LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
 	}
 	bool isInLoop;
@@ -65,7 +65,7 @@ class Show {
 		if (isInLoop && f.type == LOOP_FRAME) {
 			isInLoop = false;
 		}
-		LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
+		// LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
 	}
 	// FrameData next() {
@@ -171,6 +171,7 @@ class Show {
 		return currentTime;
 	}
 	void setTime(u32 time) {
+		if (!file) return;
 		int offset = (int)currentTime - (int)time;
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
@@ -250,7 +251,6 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-#ifndef MASTER
 #ifdef INVERTED_RGB
 		analogWrite(r_pin, 255 - r);
 		analogWrite(g_pin, 255 - g);
@@ -259,7 +259,6 @@ class Show {
 		analogWrite(r_pin, r);
 		analogWrite(g_pin, g);
 		analogWrite(b_pin, b);
-#endif
 #endif
 	}
 
@@ -293,12 +292,10 @@ Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 void setup() {
-#ifndef MASTER
 	analogWriteFreq(100);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
-#endif
 }
 void end() {
 	A.end();

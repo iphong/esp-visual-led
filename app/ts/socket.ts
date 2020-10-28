@@ -33,7 +33,7 @@ function isValidSize() {
 function checksum() {
 	return queue[length - 1] == crc;
 }
-export function decode(byte: number) {
+export function decodeMsg(byte: number) {
 	queue[length++] = byte;
 	if (isValidStart() && isValidSize() && checksum()) {
 		synced = false;
@@ -43,13 +43,13 @@ export function decode(byte: number) {
 			const msg = readStr(buf, buf.length-7, 7)
 			// console.log(`${id}: ${msg}`)
 			if (msg.startsWith('SELECT')) {
-				send(id, 'BLINK', 1, 2)
+				send(id, 'BLINK')
 			}
 			if (msg.startsWith('PING')) {
 				const type = buf[11]
 				const vbat = (buf[12] << 8) | buf[13]
 				const name = readStr(buf, 20, 14);
-				console.log((vbat/1000+0.04).toPrecision(3) + 'v - ' +name)
+				console.log(id, type, (vbat/1000+0.04).toPrecision(3), name)
 			}
 
 			
@@ -67,3 +67,17 @@ export function decode(byte: number) {
 		crc = 0;
 	}
 }
+
+export function encodeMsg(input: number[]) {
+	const output: number[] = []
+	output[0] = 36 // syncword
+	output[1] = input.length
+	let crc = output[0] + output[1]
+	for (let i = 0; i < input.length; i++) {
+		output[i + 2] = input[i]
+		crc += output[i + 2];
+	}
+	output.push(crc)
+	return new Uint8Array(output)
+}
+

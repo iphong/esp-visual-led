@@ -49,17 +49,16 @@ struct FrameData {
 	u32 transition;
 };
 struct SyncData {
-	u8 show;
-	u8 running;
-	u8 paused;
 	u32 time;
+	u8 show;
+	u8 ended;
+	u8 paused;
 };
 struct PingData {
 	char id[6];
 	u8 type;
 	u16 vbat;
 	char name[20];
-	u32 lastUpdate;
 };
 struct SaveData {
 	u8 header = HEADER;

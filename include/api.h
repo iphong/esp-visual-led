@@ -1,10 +1,7 @@
-#include "def.h"
 #include "app.h"
+#include "def.h"
 #include "led.h"
 #include "net.h"
-#ifdef USE_SD_CARD
-#include "sd.h"
-#endif
 
 #ifndef __API_H__
 #define __API_H__
@@ -14,10 +11,7 @@ namespace Api {
 ESP8266WebServer server(80);
 
 String unsupportedFiles = String();
-#ifdef USE_SD_CARD
-#else
 File uploadFile;
-#endif
 String transferTarget;
 
 static const char TEXT_PLAIN[] PROGMEM = "text/plain";
@@ -67,11 +61,7 @@ void replyServerError(String msg) {
 /* Read the given file from the filesystem and stream it back to the client */
 bool handleFileRead(String path) {
 	LOGL(String("handleFileRead: ") + path);
-#ifdef USE_SD_CARD
-	if (!SD::sdOK) {
-#else
 	if (!App::fsOK) {
-#endif
 		replyServerError(FPSTR(FS_INIT_ERROR));
 		return true;
 	}
@@ -79,9 +69,7 @@ bool handleFileRead(String path) {
 		path += "index.html";
 	}
 	String contentType;
-#ifdef USE_SD_CARD
-	bool isGZIP = false;
-#endif
+
 	if (server.hasArg("download")) {
 		contentType = F("application/octet-stream");
 	} else if (path.endsWith("mp3")) {
@@ -92,28 +80,10 @@ bool handleFileRead(String path) {
 		contentType = mime::getContentType(path);
 	}
 
-#ifdef USE_SD_CARD
-	if (!SD::fs.exists(path.c_str())) {
-		isGZIP = true;
-#else
 	if (!App::fs->exists(path)) {
-#endif
 		// File not found, try gzip version
 		path = path + ".gz";
 	}
-#ifdef USE_SD_CARD
-	if (SD::fs.exists(path.c_str())) {
-		SD::open(path);
-		if (isGZIP) {
-			server.sendHeader("Content-Encoding", "gzip");
-		}
-		if (server.streamFile(SD::file, contentType) != SD::file.size()) {
-			LOGL("Sent less data than expected!");
-		}
-		SD::close();
-		return true;
-	}
-#else
 	if (App::fs->exists(path)) {
 		File file = App::fs->open(path, "r");
 		if (server.streamFile(file, contentType) != file.size()) {
@@ -122,7 +92,6 @@ bool handleFileRead(String path) {
 		file.close();
 		return true;
 	}
-#endif
 	return false;
 }  // namespace Api
 String lastExistingParent(String path) {
@@ -159,43 +128,9 @@ void deleteRecursive(String path) {
 	App::fs->rmdir(path);
 }
 
-String nodesListJSON() {
-	String json;
-	json.reserve(128);
-	json = "[";
-	for (size_t i = 0; i < Net::nodesCount; i++) {
-		json += "{";
-		json += "\"id\":\"" + String(Net::nodesList[i].id).substring(0, 6) + "\",";
-		json += "\"name\":\"" + String(Net::nodesList[i].name).substring(0, 20) + "\",";
-		json += "\"type\":" + String(Net::nodesList[i].type) + ",";
-		json += "\"vbat\":" + String(Net::nodesList[i].vbat) + ",";
-		json += "\"hidden\":" + String(millis() - Net::nodesList[i].lastUpdate > 10000 ? 1 : 0) + "";
-		json += "}";
-		if (i < Net::nodesCount - 1) json += ",";
-	}
-	json += "]";
-	return json;
-}
-
-String configJSON() {
-	String json;
-	json.reserve(128);
-
-	json = "{";
-	json += "\"id\":\"" + String(App::chipID) + "\",";
-	json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
-	json += "\"mac\":\"" + WiFi.macAddress() + "\",";
-	json += "\"brightness\":" + String(App::data.brightness) + ",";
-	json += "\"channel\":" + String(App::data.channel) + ",";
-	json += "\"show\":" + String(App::data.show) + ",";
-	json += "\"nodes\":" + nodesListJSON() + "";
-	json += "}";
-	return json;
-}
-
 void setup(void) {
 	// server.getServer().setServerKeyAndCert_P(rsakey, sizeof(rsakey), x509, sizeof(x509));
-	
+
 	server.on("/status", HTTP_GET, []() {
 		LOGL("handleStatus");
 		FSInfo fs_info;
@@ -221,9 +156,6 @@ void setup(void) {
 		json += "\"}";
 
 		server.send(200, "application/json", json);
-	});
-	server.on("/stat", HTTP_GET, []() {
-		server.send(200, "application/json", configJSON());
 	});
 	server.on("/show", []() {
 		if (!server.hasArg("id")) {
@@ -414,55 +346,24 @@ void setup(void) {
 				filename = "/" + filename;
 			}
 			LOGL(String("handleFileUpload Name: ") + filename);
-#ifdef USE_SD_CARD
-			SD::openWrite(filename.c_str());
-			if (!SD::file) {
-				return replyServerError(F("CREATE FAILED"));
-			}
-#else
 			uploadFile = App::fs->open(filename, "w");
 			if (!uploadFile) {
 				return replyServerError(F("CREATE FAILED"));
 			}
-#endif
 			LOGL(String("Upload: START, filename: ") + filename);
 		} else if (upload.status == UPLOAD_FILE_WRITE) {
-#ifdef USE_SD_CARD
-			if (SD::file) {
-				size_t bytesWritten = SD::file.write(upload.buf, upload.currentSize);
-				if (bytesWritten != upload.currentSize) {
-					return replyServerError(F("WRITE FAILED"));
-				}
-			}
-#else
 			if (uploadFile) {
 				size_t bytesWritten = uploadFile.write(upload.buf, upload.currentSize);
 				if (bytesWritten != upload.currentSize) {
 					return replyServerError(F("WRITE FAILED"));
 				}
 			}
-#endif
 			LOGL(String("Upload: WRITE, Bytes: ") + upload.currentSize);
 		} else if (upload.status == UPLOAD_FILE_END) {
-#ifdef USE_SD_CARD
-			if (SD::file) {
-				SD::file.close();
-			}
-#else
 			if (uploadFile) {
 				uploadFile.close();
 			}
-#endif
 			LOGL(String("Upload: END, Size: ") + upload.totalSize);
-
-#ifdef MASTER
-			if (server.hasArg("sync")) {
-				if (server.hasArg("target"))
-					Net::sendFile(upload.filename, server.arg("target"));
-				else
-					Net::sendFile(upload.filename);
-			}
-#endif
 		}
 	});
 
@@ -503,7 +404,6 @@ void setup(void) {
 	});
 
 	server.begin();
-
 	LOGL("HTTP server started");
 }
 

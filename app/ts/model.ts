@@ -1,27 +1,45 @@
+import { openShowEntry } from "./controller"
+import { renderAudio, renderShow } from "./view"
+
 export const store: any = {
 	serial_port: '',
-	serial_connection_id: 0,
-	show_data: ''
+	serial_connection: 0,
+	serial_connected: true,
+	show_selected: 1,
+	show: {},
+	audio: {},
+	file: ''
 }
 
+export const cache: any = {}
+
 export async function set(key: string, value: any) {
-	if (value instanceof Object) value = JSON.stringify(value)
 	store[key] = value
-	chrome.storage.local.set({ data: store }, () => {
-		// console.log(`SET ${key} = ${value}`)
+	return new Promise(resolve => {
+		chrome.storage.local.set(store, () => {
+			console.log(`SET`, key, '=', value)
+			resolve(value)
+		})
 	})
 }
 
 export async function loadData() {
 	return new Promise(resolve => {
-		chrome.storage.local.get(['data'], async ({ data }) => {
-			Object.assign(store, data)
-			try {
-				if (store.show_data) {
-					store.show_data = JSON.parse(store.show_data)
-				}
-			} catch(e) {}
+		chrome.storage.local.get(async (res) => {
+			Object.assign(store, res)
 			resolve(store)
 		})
 	})
 }
+
+chrome.storage.onChanged.addListener((changes) => {
+	for (let key in changes) {
+		store[key] = changes[key].newValue
+	}
+	if ('show' in changes) {
+		renderShow(store.show)
+	}
+	if ('audio' in changes) {
+		renderAudio(store.audio)
+	}
+})

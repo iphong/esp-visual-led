@@ -5,14 +5,14 @@
 #include "def.h"
 #include "led.h"
 #include "net.h"
-#ifdef USE_SD_CARD
-#include "sd.h"
-#endif
 
 ADC_MODE(ADC_VCC);
 
 void setup() {
 	sprintf(App::chipID, "%06X", system_get_chip_id());
+	
+	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
+	Net::apPSK = "11111111";
 
 	Serial.begin(921600);
 	Serial.println("\n\n\n\n\n");
@@ -21,11 +21,6 @@ void setup() {
 	btn.onPress(buttonPressHandler);
 	btn.onPressHold(buttonPressHoldHandler);
 
-	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
-	Net::apPSK = "11111111";
-	Net::apAddr = {10, 1, 1, 1};
-	Net::apMask = {255, 255, 255, 0};
-
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.setAutoConnect(true);
 	WiFi.setAutoReconnect(true);
@@ -33,29 +28,19 @@ void setup() {
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	WiFi.disconnect();
 
+	ArduinoOTA.onProgress([](int percent, int total) {
+		App::LED_BLINK();
+	});
+	ArduinoOTA.begin();
+
 	App::setup();
-#ifdef USE_SD_CARD
-	SD::setup();
-#endif
 	LED::setup();
 	Net::setup();
 	Api::setup();
-#ifdef MASTER
-	Net::wifiOn();
-	Net::sendPing();
-#else
-	if (App::isPaired()) {
-		Net::sendPing();
-	}
-#endif
-	if (MDNS.begin("lightmaster")) {
-		LOGL("MDNS responder started");
-	}
-	
 }
 
 void loop() {
-	MDNS.update();
+	ArduinoOTA.handle();
 	App::loop();
 	Api::loop();
 	Net::loop();
