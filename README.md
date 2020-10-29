@@ -110,7 +110,7 @@ SYNC    SIZE     DATA       CRC
 0x00    0x00     ....       0x00
 ```
 
-### 4. HANDLING
+### 5. HANDLING
 
 * Frame can be implemented using simple pub/sub paradism in your application layer. For example:
 ```c++
