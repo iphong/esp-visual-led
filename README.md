@@ -92,7 +92,7 @@ HEADER      FRAME TYPE      FRAME VALUE
 * The third byte onward is the actual payload
 * Due to the nature of remote control, data payload needs to be as compact as possible.
 
-### 3. FRAMES
+### 3. FRAME
 
 * Different data frame can be defined as type/value pair if desired
 * types and values can be at any length and use ascii characters for easier
@@ -102,7 +102,15 @@ R  G  B  CHANNEL1 CHANNEL2 ..
 52 47 42 FF 00 00 FF 00 00 ..
 ```
 
-### 4. DATA HANDLING
+### 4. STREAM
+ * Handling data from a bytes stream buffer
+ * Relay messages from a different medium such as serial ports
+```
+SYNC    SIZE     DATA       CRC
+0x00    0x00     ....       0x00
+```
+
+### 4. HANDLING
 
 * Frame can be implemented using simple pub/sub paradism in your application layer. For example:
 ```c++
