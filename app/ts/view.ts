@@ -1,43 +1,38 @@
-import { parseAudio, player, waveformData } from "./audio"
-import { store } from "./model"
+import { store } from "./store"
 
-const $shows = document.getElementById('show-select') as HTMLSelectElement
-const $devices = document.getElementById('serial-dev-select') as HTMLSelectElement
-const $tempo = document.getElementById('tempo') as HTMLDivElement
-const $waveform = document.getElementById('waveform') as HTMLDivElement
-const $handle = document.getElementById('handle') as HTMLDivElement
-const $main = document.getElementById('main') as HTMLDivElement
-const $tracks = document.getElementById('tracks') as HTMLDivElement
-
+export const $player = document.getElementById('player') as HTMLAudioElement
+export const $shows = document.getElementById('show-select') as HTMLSelectElement
+export const $devices = document.getElementById('serial-dev-select') as HTMLSelectElement
+export const $tempo = document.getElementById('tempo') as HTMLDivElement
+export const $waveform = document.getElementById('waveform') as HTMLDivElement
+export const $handle = document.getElementById('handle') as HTMLDivElement
+export const $main = document.getElementById('main') as HTMLDivElement
+export const $tracks = document.getElementById('tracks') as HTMLDivElement
 
 export async function updateTime() {
+	if ($player.duration) {
+		const ratio = $player.currentTime / (store.show_duration / 1000)
+		$main.scrollLeft = ($main.scrollWidth - $main.offsetWidth) * ratio
+		$handle.style.left = ratio * 100 + '%'
+	}
+}
+export async function updateSize() {
 	if (store.show_duration) {
 		const width = store.show_duration / 10
 		$tracks.style.width = width + 'px'
 		$waveform.style.width = width + 'px'
 		$tempo.style.width = width + 'px'
 	}
-
-	if (player.duration) {
-		const ratio = player.currentTime / (store.show_duration / 1000)
-
-		$main.scrollLeft = ($main.scrollWidth - $main.offsetWidth) * ratio
-		// $footer.scrollLeft = ($footer.scrollWidth - $footer.offsetWidth) * ratio
-
-		$handle.style.left = ratio * 100 + '%'
-		$handle.style.opacity = '1'
-	} else {
-		$handle.style.opacity = '0'
-	}
 }
 
 export async function renderSerial() {
-	console.log('render serial toolbar')
+	console.log('render serial')
+	renderDevicesList()
 	return new Promise(resolve => {
 		const $c = document.getElementById('serial-connect')
 		const $d = document.getElementById('serial-disconnect')
 		if ($c && $d) {
-			if (store.serial_connection) {
+			if (store.serial_connected) {
 				$c.setAttribute('hidden', 'hidden')
 				$d.removeAttribute('hidden')
 				$devices.setAttribute('disabled', 'disabled')
@@ -52,8 +47,7 @@ export async function renderSerial() {
 }
 
 export async function renderDevicesList() {
-	console.log('render serial devices')
-	$shows.value = store.show_selected
+	$shows.value = store.show_selected.toString()
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
 			$devices.innerHTML = '<option value="">...</option>'
@@ -72,87 +66,78 @@ export async function renderDevicesList() {
 	})
 }
 
-export async function renderAudio(audio: ShowAudio) {
-	if (!audio) return
-	updateTime()
-	renderTempo(audio)
-	renderWaveform(audio)
+export async function renderAudio(audio: AudioData) {
+	$tempo.innerHTML = ''
+	$waveform.innerHTML = ''
+	updateSize()
+	if (audio) {
+		renderTempo(audio)
+		renderWaveform(audio)
+	}
 }
 
-export async function renderTempo(audio: ShowAudio) {
-	$tempo.innerHTML = ''
+export async function renderTempo(audio: AudioData) {
 	if (audio.beats) {
 		audio.beats.reduce((start, end, index) => {
 			const width = end - start
 			const $block = document.createElement('span')
 			$block.classList.add('block')
 			$block.style.width = width / 10 + 'px'
-			$block.innerHTML = `${(index - 1) % 8 + 1}`
+			$block.innerHTML = index ? `${(index - 1) % 8 + 1}` : `-`
 			$tempo.appendChild($block)
 			return end
 		}, 0)
 	}
 }
 
-export async function renderWaveform(audio: ShowAudio) {
-	$waveform.innerHTML = ''
-	const canvas = document.createElement('canvas')
-	const ctx = canvas.getContext("2d");
-	$waveform.appendChild(canvas)
-	if (ctx) {
+export async function renderWaveform(audio: AudioData) {
+	if (audio.waveform) {
+		console.log('render audio waveform')
 		const height = $waveform.offsetHeight
-		const width = $waveform.offsetWidth
 		const halfHeight = height / 2
-		if (audio.waveform) {
-			console.log('render audio waveform')
-			const size = 10
+		const canvas = document.createElement('canvas')
+		const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+		const size = 1
+		canvas.width = store.show_duration / 10;
+		canvas.height = height;
+		ctx.lineWidth = 2
+		ctx.lineJoin = 'round'
+		audio.waveform.forEach(([max, min, pos, neg], i) => {
+			const x = i * size
+			ctx.fillStyle = '#333333'
+			const p1 = neg / height * halfHeight + halfHeight;
+			ctx.fillRect(x, p1, size, (pos / height * halfHeight + halfHeight) - p1);
 
-			canvas.width = width;
-			canvas.height = height;
-
-			ctx.lineWidth = 2
-			ctx.lineJoin = 'round'
-			audio.waveform.forEach(([max, min, pos, neg], i) => {
-				const x = i * size
-				ctx.fillStyle = '#333333'
-				const p1 = neg / height * halfHeight + halfHeight;
-				ctx.fillRect(x + 2, p1, size - 4, (pos / height * halfHeight + halfHeight) - p1);
-
-				ctx.fillStyle = '#000000'
-				const p2 = Math.round(min / height * halfHeight) + halfHeight;
-				ctx.fillRect(x + 2, p2, size - 4, Math.round(max / height * halfHeight + halfHeight) - p2);
-			})
-		}
-
+			ctx.fillStyle = '#000000'
+			const p2 = Math.round(min / height * halfHeight) + halfHeight;
+			ctx.fillRect(x, p2, size, Math.round(max / height * halfHeight + halfHeight) - p2);
+		})
 		if (audio.beats) {
 			console.log('render audio tempo')
 			audio.beats.forEach((time, i) => {
 				if (i % 8 === 0) {
 					ctx.fillStyle = '#af0'
-					ctx.fillRect(time / 10 - 2, 0, 4, 60);
-				}
-				else if (i % 2 === 0) {
-					// ctx.fillStyle = '#8c173f'
-					// ctx.fillRect(time / 10 - 1, 0, 2, 60);
+					ctx.fillRect(time / 10 - 1, 0, 1, height);
 				}
 			})
 		}
+		$waveform.appendChild(canvas)
 	}
 }
 
 export async function renderShow(show: ShowData) {
 	$tracks.innerHTML = ''
-
-	updateTime()
-
-	store.show_tracks.forEach(track => {
-		const $track = document.createElement('div')
-		const { frames, ...params } = track
-		$track.classList.add('track')
-		Object.assign($track.dataset, params)
-		$tracks.appendChild($track)
-		renderLight($track, track)
-	})
+	updateSize()
+	if (store.show_tracks) {
+		store.show_tracks.forEach((track:any) => {
+			const $track = document.createElement('div')
+			const { frames, ...params } = track
+			Object.assign($track.dataset, params)
+			$track.classList.add('track')
+			$tracks.appendChild($track)
+			renderLight($track, track)
+		})
+	}
 }
 
 export function renderLight(container: any, track: any) {
@@ -191,13 +176,13 @@ export function renderLight(container: any, track: any) {
 
 						break
 					default:
-						console.log("unhandled light type:", params.type)
+						console.log("unhandled light type", [params.type])
 				}
 				container.appendChild($el)
 			})
 			break
 		default:
-			return console.log('unsupported device type:', track.device)
+			return console.log('unsupported device type', [track.device])
 	}
 }
 const tmpCanvas = document.createElement('canvas')

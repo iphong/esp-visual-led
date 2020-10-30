@@ -1,42 +1,37 @@
 <!DOCTYPE html>
 <title>SDC LED TECHNOLOGY</title>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="LED">
 <meta name="viewport" content="width=device-width">
 <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+<link rel="stylesheet" type="text/css" href="css/materialdesignicons.min.css">
 <link rel="stylesheet" href="css/app.css">
 
+<audio id="player"></audio>
 <header id="header">
 	<div id="logo">
 		<strong>LIGHT</strong>
 		<small>MASTER</small>
 	</div>
 	<nav>
-		<button data-action="newShow">New</button>
-		<button data-action="saveShow">Save</button>
-		<button data-action="openShow">Open</button>
+		<button id="new-button" data-action="newShow" class="mdi mdi-note-outline"></button>
+		<button id="save-button" data-action="saveShow" class="mdi mdi-content-save-outline"></button>
+		<button id="open-button" data-action="openShow" class="mdi mdi-folder-open-outline"></button>
 	</nav>
 	<nav>
-		<select data-key="show_selected" id="show-select">
-			<option>0</option>
-			<option>1</option>
-			<option>2</option>
-			<option>3</option>
-			<option>4</option>
-			<option>5</option>
-			<option>6</option>
-			<option>7</option>
-			<option>8</option>
-		</select>
-		<!-- <button data-action="startShow">Start</button>
-		<button data-action="stopShow">Stop</button> -->
+		<button data-action="startShow" class="mdi mdi-play"></button>
+		<button data-action="stopShow" class="mdi mdi-stop"></button>
 	</nav>
 	<nav id="serial-toolbar">
-		<select data-key="serial_port" id="serial-dev-select" style="width: 150px;"></select>
-		<button id="serial-connect" data-action="serialConnect" hidden>Connect</button>
-		<button id="serial-disconnect" data-action="serialDisconnect" hidden>Disconnect</button>
+		<select id="serial-dev-select" data-key="serial_port" style="width: 150px;"></select>
+
+		<button id="open-manager" data-action="openManager" class="mdi mdi-devices"></button>
+		<button id="open-remote" data-action="openRemote" class="mdi mdi-remote"></button>
+		<button id="open-tools" data-action="openUtils" class="mdi mdi-console"></button>
+		<button id="serial-connect" data-action="serialConnect" class="mdi mdi-play-network-outline"></button>
+		<button id="serial-disconnect" data-action="serialDisconnect" class="mdi mdi-network-off-outline"></button>
 	</nav>
 </header>
 <main id="main">
@@ -44,8 +39,6 @@
 	<div id="tempo"></div>
 	<div id="waveform"></div>
 </main>
-<footer id="footer">
-</footer>
 
 <div id="handle"></div>
 

@@ -3,6 +3,7 @@
 	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 	font-family: "system-ui", "Helvetica Neue", Verdana, Geneva, Tahoma, sans-serif;
 }
+
 *:not(input) {
 	user-select: none;
 	-webkit-user-select: none;
@@ -10,72 +11,92 @@
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
+
 header {
 	-webkit-app-region: drag;
 }
+
 button, input, select {
 	-webkit-app-region: no-drag;
 }
+
 html {
 	height: 100%;
 	width: 100%;
 	padding: 0;
 	margin: 0;
 }
+
 body {
 	display: grid;
-	grid-template-rows: 60px auto 10px;
+	font-size: 14px;
+	font-family: system-ui;
+	grid-template-rows: 60px auto;
 	grid-gap: 2px;
 	background: #000;
 	color: #ffffff;
 	height: 100%;
 	width: 100%;
-    margin: 0;
-    padding: 0;
+	margin: 0;
+	padding: 0;
 }
-nav {
-	white-space: nowrap;
+
+button {
+	font-size: 1.5em;
 }
-button,
-select,
-input {
-	padding: .5em 1em;
-	font-size: 14px;
-	font-weight: normal;
+
+button, input, select {
+	vertical-align: middle;
+	height: 35px;
+	min-width: 40px;
+	padding: 0 10px;
+	background: transparent;
 	border: none;
-	outline: none;
-	cursor: pointer;
-	border-radius: 4px;
-	background-color: #444444;
 	color: white;
 	-webkit-appearance: none;
+	outline: none;
 }
+
+button:focus, input:focus, select:focus {
+
+}
+
 button:active,
 button.selected {
-	background-color: #222;
+	background: rgba(255,255,255,0.1);
+}
+
+button[disabled],
+select[disabled],
+input[disabled] {
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 #header {
 	position: relative;
 	display: grid;
-    padding: 5px 20px;
-    grid-gap: 10px;
-    background: #555555;
+	padding: 5px 20px;
+	grid-gap: 10px;
+	background: #222326;
 	grid-template-columns: 120px 1fr 1fr auto;
 	align-items: center;
 	justify-content: center;
 }
+
 #logo strong {
 	font-size: 30px;
 	display: block;
 	line-height: 1em;
 }
+
 #logo small {
 	display: block;
 	font-size: small;
-    letter-spacing: 0.5em;
+	letter-spacing: 0.5em;
 	line-height: 1em;
 }
+
 #main {
 	position: relative;
 	width: 100%;
@@ -84,36 +105,43 @@ button.selected {
 	grid-gap: 1px;
 	overflow-x: hidden;
 }
+
 #tracks {
 	display: grid;
 	grid: auto / auto;
 	grid-gap: 2px;
 }
+
 #tracks .track {
 	position: relative;
 }
+
 #tracks .track > span {
 	display: block;
 	position: absolute;
 	height: 100%;
 }
+
 #tempo {
-	background: #444;
+	background: #222326;
 	white-space: nowrap;
 }
+
 #waveform {
-    background: #444;
+	background: #222326;
 }
+
 #handle {
 	position: fixed;
 	left: 0;
 	top: 60px;
-	bottom: 10px;
+	bottom: 80px;
 	width: 4px;
 	background-color: white;
 	box-shadow: 1px 1px 0 #000000;
 	transform: translateX(-50%);
 }
+
 .block {
 	display: inline-block;
 	height: 100%;

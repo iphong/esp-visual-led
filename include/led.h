@@ -68,50 +68,6 @@ class Show {
 		// LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
 	}
-	// FrameData next() {
-	// 	u8 b[16];
-	// 	FrameData f;
-	// 	if (file.available()) {
-	// 		file.readBytes((char*)b, 16);
-	// 		f.type = b[0];
-	// 		f.start = readUint32(&b[1]);
-	// 		f.duration = readUint32(&b[5]);
-	// 		f.transition = readUint32(&b[9]);
-	// 		f.r = b[13];
-	// 		f.g = b[14];
-	// 		f.b = b[15];
-	// 		// for (auto b : b) LOGD("%02X ", b);
-	// 		// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
-	// 	}
-	// 	return f;
-	// }
-	// FrameData prev() {
-	// 	static bool isInLoop = 0;
-	// 	u8 b[16];
-	// 	FrameData f;
-	// 	size_t pos = file.position();
-	// 	if (pos >= 32) {
-	// 		file.seek(pos - 32);
-	// 		file.readBytes((char*)b, 16);
-	// 		f.type = b[0];
-	// 		f.start = readUint32(&b[1]);
-	// 		f.duration = readUint32(&b[5]);
-	// 		f.transition = readUint32(&b[9]);
-	// 		f.r = b[13];
-	// 		f.g = b[14];
-	// 		f.b = b[15];
-	// 		// for (auto b : b) LOGD("%02X ", b);
-	// 		// LOGD("\n%X %u %u\n", f.type, f.start, f.duration, frame.transition);
-	// 	}
-	// 	if (!isInLoop && f.type == END_FRAME) {
-	// 		isInLoop = true;
-	// 		while (isInLoop) prev();
-	// 	}
-	// 	if (isInLoop && f.type == LOOP_FRAME) {
-	// 		isInLoop = false;
-	// 	}
-	// 	return f;
-	// }
 
 	void
 	setTransition(FrameData* frame, u32 lapsed) {
@@ -139,10 +95,7 @@ class Show {
 		} else {
 			color.set(frame->r, frame->g, frame->b);
 		}
-		setRGB(
-			map(color.r, 0, 255, 0, App::data.brightness),
-			map(color.g, 0, 255, 0, App::data.brightness),
-			map(color.b, 0, 255, 0, App::data.brightness));
+		setRGB(color.r, color.g, color.b);
 	}
 
 	void end() {
@@ -251,6 +204,12 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
+		r = map(r, 0, 255, 0, App::data.brightness);
+		g = map(g, 0, 255, 0, App::data.brightness);
+		b = map(b, 0, 255, 0, App::data.brightness);
+		r /= 1;
+		g /= 1;
+		b /= 1;
 #ifdef INVERTED_RGB
 		analogWrite(r_pin, 255 - r);
 		analogWrite(g_pin, 255 - g);
@@ -292,7 +251,7 @@ Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 void setup() {
-	analogWriteFreq(100);
+	analogWriteFreq(10000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();

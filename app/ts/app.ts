@@ -1,14 +1,91 @@
-Object.defineProperty(window, 'localStorage', { value: null })
-
-import { loadData, set, store } from './model'
-import { renderDevicesList, renderSerial, updateTime } from './view'
-import { player } from './audio'
-import { decodeMsg, encodeMsg } from './socket'
-import * as actions from './controller'
-import { serialConnect } from './controller'
+import { init, set, store, openShowEntry, parseAudioFile, parseShowFile, cache, parseLSF, logHex } from './store'
+import { $player, renderAudio, renderSerial, renderShow, updateTime } from './view'
+import { decodeMsg, encodeMsg, sendSync, sendRaw } from './serial'
+import { serialConnect } from './serial'
+import * as actions from './actions'
+import $ from 'jquery'
 
 Object.assign(window, actions)
-window['store'] = store
+window['player'] = $player
+
+chrome.serial.onReceiveError.addListener(async ({ connectionId: id }) => {
+	if (id === store.serial_connection) {
+		const current = chrome.app.window.current()
+		chrome.app.window.getAll().forEach(view => {
+			if (view !== current) view.close()
+		})
+	}
+})
+
+function updateSerialView() {
+	if (store.serial_connected) {
+		$('#open-manager').removeAttr('hidden')
+		$('#open-remote').removeAttr('hidden')
+		$('#open-tools').removeAttr('hidden')
+		$('#serial-disconnect').removeAttr('hidden')
+		$('#serial-connect').attr('hidden', 'true')
+		$('#serial-dev-select').attr('hidden', 'true')
+	} else {
+		$('#open-manager').attr('hidden', 'true')
+		$('#open-remote').attr('hidden', 'true')
+		$('#open-tools').attr('hidden', 'true')
+		$('#serial-connect').removeAttr('hidden')
+		$('#serial-disconnect').attr('hidden', 'true')
+		$('#serial-dev-select').removeAttr('hidden')
+	}
+}
+
+chrome.storage.onChanged.addListener(async (changes) => {
+	if ('serial_connected' in changes) {
+		updateSerialView()
+	}
+	if ('audio' in changes) {
+		await renderAudio(changes.audio.newValue)
+	}
+	if ('show' in changes) {
+		await renderShow(changes.show.newValue)
+	}
+	if ('serial' in changes) {
+		await renderSerial()
+	}
+})
+
+addEventListener('load', async () => {
+	await init()
+	if (store.serial_connected) {
+		await serialConnect()
+	} else {
+		await renderSerial()
+	}
+	updateSerialView()
+	await renderShow(store.show)
+	await renderAudio(store.audio)
+	if (store.show_file) {
+		chrome['fileSystem'].restoreEntry(store.show_file, async (entry: FileEntry) => {
+			if (entry) {
+				await openShowEntry(entry)
+				if (cache.audio) {
+					$player.src = URL.createObjectURL(cache.audio)
+					console.log('set player src', [$player.src])
+				}
+			} else {
+				console.log('unable to restore show entry', [store.show_file])
+				await set('show_file', '')
+			}
+			await renderShow(store.show)
+			await renderAudio(store.audio)
+		})
+	}
+	requestAnimationFrame(function tick() {
+		updateTime()
+		requestAnimationFrame(tick)
+	})
+	setInterval(() => {
+		if ($player.duration) {
+			sendSync(Math.round($player.currentTime * 1000), store.show_selected, $player.ended, $player.paused)
+		}
+	}, 100)
+})
 
 addEventListener('click', (e: MouseEvent) => {
 	if (e.target) {
@@ -22,6 +99,7 @@ addEventListener('click', (e: MouseEvent) => {
 		}
 	}
 })
+
 addEventListener('change', async (e) => {
 	if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
 		const { key } = e.target.dataset
@@ -30,86 +108,56 @@ addEventListener('change', async (e) => {
 		}
 	}
 })
-addEventListener('canplaythrough', updateTime)
-addEventListener('load', async () => {
-	await loadData()
-	await renderDevicesList()
-	if (store.serial_connection) {
-		await serialConnect()
-	} else {
-		await renderSerial()
-	}
-	if (store.show_file) {
-		chrome['fileSystem'].restoreEntry(store.show_file, (entry: FileEntry) => {
-			if (entry)
-				actions.openShowEntry(entry)
-		})
-	}
-})
+
 addEventListener('dragover', async (e) => {
 	e.preventDefault()
 })
+
 addEventListener('drop', async (e: DragEvent) => {
 	e.preventDefault()
 	if (!e.dataTransfer) return
 	for (let file of e.dataTransfer.files) {
 		if (file.type.startsWith('audio/')) {
-			await actions.handleAudioFile(file, true)
-			updateTime()
+			await parseAudioFile(file, true)
+			cache.audio = file
+			$player.src = URL.createObjectURL(cache.audio)
+			console.log('set player src', [$player.src])
+			await updateTime()
 		}
-		if (file.name.endsWith('ltp') || file.name.endsWith('json')) {
-			actions.handleJsonFile(file)
+		if (file.name.endsWith('lt3')) {
+			await parseShowFile(file)
+		}
+		if (file.name.endsWith('lsf')) {
+			await parseLSF(file)
 		}
 	}
 })
 
 addEventListener('wheel', (e) => {
-	if (player.duration) {
+	if ($player.duration) {
 		const delta = (e.deltaX + e.deltaY) / 2
-		player.currentTime = Math.max(0, Math.min(player.duration, player.currentTime + (delta / 100)))
+		$player.currentTime = Math.max(0, Math.min($player.duration, $player.currentTime + (delta / (e.altKey ? 200 : 10))))
 	}
 })
 
 addEventListener('keydown', (e) => {
 	switch (e.key) {
 		case ' ':
-			player.paused || player.ended ? player.play() : player.pause()
+			$player.paused || $player.ended ? $player.play() : $player.pause()
 			break
 		case 'ArrowLeft':
-			player.currentTime -= 0.1
+			$player.currentTime -= e.altKey ? 0.01 : 1
 			break
 		case 'ArrowRight':
-			player.currentTime += 0.1
+			$player.currentTime += e.altKey ? 0.01 : 1
 			break
 		case 'ArrowUp':
-			player.volume = Math.min(player.volume + 0.1, 1)
+			$player.volume = Math.min($player.volume + 0.1, 1)
 			break
 		case 'ArrowDown':
-			player.volume = Math.max(player.volume - 0.1, 0)
+			$player.volume = Math.max($player.volume - 0.1, 0)
 			break
 	}
-})
-
-chrome.serial.onReceive.addListener(async ({ connectionId: id, data }) => {
-	if (id === store.serial_connection)
-		(new Uint8Array(data)).forEach(decodeMsg)
-})
-
-chrome.serial.onReceiveError.addListener(async ({ connectionId: id, error }) => {
-	if (id === store.serial_connection) {
-		console.log("serial closed:", error)
-		await set('serial_connection', 0)
-		await set('serial_connected', false)
-		await renderSerial()
-		await renderDevicesList()
-	}
-})
-
-setInterval(actions.syncShow, 1000)
-
-requestAnimationFrame(function tick() {
-	updateTime()
-	requestAnimationFrame(tick)
 })
 
 addEventListener('message', e => {
@@ -117,13 +165,13 @@ addEventListener('message', e => {
 	const data = e.data.slice(1)
 	switch (type) {
 		case 0:
-			actions.serialSend(data)
+			sendRaw(data)
 			break
 		case 1:
-			actions.serialSend(encodeMsg(data))
+			sendRaw(encodeMsg(data))
 			break
 		case 2:
-			actions.serialSend(encodeMsg([35, 62, ...data]))
+			sendRaw(encodeMsg([35, 62, ...data]))
 			break
 	}
 })

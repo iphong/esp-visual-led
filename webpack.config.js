@@ -5,6 +5,7 @@ module.exports = {
 		app: './app/ts/app.ts',
 		utils: './app/ts/utils.ts',
 		remote: './app/ts/remote.ts',
+		manager: './app/ts/manager.ts',
 		background: './app/ts/background.ts'
 	},
 	output: {
@@ -21,5 +22,5 @@ module.exports = {
 			{ test: /\.js$/, use: 'babel-loader' }
 		]
 	},
-	target: 'webworker'
+	target: 'web'
 }
