@@ -17,12 +17,12 @@ String apPSK;
 // IPAddress apAddr = {10, 1, 1, 1};
 // IPAddress apMask = {255, 255, 255, 0};
 
-bool wifiActive;
+bool wifiActive = false;
 
 void wifiOn() {
 	wifiActive = true;
 	// WiFi.softAPConfig(apAddr, apAddr, apMask);
-	WiFi.softAP(apSSID, apPSK, 1, 0, 4);
+	WiFi.softAP(apSSID, apPSK);
 }
 void wifiOff() {
 	wifiActive = false;
@@ -34,7 +34,7 @@ void wifiToggle() {
 void setSync(u8* data, u8 size) {
 	SyncData state;
 	memcpy(&state, data, size);
-	// LOGD("received sync: %u %u %u %u\n", state.show, state.ended, state.paused, state.time);
+	LOGD("received sync: %u %u %u %u\n", state.show, state.ended, state.paused, state.time);
 	if (state.show == 0 && App::data.show != 0) {
 		LED::end();
 		LED::begin();
@@ -112,22 +112,46 @@ void setColor(u8* buf, u8 len) {
 
 File file;
 String path;
-void beginFile(u8 *buf, u8 len) {
+u32 time;
+u8 blank[128];
+void beginFile(u8* buf, u8 len) {
+	LOG("FBEGIN: ");
+	time = micros();
 	path = "";
 	if (file) file.close();
-	for (u8 i=0; i<len; i++) path += buf[i];
-	file = App::fs->open((const char *)buf, "w+");
-	App::LED_LOW();
+	for (u8 i = 0; i < len; i++) path += buf[i];
+	file = App::fs->open((const char*)buf, "w");
+	if (file) {
+		file.write(blank, 128);
+		file.seek(0);
+		App::LED_LOW();
+		LOGD("%u us OK\n", micros() - time);
+	} else
+		LOG("\n");
 }
-void writeFile(u8 *buf, u8 len) {
-	if (!file) return;
-	file.write(buf, len);
+void writeFile(u8* buf, u8 len) {
+	time = micros();
+	LOG("FWRITE : ");
+	if (!file) {
+		LOG("\n");
+		return;
+	}
+	for (auto i = 0; i < len; i++) {
+		file.write(buf[i]);
+	}
 	App::LED_BLINK();
+	LOGD("%u us\n", micros() - time);
 }
-void closeFile(u8 *buf, u8 len) {
-	if (!file) return;
+void closeFile(u8* buf, u8 len) {
+	LOG("CLOSE: ");
+	time = micros();
+	if (!file) {
+		LOG("\n");
+		return;
+	}
 	file.close();
 	App::LED_HIGH();
+	LOGD("%u us\n", micros() - time);
 }
 
 void setup() {

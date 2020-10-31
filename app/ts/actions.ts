@@ -1,32 +1,24 @@
-import { sendCommand, serialConnect } from './serial'
-import { set, store, openShowEntry, saveShowEntry, cache, convertFrame, createEndFrame } from './store'
+import { sendFile } from './serial'
+import { set, store, openShowEntry, saveShowEntry, cache, convertTracks, DEFAULT_STORE_DATA } from './store'
 import { $player, renderShow, updateSize, updateTime } from './view'
 
 export async function newShow() {
-	cache.audio = null
-	cache.show = null
 	$player.currentTime = 0
 	await updateSize()
 	await updateTime()
 	$player.src = ''
-	await set({
-		show: null, 
-		audio: null,
-		show_file: '',
-		show_duration: 0,
-		show_tracks: []
-	})
+	await set(Object.assign({}, DEFAULT_STORE_DATA))
 }
 
 export { logHex } from './store'
 
 export async function startShow() {
+	store.show.running = true
 	await $player.play()
 }
 
 export async function stopShow() {
-	await $player.play()
-	$player.currentTime = $player.duration
+	store.show.running = false
 	$player.pause()
 	$player.currentTime = 0
 }
@@ -61,9 +53,11 @@ export async function openShow() {
 		})
 	})
 }
-
-export { serialConnect, serialDisconnect, sendCommand, sendRaw } from './serial'
-
+export async function sendShowFile() {
+	let index = 1
+	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5A.lsb')
+	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5B.lsb')
+}
 export function openManager() {
 	chrome['app'].window.create('../manager.html', {
 		id: 'manager',
@@ -85,3 +79,5 @@ export function openRemote() {
 		height: 250
 	});
 }
+
+export * from './serial'

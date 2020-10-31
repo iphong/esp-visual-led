@@ -11,14 +11,14 @@ export const $tracks = document.getElementById('tracks') as HTMLDivElement
 
 export async function updateTime() {
 	if ($player.duration) {
-		const ratio = $player.currentTime / (store.show_duration / 1000)
+		const ratio = $player.currentTime / $player.duration
 		$main.scrollLeft = ($main.scrollWidth - $main.offsetWidth) * ratio
 		$handle.style.left = ratio * 100 + '%'
 	}
 }
 export async function updateSize() {
-	if (store.show_duration) {
-		const width = store.show_duration / 10
+	if (store.show && store.show.duration) {
+		const width = store.show.duration / 10
 		$tracks.style.width = width + 'px'
 		$waveform.style.width = width + 'px'
 		$tempo.style.width = width + 'px'
@@ -47,7 +47,6 @@ export async function renderSerial() {
 }
 
 export async function renderDevicesList() {
-	$shows.value = store.show_selected.toString()
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
 			$devices.innerHTML = '<option value="">...</option>'
@@ -98,7 +97,8 @@ export async function renderWaveform(audio: AudioData) {
 		const canvas = document.createElement('canvas')
 		const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 		const size = 1
-		canvas.width = store.show_duration / 10;
+
+		canvas.width = audio.duration / 10;
 		canvas.height = height;
 		ctx.lineWidth = 2
 		ctx.lineJoin = 'round'
@@ -127,9 +127,9 @@ export async function renderWaveform(audio: AudioData) {
 
 export async function renderShow(show: ShowData) {
 	$tracks.innerHTML = ''
-	updateSize()
-	if (store.show_tracks) {
-		store.show_tracks.forEach((track:any) => {
+	await updateSize()
+	if (store.show) {
+		store.show.tracks.forEach((track:any) => {
 			const $track = document.createElement('div')
 			const { frames, ...params } = track
 			Object.assign($track.dataset, params)

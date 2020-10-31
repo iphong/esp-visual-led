@@ -1,4 +1,4 @@
-import { init, set, store, openShowEntry, parseAudioFile, parseShowFile, cache, parseLSF, logHex } from './store'
+import { init, set, store, openShowEntry, parseAudioFile, parseShowFile, cache } from './store'
 import { $player, renderAudio, renderSerial, renderShow, updateTime } from './view'
 import { decodeMsg, encodeMsg, sendSync, sendRaw } from './serial'
 import { serialConnect } from './serial'
@@ -82,7 +82,7 @@ addEventListener('load', async () => {
 	})
 	setInterval(() => {
 		if ($player.duration) {
-			sendSync(Math.round($player.currentTime * 1000), store.show_selected, $player.ended, $player.paused)
+			sendSync(Math.round($player.currentTime * 1000), store.show.selected, !store.show.running, $player.paused)
 		}
 	}, 100)
 })
@@ -126,9 +126,6 @@ addEventListener('drop', async (e: DragEvent) => {
 		}
 		if (file.name.endsWith('lt3')) {
 			await parseShowFile(file)
-		}
-		if (file.name.endsWith('lsf')) {
-			await parseLSF(file)
 		}
 	}
 })

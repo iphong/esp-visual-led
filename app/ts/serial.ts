@@ -70,6 +70,7 @@ export async function sendRaw(data: ArrayBuffer) {
 }
 
 export async function sendCommand(id: string, head: string, ...bytes: number[]): Promise<any> {
+	console.log('send', id, head, ...bytes.map(c => c.toString(16).padStart(2, '0')))
 	const i = id.split('').map(c => c.charCodeAt(0))
 	const h = head.split('').map(c => c.charCodeAt(0))
 	await sendRaw(encodeMsg([...i, 62, ...h, ...bytes]))
@@ -93,17 +94,17 @@ export function equals(a: number[], b: number[], size: number, offset: number = 
 	return true
 }
 
-const syncword = [36]
+const header = [36]
 const buffer: number[] = []
 let crc = 0;
 let length = 0;
 let synced = false;
 
 function isValidStart() {
-	return synced = synced || equals(buffer, syncword, syncword.length);
+	return synced = synced || equals(buffer, header, header.length);
 }
 function isValidSize() {
-	return length >= syncword.length + buffer[1] + 2;
+	return length >= header.length + buffer[1] + 2;
 }
 function checksum() {
 	return buffer[length - 1] == crc % 256;
@@ -122,10 +123,9 @@ export function decodeMsg(byte: number) {
 		crc += byte;
 	}
 }
-
 export function encodeMsg(input: number[]) {
 	const output: number[] = []
-	output[0] = 36 // syncword
+	output[0] = 36 // header
 	output[1] = input.length
 	let crc = output[0] + output[1]
 	for (let i = 0; i < input.length; i++) {
@@ -144,14 +144,32 @@ export async function sendSync(time:number, show:number,  ended:boolean, paused:
 	view.setUint8(5, ended ? 1 : 0)
 	view.setUint8(6, paused ? 1 : 0)
 	view.setUint8(7, 0xFF)
-	sendCommand('#', 'SYNC', ...data);
+	await sendCommand('#', 'SYNC', ...data);
+}
+export async function sendFile(file:File|Blob, path?:string, id:string = '#') {
+	console.log('begin uploading')
+	let bytesSent = 0
+	if (file instanceof File)
+		file = new Blob([file])
+	const bytesLength = file.size;
+	const buffer = await file.arrayBuffer()
+	await sendCommand(id, 'FBEGIN' + path)
+	await delay(500);
+	let count = 0
+	while (bytesSent < bytesLength) {
+		const start = bytesSent
+		const end = Math.min(bytesSent + 16, bytesLength)
+		await sendCommand(id, 'FWRITE', ...new Uint8Array(buffer, start, end-start))
+		bytesSent = end
+		if (count++) await delay(2);
+		else await delay(500);
+	}
+	await sendCommand(id, 'FCLOSE')
+	await delay(100);
+	console.log('file uploaded')
 }
 
-export async function sendFile(file?:File|Blob) {
-	
-}
-
-export async function delay(ms:number) {
+export async function delay(ms:number = 1000) {
 	return new Promise(resolve => {
 		setTimeout(resolve, ms)
 	})

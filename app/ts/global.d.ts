@@ -46,9 +46,6 @@ declare interface StoreData {
 	serial_port: string
 	serial_connection: number
 	serial_connected: boolean
-	show_selected: number
-	show_duration: number
-	show_tracks: TrackData[]
 	show_file: string
 	show: ShowData
 	audio: AudioData

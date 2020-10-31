@@ -43,10 +43,10 @@ bool sdOK;
 u8 led_pin = LED_PIN;
 
 static void LED_HIGH() {
-	digitalWrite(led_pin, 0);
+	digitalWrite(led_pin, 1);
 }
 static void LED_LOW() {
-	digitalWrite(led_pin, 1);
+	digitalWrite(led_pin, 0);
 }
 static void LED_BLINK() {
 	digitalWrite(led_pin, !digitalRead(led_pin));

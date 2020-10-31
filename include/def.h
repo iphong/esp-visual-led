@@ -13,6 +13,24 @@
 #define MODE_SHOW 	(u8)0x00
 #define MODE_BIND 	(u8)0x01
 
+enum MSG_ID {
+
+	PING_MSG        = 0x01,
+	PAIR_MSG        = 0x02,
+	NODE_MSG        = 0x03,
+	NAME_MSG        = 0x04,
+	INFO_MSG        = 0x05,
+
+	SET_RGB_MSG     = 0x10,
+	SET_DIM_MSG     = 0x11,
+
+	FILE_BEGIN_MSG  = 0x20,
+	FILE_WRITE_MSG  = 0x21,
+	FILE_CLOSE_MSG  = 0x22,
+
+	WIFI_ON_MSG     = 0x70,
+	WIFI_OFF_MSG    = 0x71
+};
 
 struct RGB {
 	u8 r;

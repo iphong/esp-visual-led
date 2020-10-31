@@ -1,25 +1,31 @@
 Object.defineProperty(window, 'localStorage', { value: null })
 
-import MusicTempo from 'music-tempo'
 import unzip from 'unzip-js'
 import JSZip from 'jszip'
+import MusicTempo from 'music-tempo'
 import flattenDeep from 'lodash/flattenDeep'
 
 export const cache:CacheData = {
 	audio: null,
 	show: null
 }
-export const store:StoreData = {
+export const DEFAULT_STORE_DATA = {
 	serial_port: '',
 	serial_connection: 0,
 	serial_connected: false,
-	show_selected: 1,
-	show_duration: 0,
-	show_tracks: [],
 	show_file: '',
-	show: null,
+	show: {
+		LIGHT_MASTER_FILE: true,
+		selected: 1,
+		running: false,
+		time: 0,
+		duration: 0,
+		markers: [],
+		tracks: []
+	},
 	audio: null
 }
+export const store:StoreData|any = Object.assign({}, DEFAULT_STORE_DATA)
 window['store'] = store
 
 chrome.storage.onChanged.addListener(changes => {
@@ -162,13 +168,14 @@ export async function parseShowFile(file:File|Blob) {
 		file = new Blob([file])
 	console.log('parse show file')
 	const body = await file.text()
-	const show = JSON.parse(body)
-	await set('show', show)
-	await set('show_duration', Math.max(store.show_duration, show.solution.end))
-	if (show.tracks) {
-		await set('show_tracks', parseShowTracks(show.tracks))
-	}
-	return show
+	const res:any = JSON.parse(body)
+	if (res.LIGHT_MASTER_FILE) return await set('show', res)
+
+	const show:ShowData = Object.assign(store.show || {}, {
+		markers: res.markers,
+		tracks: parseShowTracks(res.tracks)
+	})
+	return await set('show', show)
 }
 
 export async function parseAudioFile(file:File|Blob, force = false) {
@@ -177,11 +184,11 @@ export async function parseAudioFile(file:File|Blob, force = false) {
 		console.log('parse audio file')
 		audio = await parseAudio(file)
 	}
-	if (audio.duration)
-		await set('show_duration', Math.max(store.show_duration, audio.duration))
-
+	if (store.show && audio.duration) {
+		store.show.duration = Math.max(store.show.duration, audio.duration)
+		await set('show', store.show)
+	}
 	cache.audio = file
-
 	await set('audio', audio)
 	return audio
 }
@@ -293,11 +300,11 @@ export function createLoopFrame(start:number, duration:number) {
 	return createBinaryFrame({ type: 3, start, duration })
 }
 
-function hex2rgb(hex:string):[number, number, number] {
+function hex2rgb(hex:string): [number, number, number] {
 	return [
-		parseInt(hex.slice(1, 2), 16),
-		parseInt(hex.slice(3, 2), 16),
-		parseInt(hex.slice(5, 2), 16)
+		parseInt(hex[1] + hex[2], 16),
+		parseInt(hex[3] + hex[4], 16),
+		parseInt(hex[5] + hex[6], 16)
 	]
 }
 
@@ -352,13 +359,15 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 export function convertTracks(tracks) {
 	const buf = []
 	tracks.forEach((track, index) => {
-		if (index > 0 && index < tracks.length) {
-			const last = tracks[index-1]
+		if (index === 0) {
+			buf.push(...new Array(createColorFrame(0, track.start, 0, 0, 0, 0)))
+		} else if (index > 0 && index < tracks.length) {
+			const last = tracks[index - 1]
 			const gap = track.start - (last.start + last.duration)
 			if (gap > 0) buf.push(...new Array(createColorFrame(last.start + last.duration, gap, 0, 0, 0, 0)))
 		}
-		buf.push(... new Array(convertFrame(track)))
-		if (index === tracks.length-1) {
+		buf.push(...new Array(convertFrame(track)))
+		if (index === tracks.length - 1) {
 			buf.push(...new Array(createEndFrame(track.start + track.duration)))
 		}
 	})
@@ -367,62 +376,6 @@ export function convertTracks(tracks) {
 
 export function logHex(data) {
 	console.log(data.map((c:number) => c.toString(16).padStart(2, '0')).join(' '))
-}
-
-const rgbFrameRegex = /(\t+)?([0-9]+)ms: setrgb [AB]+ ([0-9]+)ms > ([0-9]+), ([0-9]+), ([0-9]+)/i
-const endFrameRegex = /(\t+)?([0-9]+)ms: end/i
-const loopFrameRegex = /([0-9]+)ms: loop ([0-9]+)ms/i
-export async function parseLSF(file) {
-	return new Promise(resolve => {
-		const reader = new FileReader()
-		reader.readAsText(file)
-		reader.onload = () => {
-			const output = {}
-			const data = (reader.result as string).match(/@?\w+[^@]+/mg).map(segment => {
-				let id = 'AB'
-				if (segment.startsWith('@')) {
-					id = segment[1]
-					segment = segment.substr(2)
-				}
-				return output[id] = segment.trim().split(/\r|\n|\r\n/)
-					.filter(line => {
-						return !!line.match(/^[\t0-9]/)
-					})
-					.map(line => {
-						let matched
-						if (matched = line.match(rgbFrameRegex)) {
-							let [, , start, transition, r, g, b] = matched
-							return { type: 1, start, duration: 0, transition, r, g, b }
-						} else if (matched = line.match(endFrameRegex)) {
-							let [, , start] = matched
-							return { type: 2, start }
-						} else if (matched = line.match(loopFrameRegex)) {
-							let [, start, duration] = matched
-							return { type: 3, start, duration, frames: [] }
-						} else {
-							return {}
-						}
-					}).map(({ start = 0, duration = 0, transition = 0, type = 0, r = 0, g = 0, b = 0 }, index, lines) => {
-						const frame = new Uint8Array(16)
-						const view = new DataView(frame.buffer)
-						if (type === 1 && lines[index + 1]) {
-							duration = lines[index + 1].start - start
-						}
-						view.setUint8(0, type)
-						view.setUint8(1, r)
-						view.setUint8(2, g)
-						view.setUint8(3, b)
-						view.setUint32(4, start, true)
-						view.setUint32(8, duration, true)
-						view.setUint32(12, transition, true)
-
-						new Array(frame).map(logHex)
-						return frame
-					})
-			})
-			resolve(data)
-		}
-	})
 }
 
 
