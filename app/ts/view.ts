@@ -27,7 +27,7 @@ export async function updateSize() {
 
 export async function renderSerial() {
 	console.log('render serial')
-	renderDevicesList()
+	await renderDevicesList()
 	return new Promise(resolve => {
 		const $c = document.getElementById('serial-connect')
 		const $d = document.getElementById('serial-disconnect')
@@ -68,10 +68,10 @@ export async function renderDevicesList() {
 export async function renderAudio(audio: AudioData) {
 	$tempo.innerHTML = ''
 	$waveform.innerHTML = ''
-	updateSize()
+	await updateSize()
 	if (audio) {
-		renderTempo(audio)
-		renderWaveform(audio)
+		// await renderTempo(audio)
+		await renderWaveform(audio)
 	}
 }
 
@@ -116,7 +116,7 @@ export async function renderWaveform(audio: AudioData) {
 			console.log('render audio tempo')
 			audio.beats.forEach((time, i) => {
 				if (i % 8 === 0) {
-					ctx.fillStyle = '#af0'
+					ctx.fillStyle = '#c924ff'
 					ctx.fillRect(time / 10 - 1, 0, 1, height);
 				}
 			})
@@ -160,20 +160,15 @@ export function renderLight(container: any, track: any) {
 						break
 					case 4: // flash
 						$el.style.backgroundImage = `url(${drawFlash(color[0], color[1], period, ratio)})`
-						// $el.style.backgroundSize = '20%'
 						break
 					case 5: // rainbow
 						$el.style.backgroundImage = `url(${drawRainbow(period)})`
-						// $el.style.backgroundSize = period / 10 + 'px'
 						break
 					case 6: // dots
 						$el.style.backgroundImage = `url(${drawDots(color[0], spacing)})`
-						// $el.style.backgroundSize = (spacing + 2) + 'px'
 						break
 					case 7: // pulse
 						$el.style.backgroundImage = `url(${drawPulse(color[0], period)})`
-						// $el.style.backgroundSize = period / 10 + 'px'
-
 						break
 					default:
 						console.log("unhandled light type", [params.type])

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width">
 <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
 
-<link rel="stylesheet" type="text/css" href="css/materialdesignicons.min.css">
+<link rel="stylesheet" type="text/css" href="css/materialdesignicons.css">
 <link rel="stylesheet" href="css/app.css">
 
 
@@ -23,18 +23,28 @@
 		<button id="open-button" data-action="openShow" class="mdi mdi-folder-open-outline"></button>
 	</nav>
 	<nav>
-		<button data-action="sendShowFile" class="mdi mdi-send"></button>
-		<button data-action="startShow" class="mdi mdi-play"></button>
-		<button data-action="stopShow" class="mdi mdi-stop"></button>
+		<select data-key="show_selected">
+			<option value="1">Show 1</option>
+			<option value="2">Show 2</option>
+			<option value="3">Show 3</option>
+			<option value="4">Show 4</option>
+			<option value="5">Show 5</option>
+			<option value="6">Show 6</option>
+			<option value="7">Show 7</option>
+			<option value="8">Show 8</option>
+		</select>
 	</nav>
 	<nav id="serial-toolbar">
-		<select id="serial-dev-select" data-key="serial_port" style="width: 150px;"></select>
-
 		<button id="open-manager" data-action="openManager" class="mdi mdi-devices"></button>
 		<button id="open-remote" data-action="openRemote" class="mdi mdi-remote"></button>
 		<button id="open-tools" data-action="openUtils" class="mdi mdi-console"></button>
+	</nav>
+	<nav>
+		<select id="serial-dev-select" data-key="serial_port"></select>
+		<button id="upload-show" data-action="sendShowFile" class="mdi mdi-send"></button>
+		<button id="toggle-sync" data-key="show_sync" class="mdi mdi-sync" ></button>
 		<button id="serial-connect" data-action="serialConnect" class="mdi mdi-play-network-outline"></button>
-		<button id="serial-disconnect" data-action="serialDisconnect" class="mdi mdi-network-off-outline"></button>
+		<button id="serial-disconnect" data-action="serialDisconnect" class="mdi mdi-play-network-outline selected"></button>
 	</nav>
 </header>
 <main id="main">

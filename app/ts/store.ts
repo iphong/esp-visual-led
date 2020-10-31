@@ -9,23 +9,30 @@ export const cache:CacheData = {
 	audio: null,
 	show: null
 }
+export const DEFAULT_SHOW_DATA = {
+	selected: 1,
+	running: false,
+	time: 0,
+	duration: 0,
+	markers: [],
+	tracks: []
+}
+export const DEFAULT_AUDIO_DATA = {
+	url: null,
+	beats: [],
+	duration: 0,
+	waveform: []
+}
 export const DEFAULT_STORE_DATA = {
 	serial_port: '',
 	serial_connection: 0,
 	serial_connected: false,
 	show_file: '',
-	show: {
-		LIGHT_MASTER_FILE: true,
-		selected: 1,
-		running: false,
-		time: 0,
-		duration: 0,
-		markers: [],
-		tracks: []
-	},
-	audio: null
+	show_sync: false,
+	show: DEFAULT_SHOW_DATA,
+	audio: DEFAULT_AUDIO_DATA
 }
-export const store:StoreData|any = Object.assign({}, DEFAULT_STORE_DATA)
+export const store:StoreData|any = Object.create((DEFAULT_STORE_DATA))
 window['store'] = store
 
 chrome.storage.onChanged.addListener(changes => {
@@ -53,6 +60,54 @@ export async function set(key:string|object, value?:any) {
 		} else {
 			resolve()
 		}
+	})
+}
+
+
+export async function parseAudioFile(file:File|Blob, force = false) {
+	let audio:AudioData = store.audio
+	if (force || !audio || !audio.waveform) {
+		console.log('parse audio file')
+		audio = await parseAudio(file)
+	}
+	if (store.show && audio.duration) {
+		store.show.duration = Math.max(store.show.duration, audio.duration)
+		await set('show', store.show)
+	}
+	cache.audio = file
+	await set('audio', audio)
+	return audio
+}
+
+export async function parseAudio(file:File|Blob|ArrayBuffer):Promise<AudioData> {
+	return new Promise(async (resolve, reject) => {
+		let name = ''
+		let buffer = file
+		if (buffer instanceof File) {
+			name = buffer.name
+			buffer = new Blob([buffer])
+		}
+		if (buffer instanceof Blob)
+			buffer = await buffer.arrayBuffer()
+		new AudioContext().decodeAudioData(buffer, res => {
+			console.log('decoded audio', [res])
+			const data = res.getChannelData(0)
+			if (res.numberOfChannels == 2) {
+				const data2 = res.getChannelData(1)
+				for (let i in data) {
+					data[i] = (data[i] + data2[i]) / 2
+				}
+			}
+			console.log('getting music tempo')
+			const { beats } = new MusicTempo(data) as {beats:Float32Array}
+			resolve({
+				name,
+				url: URL.createObjectURL(file),
+				beats: [...new Uint32Array(beats.map(v => v * 1000))],
+				duration: Math.round(res.duration * 1000),
+				waveform: parseWaveform(data, res.duration * 100)
+			} as AudioData)
+		}, reject)
 	})
 }
 
@@ -99,6 +154,24 @@ export function parseWaveform(audioData:Float32Array, width:number):WaveformData
 	return waveformData
 }
 
+export async function parseShowFile(file:File|Blob) {
+	if (file instanceof File)
+		file = new Blob([file])
+	console.log('parse show file')
+	const body = await file.text()
+	const res:any = JSON.parse(body)
+
+	if (res.LIGHT_MASTER) {
+		return await set({ show_selected: res.selected, show: res })
+	}
+
+	const show:ShowData = Object.assign(store.show || {}, {
+		LIGHT_MASTER: true,
+		tracks: parseShowTracks(res.tracks)
+	})
+	set({ show_selected: show.selected, show })
+}
+
 export function parseShowTracks(tracks:any[]) {
 	function rgb({ r, g, b }:{r:number, g:number, b:number}) {
 		return [r, g, b].map(v => Math.round(v * 255))
@@ -131,86 +204,19 @@ export function parseShowTracks(tracks:any[]) {
 	})
 }
 
-export async function parseAudio(file:File|Blob|ArrayBuffer):Promise<AudioData> {
-	return new Promise(async (resolve, reject) => {
-		let name = ''
-		let buffer = file
-		if (buffer instanceof File) {
-			name = buffer.name
-			buffer = new Blob([buffer])
-		}
-		if (buffer instanceof Blob)
-			buffer = await buffer.arrayBuffer()
-		new AudioContext().decodeAudioData(buffer, res => {
-			console.log('decoded audio', [res])
-			const data = res.getChannelData(0)
-			if (res.numberOfChannels == 2) {
-				const data2 = res.getChannelData(1)
-				for (let i in data) {
-					data[i] = (data[i] + data2[i]) / 2
-				}
-			}
-			console.log('getting music tempo')
-			const { beats } = new MusicTempo(data) as {beats:Float32Array}
-			resolve({
-				name,
-				url: URL.createObjectURL(file),
-				beats: [...new Uint32Array(beats.map(v => v * 1000))],
-				duration: Math.round(res.duration * 1000),
-				waveform: parseWaveform(data, res.duration * 100)
-			} as AudioData)
-		}, reject)
-	})
-}
-
-export async function parseShowFile(file:File|Blob) {
-	if (file instanceof File)
-		file = new Blob([file])
-	console.log('parse show file')
-	const body = await file.text()
-	const res:any = JSON.parse(body)
-	if (res.LIGHT_MASTER_FILE) return await set('show', res)
-
-	const show:ShowData = Object.assign(store.show || {}, {
-		markers: res.markers,
-		tracks: parseShowTracks(res.tracks)
-	})
-	return await set('show', show)
-}
-
-export async function parseAudioFile(file:File|Blob, force = false) {
-	let audio:AudioData = store.audio
-	if (force || !audio || !audio.waveform) {
-		console.log('parse audio file')
-		audio = await parseAudio(file)
-	}
-	if (store.show && audio.duration) {
-		store.show.duration = Math.max(store.show.duration, audio.duration)
-		await set('show', store.show)
-	}
-	cache.audio = file
-	await set('audio', audio)
-	return audio
-}
-
-export async function handleImageFile(file:File|Blob) {
-
-}
-
 export async function openShowEntry(entry:FileEntry) {
 	if (!entry) return
-	console.log(`open show file`, [entry.fullPath])
-	if (entry.name.endsWith('ltp')) {
-		await set('show_file', chrome['fileSystem'].retainEntry(entry))
-	} else {
-		await set('show_file', '')
-	}
-	return new Promise((resolve, reject) => {
+	return new Promise(async(resolve, reject) => {
+		console.log(`open show file`, [entry.fullPath])
+		if (entry.name.toUpperCase().endsWith('LMP')) {
+			await set('show_file', chrome['fileSystem'].retainEntry(entry))
+		} else {
+			await set('show_file', '')
+		}
 		entry.file(file => {
 			unzip(file, (err, zip) => {
 				if (err) reject(err)
-				zip.readEntries((err, entries) => {
-					if (err) reject(err)
+				zip.readEntries(( entries) => {
 					let ended = 0
 					entries.forEach(entry => {
 						const { name } = entry
@@ -221,7 +227,14 @@ export async function openShowEntry(entry:FileEntry) {
 								content.push(data)
 							})
 							stream.on('end', async () => {
-								if (name == 'project.lt3') {
+								if (name == 'show.json') {
+									const file = new Blob(content)
+									await set('show', JSON.parse(await file.text()))
+									await set('show_selected', store.show.selected)
+								} else if (name == 'audio.json') {
+									const file = new Blob(content)
+									await set('audio', JSON.parse(await file.text()))
+								} else if (name == 'project.lt3') {
 									cache.show = new Blob(content)
 									await parseShowFile(cache.show)
 								} else if (name.endsWith('.mp3')) {
@@ -234,7 +247,7 @@ export async function openShowEntry(entry:FileEntry) {
 							})
 						})
 					})
-				})
+				}, reject)
 			})
 		})
 	})
@@ -242,16 +255,18 @@ export async function openShowEntry(entry:FileEntry) {
 
 export async function saveShowEntry(entry:FileEntry) {
 	if (!entry) return
-	if (entry.fullPath.endsWith('ltp')) {
+	if (entry.fullPath.toUpperCase().endsWith('LMP')) {
 		await set('show_file', chrome['fileSystem'].retainEntry(entry))
 	} else {
 		await set('show_file', '')
 	}
 	return new Promise(resolve => {
-		chrome.storage.local.get(['show', 'audio'], ({ show, audio, show_tracks }) => {
+		chrome.storage.local.get(['show', 'audio'], ({ show, audio, show_selected }) => {
 			entry.createWriter(async (writer:FileWriter) => {
 				const zip = new JSZip()
-				if (show) zip.file('project.lt3', JSON.stringify(show))
+				show.selected = show_selected
+				if (show) zip.file('show.json', JSON.stringify(show))
+				if (audio) zip.file('audio.json', JSON.stringify(audio))
 				if (cache.audio) zip.file('audio.mp3', cache.audio)
 				zip.generateAsync({ type: 'blob' }).then(content => {
 					writer.write(content)

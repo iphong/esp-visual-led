@@ -25,11 +25,10 @@ declare type WaveformData = [
 	number, // average positive
 	number, // average negative
 	number, // max positive
-	number,  // max nagative
+	number,  // max negative
 ]
 
 declare interface AudioData {
-	[key:string]: any // For dev only remove if production
 	name: string
 	duration: number
 	beats: number[]
@@ -42,11 +41,12 @@ declare interface ShowData {
 }
 
 declare interface StoreData {
-	[key:string]: any // For dev only remove if production
 	serial_port: string
 	serial_connection: number
 	serial_connected: boolean
 	show_file: string
+	show_sync: true
+	show_selected: 1,
 	show: ShowData
 	audio: AudioData
 }

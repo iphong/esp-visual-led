@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-title" content="LED">
 <meta name="viewport" content="width=device-width">
 <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'sha256-4PrwJEhM/27puxFywOwJtmmWkd2ZdNdaB5E1b+JtzaA='; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: filesystem:; connect-src * data: blob: filesystem:; style-src 'self' blob: filesystem: data: 'unsafe-inline'; img-src 'self' blob: filesystem: data:; frame-src 'self' blob: filesystem: data:; font-src 'self' blob: filesystem: data:; media-src * data: blob: filesystem:; script-src 'self' blob: filesystem: 'wasm-eval'">
 
-<link rel="stylesheet" type="text/css" href="css/materialdesignicons.min.css">
+<link rel="stylesheet" type="text/css" href="css/materialdesignicons.css">
 <style>
 	html {
 		height: 100%;
@@ -59,7 +59,6 @@
 
 <h2>Integer Tool</h2>
 <code contenteditable="true" id="int"></code>
-<pre id="res"></code>
-
+<pre id="res"></pre>
 
 <script src="dist/utils.js"></script>

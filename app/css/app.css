@@ -16,7 +16,7 @@ header {
 	-webkit-app-region: drag;
 }
 
-button, input, select {
+button, input, select, label {
 	-webkit-app-region: no-drag;
 }
 
@@ -30,7 +30,7 @@ html {
 body {
 	display: grid;
 	font-size: 14px;
-	font-family: system-ui;
+	font-family: system-ui, serif;
 	grid-template-rows: 60px auto;
 	grid-gap: 2px;
 	background: #000;
@@ -45,30 +45,43 @@ button {
 	font-size: 1.5em;
 }
 
-button, input, select {
+nav > * {
+	vertical-align: middle;
+}
+button, select {
 	vertical-align: middle;
 	height: 35px;
 	min-width: 40px;
 	padding: 0 10px;
-	background: transparent;
-	border: none;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid rgba(0,0,0,0.1);
 	color: white;
 	-webkit-appearance: none;
 	outline: none;
-}
+	border-radius: 5px;
 
+}
+button {
+}
 button:focus, input:focus, select:focus {
 
 }
 
+button:hover {
+	text-shadow: 0 0 10px #c000ff;
+	background: rgba(255,255,255,0.1);
+}
 button:active,
 button.selected {
-	background: rgba(255,255,255,0.1);
+	background: rgba(0,0,0,0.2);
+}
+button.selected {
+	color: #d143ff;
+	text-shadow: 0 0 10px #c000ff;
 }
 
 button[disabled],
-select[disabled],
-input[disabled] {
+select[disabled] {
 	opacity: 0.5;
 	pointer-events: none;
 }
@@ -79,11 +92,13 @@ input[disabled] {
 	padding: 5px 20px;
 	grid-gap: 10px;
 	background: #222326;
-	grid-template-columns: 120px 1fr 1fr auto;
+	grid-template-columns: 120px 1fr 1fr 1fr auto;
 	align-items: center;
 	justify-content: center;
 }
-
+#logo {
+	text-shadow: 0 0 10px #bd00f1;
+}
 #logo strong {
 	font-size: 30px;
 	display: block;
