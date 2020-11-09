@@ -75,6 +75,10 @@ SEQUENCE   01   SEQUENCE   02
 ```
 # Control Protocol for Visual LED peripherals
 
+    THIS DOCUMENTATION IS WORK IN PROGRESS AND NOT COMPLETED
+    IT MAY NOT REFLECT THE ACTUAL CODE IN DEVELOPMENT
+
+
 Based on data payload received using esp-now which is a sequence of no more than 250 bytes.
 
 Since this protocol is focusing on controlling visual effect devices. The data does not need to be encrypted and is readable by anyone within range.
