@@ -7,7 +7,7 @@ import unzip from 'unzip-js'
 import MusicTempo from 'music-tempo'
 import flattenDeep from 'lodash/flattenDeep'
 
-export const cache:CacheData = {
+export const cache: CacheData = {
 	audio: null,
 	show: null
 }
@@ -24,7 +24,7 @@ export const DEFAULT_AUDIO_DATA = {
 	duration: 0,
 	waveform: []
 }
-export const DEFAULT_STORE_DATA:StoreData = {
+export const DEFAULT_STORE_DATA: StoreData = {
 
 	port: '',
 	connection: 0,
@@ -34,7 +34,7 @@ export const DEFAULT_STORE_DATA:StoreData = {
 	file: '',
 	time: 0,
 	slot: 1,
-	duration: 60000,
+	duration: 0,
 	paused: false,
 	ended: false,
 
@@ -48,7 +48,7 @@ export const DEFAULT_STORE_DATA:StoreData = {
 	show: null,
 	audio: null
 }
-export const store:StoreData|any = Object.create(DEFAULT_STORE_DATA)
+export const store: StoreData | any = Object.create(DEFAULT_STORE_DATA)
 window['store'] = store
 
 chrome.storage.onChanged.addListener(async (changes) => {
@@ -64,26 +64,27 @@ chrome.storage.onChanged.addListener(async (changes) => {
 export async function init() {
 	console.log('init storage')
 	return new Promise(resolve => {
-		chrome.storage.local.get(async (res) => {
+		chrome.storage.local.get(async (res: any) => {
+			// const { tracks, duration, solution, ...data } = res
 			Object.assign(store, res)
 			resolve(store)
 		})
 	})
 }
 
-export async function set(key:string|object, value?:any) {
+export async function set(key: string | object, value?: any) {
 	return new Promise(resolve => {
 		if (typeof key === 'string') {
 			chrome.storage.local.set({ [key]: value } as any, resolve)
 		} else if (typeof key === 'object') {
 			chrome.storage.local.set(key, resolve)
 		} else {
-			resolve()
+			resolve(null)
 		}
 	})
 }
 
-export async function parseShowFile(file:File|Blob):Promise<ShowData> {
+export async function parseShowFile(file: File | Blob): Promise<ShowData> {
 	console.log('parse show file')
 	return new Promise(async (resolve) => {
 		if (file instanceof File) file = new Blob([file], { type: file.type })
@@ -102,14 +103,14 @@ export async function parseShowFile(file:File|Blob):Promise<ShowData> {
 	})
 }
 
-export async function parseAudioFile(file:File|Blob):Promise<AudioData> {
+export async function parseAudioFile(file: File | Blob): Promise<AudioData> {
 	console.log('parse audio file')
 	return {}
 	// const { duration, waveform, beats, tempo }:any = await parseAudio(file)
 	// return { duration: Math.max(duration, store.duration), waveform, beats, tempo }
 }
 
-export async function parseAudio(file:File|Blob|ArrayBuffer):Promise<AudioData> {
+export async function parseAudio(file: File | Blob | ArrayBuffer): Promise<AudioData> {
 	return new Promise(async (resolve, reject) => {
 		let name = ''
 		let buffer = file
@@ -129,7 +130,7 @@ export async function parseAudio(file:File|Blob|ArrayBuffer):Promise<AudioData> 
 				}
 			}
 			console.log('getting music tempo')
-			const { beats, tempo } = new MusicTempo(data) as {beats:Float32Array, tempo:number}
+			const { beats, tempo } = new MusicTempo(data) as { beats: Float32Array, tempo: number }
 			resolve({
 				name,
 				tempo,
@@ -141,9 +142,9 @@ export async function parseAudio(file:File|Blob|ArrayBuffer):Promise<AudioData> 
 	})
 }
 
-export function parseWaveform(audioData:Float32Array, width:number):WaveformData[] {
+export function parseWaveform(audioData: Float32Array, width: number): WaveformData[] {
 	const step = Math.round(audioData.length / width)
-	const waveformData:WaveformData[] = []
+	const waveformData: WaveformData[] = []
 	let x = 0,
 		sumPositive = 0,
 		sumNegative = 0,
@@ -183,15 +184,15 @@ export function parseWaveform(audioData:Float32Array, width:number):WaveformData
 	return waveformData
 }
 
-export function parseShowTracks(tracks:any[]) {
-	function rgb({ r, g, b }:{r:number, g:number, b:number}) {
+export function parseShowTracks(tracks: any[]) {
+	function rgb({ r, g, b }: { r: number, g: number, b: number }) {
 		return [r, g, b].map(v => Math.round(v * 255))
 	}
-	function hex(num:number) {
+	function hex(num: number) {
 		return num.toString(16).padStart(2, '0').toUpperCase()
 	}
-	function frame({ type, startTime: start, endTime: end, color, colorEnd, colorStart, period, spacing, ratio }:any) {
-		const data:any = {
+	function frame({ type, startTime: start, endTime: end, color, colorEnd, colorStart, period, spacing, ratio }: any) {
+		const data: any = {
 			type,
 			start,
 			duration: end - start,
@@ -205,7 +206,7 @@ export function parseShowTracks(tracks:any[]) {
 		if (typeof spacing !== 'undefined') data.spacing = spacing
 		return data
 	}
-	return tracks.map(({ name, trackType: type, device, elements }:any) => {
+	return tracks.map(({ name, trackType: type, device, elements }: any) => {
 		return {
 			type,
 			name,
@@ -215,24 +216,24 @@ export function parseShowTracks(tracks:any[]) {
 	})
 }
 
-export async function openShowEntry(entry:FileEntry) {
+export async function openShowEntry(entry: FileEntry) {
 	return new Promise(async (resolve, reject) => {
 		const upName = entry.name.toUpperCase()
-		if (upName.endsWith('LMP')) {
+		if (upName.endsWith('LMP') || upName.endsWith('LTP')) {
 			await set('file', chrome['fileSystem'].retainEntry(entry))
 		}
 		entry.file(file => {
-			unzip(file, (err:any, zip) => {
+			unzip(file, (err: any, zip) => {
 				if (err) reject(err)
-				function callback(err:any, entries) {
+				function callback(err: any, entries) {
 					let ended = 0
 					entries.forEach(entry => {
 						const { name } = entry
 						let show, audio
 						zip.readEntryData(entry, false, (err, stream) => {
 							if (err) return resolve(null)
-							let content:Uint8Array[] = []
-							stream.on('data', (data:Uint8Array) => {
+							let content: Uint8Array[] = []
+							stream.on('data', (data: Uint8Array) => {
 								content.push(data)
 							})
 							stream.on('end', async () => {
@@ -251,14 +252,14 @@ export async function openShowEntry(entry:FileEntry) {
 										if (name.endsWith('.mp3')) {
 											cache.audio = new Blob(content, { type: 'mp3' })
 											audio = await parseAudioFile(cache.audio)
-											if (audio) { 
+											if (audio) {
 												await set(audio)
 												$player.src = URL.createObjectURL(cache.audio)
 											}
 										}
 								}
 								if (++ended === entries.length) {
-									resolve()
+									resolve(null)
 								}
 							})
 						})
@@ -270,7 +271,7 @@ export async function openShowEntry(entry:FileEntry) {
 	})
 }
 
-export async function saveShowEntry(entry:FileEntry) {
+export async function saveShowEntry(entry: FileEntry) {
 	if (!entry) return
 	const upName = entry.name.toUpperCase()
 	console.log(`open file`, [entry.fullPath])
@@ -278,13 +279,13 @@ export async function saveShowEntry(entry:FileEntry) {
 		try {
 			await set('file', chrome['fileSystem'].retainEntry(entry))
 		}
-		catch(e) {
+		catch (e) {
 			console.log(e)
 		}
 	}
 	return new Promise((resolve, reject) => {
 		chrome.storage.local.get(async ({ show, audio, ...data }) => {
-			entry.createWriter(async (writer:FileWriter) => {
+			entry.createWriter(async (writer: FileWriter) => {
 				const zip = new JSZip()
 				zip.file('project.json', JSON.stringify(data))
 				if (cache.audio) zip.file('audio.mp3', cache.audio)
@@ -297,7 +298,7 @@ export async function saveShowEntry(entry:FileEntry) {
 							await set('file', '')
 						}
 						console.log(`save LMP file`, [entry.fullPath])
-						resolve()
+						resolve(null)
 					})
 				}).catch(reject)
 			})
@@ -306,16 +307,16 @@ export async function saveShowEntry(entry:FileEntry) {
 }
 
 interface Frame {
-	type:number
-	start:number
-	duration?:number
-	transition?:number
-	r?:number
-	g?:number
-	b?:number
+	type: number
+	start: number
+	duration?: number
+	transition?: number
+	r?: number
+	g?: number
+	b?: number
 }
 
-export function createBinaryFrame({ type, start, duration, transition, r, g, b }:Frame) {
+export function createBinaryFrame({ type, start, duration, transition, r, g, b }: Frame) {
 	const data = new Uint8Array(16)
 	const view = new DataView(data.buffer)
 	view.setUint8(0, type || 1)
@@ -328,19 +329,19 @@ export function createBinaryFrame({ type, start, duration, transition, r, g, b }
 	return data
 }
 
-export function createColorFrame(start:number, duration:number, transition:number, r:number, g:number, b:number) {
+export function createColorFrame(start: number, duration: number, transition: number, r: number, g: number, b: number) {
 	return createBinaryFrame({ type: 1, start, duration, transition, r, g, b })
 }
 
-export function createEndFrame(start:number) {
+export function createEndFrame(start: number) {
 	return createBinaryFrame({ type: 2, start })
 }
 
-export function createLoopFrame(start:number, duration:number) {
+export function createLoopFrame(start: number, duration: number) {
 	return createBinaryFrame({ type: 3, start, duration })
 }
 
-function hex2rgb(hex:string):[number, number, number] {
+function hex2rgb(hex: string): [number, number, number] {
 	return [
 		parseInt(hex[1] + hex[2], 16),
 		parseInt(hex[3] + hex[4], 16),
@@ -398,7 +399,7 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 
 export function convertTracks(tracks) {
 	const buf = []
-	tracks.forEach((track, index) => {
+	tracks.forEach((track: any, index: any) => {
 		if (index === 0) {
 			buf.push(...new Array(createColorFrame(0, track.start, 0, 0, 0, 0)))
 		} else if (index > 0 && index < tracks.length) {
@@ -415,7 +416,7 @@ export function convertTracks(tracks) {
 }
 
 export function logHex(data) {
-	console.log(data.map((c:number) => c.toString(16).padStart(2, '0')).join(' '))
+	console.log(data.map((c: number) => c.toString(16).padStart(2, '0')).join(' '))
 }
 
 

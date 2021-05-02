@@ -85,7 +85,8 @@ addEventListener('load', async () => {
 })
 
 addEventListener('durationchange', async e => {
-	store.duration = Math.max($player.duration * 1000, store.duration)
+	await set('duration', Math.max($player.duration * 1000, store.duration))
+	// store.duration = Math.max($player.duration * 1000, store.duration)
 	await updateSize()
 }, true)
 

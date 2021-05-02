@@ -82,8 +82,7 @@ export function openRemote() {
 		height: 250
 	})
 }
-export async function sendShowFile() {
-	let index = 1
-	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5A.lsb')
-	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5B.lsb')
+export async function sendShowFile(trackIndex:number = 1, showIndex:number = 1) {
+	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'A.lsb', 'FFFFFF')
+	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'B.lsb', 'EEEEEE')
 }

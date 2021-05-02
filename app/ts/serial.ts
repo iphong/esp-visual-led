@@ -45,7 +45,7 @@ export async function serialConnect(force = false) {
 			const options = {
 				name: 'connection',
 				bufferSize: 250,
-				bitrate: 460800,
+				bitrate: 115200,
 				receiveTimeout: 0
 			}
 			chrome.serial.connect(store.port, options, async (conn) => {
@@ -73,7 +73,7 @@ export async function sendRaw(data: ArrayBuffer) {
 	return new Promise(resolve => {
 		if (store.connected)
 			chrome.serial.send(store.connection, data, resolve)
-		else resolve()
+		else resolve(null)
 	})
 }
 
