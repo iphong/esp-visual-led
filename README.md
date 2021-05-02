@@ -1,13 +1,16 @@
 # Visual LED Implementation for ESP32/ESP8266 Micro Controller
 
 * LED RGB
-* LED POI
+* LED ARGB (WS2812,APA102...)
 
 ## The Challenges
 
-* Control an array of 36 WS2812B leds for display visual graphics
+* Control high power RGB leds for indoor lighting
+* Control multiple arrays of WS2812B leds for display visual graphics
+* Run pre-programmed light show from uploaded sequence file
+* Realtime synchronization if the same light show is run on multiple devices
 * Serving a web application for uploading & managing visual content
-* Multiple devices must be in perfect synchronized playback
+* A gateway bridge for managing and uploading visual content from user's computer
 
 Using just a single ESP8266 micro controller.
 
@@ -71,6 +74,10 @@ ID   DURATION   ID   DURATION
 SEQUENCE   01   SEQUENCE   02
 ```
 # Control Protocol for Visual LED peripherals
+
+    THIS DOCUMENTATION IS WORK IN PROGRESS AND NOT COMPLETED
+    IT MAY NOT REFLECT THE ACTUAL CODE IN DEVELOPMENT
+
 
 Based on data payload received using esp-now which is a sequence of no more than 250 bytes.
 
