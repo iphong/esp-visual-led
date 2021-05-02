@@ -8,7 +8,7 @@ bool state = 1;
 
 void setup()
 {
-    Serial.begin(921600);
+    Serial.begin(460800);
     pinMode(A0, INPUT);
     pinMode(0, INPUT);
     pinMode(2, OUTPUT);

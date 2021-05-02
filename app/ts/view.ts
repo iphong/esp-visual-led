@@ -1,24 +1,27 @@
-import { store } from "./store"
+import { store } from './store'
+import $ from 'jquery'
 
-export const $player = document.getElementById('player') as HTMLAudioElement
-export const $shows = document.getElementById('show-select') as HTMLSelectElement
-export const $devices = document.getElementById('serial-dev-select') as HTMLSelectElement
-export const $tempo = document.getElementById('tempo') as HTMLDivElement
-export const $waveform = document.getElementById('waveform') as HTMLDivElement
-export const $handle = document.getElementById('handle') as HTMLDivElement
-export const $main = document.getElementById('main') as HTMLDivElement
-export const $tracks = document.getElementById('tracks') as HTMLDivElement
+export const $player = $('#player').get(0) as HTMLAudioElement
+export const $tempo = $('#tempo').get(0) as HTMLDivElement
+export const $waveform = $('#waveform').get(0) as HTMLDivElement
+export const $handle = $('#handle').get(0) as HTMLDivElement
+export const $main = $('#main').get(0) as HTMLDivElement
+export const $tracks = $('#tracks').get(0) as HTMLDivElement
 
 export async function updateTime() {
-	if ($player.duration) {
-		const ratio = $player.currentTime / $player.duration
+	if (store.duration) {
+		if ($player.duration && !$player.ended) {
+			store.time = Math.round($player.currentTime * 1000)
+		}
+		const ratio = store.time / store.duration
 		$main.scrollLeft = ($main.scrollWidth - $main.offsetWidth) * ratio
 		$handle.style.left = ratio * 100 + '%'
+		$handle.style.transform = `translateX(-${100 - Math.round(ratio * 100)}%)`
 	}
 }
 export async function updateSize() {
-	if (store.show && store.show.duration) {
-		const width = store.show.duration / 10
+	if (store.duration) {
+		const width = store.duration / 10
 		$tracks.style.width = width + 'px'
 		$waveform.style.width = width + 'px'
 		$tempo.style.width = width + 'px'
@@ -27,109 +30,77 @@ export async function updateSize() {
 
 export async function renderSerial() {
 	console.log('render serial')
-	await renderDevicesList()
-	return new Promise(resolve => {
-		const $c = document.getElementById('serial-connect')
-		const $d = document.getElementById('serial-disconnect')
-		if ($c && $d) {
-			if (store.serial_connected) {
-				$c.setAttribute('hidden', 'hidden')
-				$d.removeAttribute('hidden')
-				$devices.setAttribute('disabled', 'disabled')
-			} else {
-				$d.setAttribute('hidden', 'hidden')
-				$c.removeAttribute('hidden')
-				$devices.removeAttribute('disabled')
-			}
-		}
-		resolve()
-	})
-}
-
-export async function renderDevicesList() {
+	updateSize()
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
-			$devices.innerHTML = '<option value="">...</option>'
+			const $devices = $('[data-key="port"]')
+			$devices.html('<option value="">...</option>')
 			devices.forEach(dev => {
 				if (dev.path.startsWith('/dev/cu.')) {
-					const option = document.createElement('option')
-					option.value = dev.path
-					option.innerHTML = dev.path.replace('/dev/cu.', '')
-					if (dev.path === store.serial_port)
-						option.selected = true
-					$devices.appendChild(option)
+					$(`<option>`)
+						.val(dev.path)
+						.html(dev.path.replace('/dev/cu.', ''))
+						.appendTo($devices)
 				}
 			})
-			resolve()
+			$devices.val(store.port)
+			resolve(null)
 		})
 	})
 }
 
-export async function renderAudio(audio: AudioData) {
-	$tempo.innerHTML = ''
-	$waveform.innerHTML = ''
-	await updateSize()
-	if (audio) {
-		// await renderTempo(audio)
-		await renderWaveform(audio)
-	}
-}
-
-export async function renderTempo(audio: AudioData) {
-	if (audio.beats) {
-		audio.beats.reduce((start, end, index) => {
+export async function renderBeats() {
+	if (!$tempo) return
+	updateSize()
+	if (store.beats && store.beats.length) {
+		console.log('render beats')
+		store.beats.reduce((start = 0, end: number, index: number) => {
 			const width = end - start
-			const $block = document.createElement('span')
-			$block.classList.add('block')
-			$block.style.width = width / 10 + 'px'
-			$block.innerHTML = index ? `${(index - 1) % 8 + 1}` : `-`
-			$tempo.appendChild($block)
+			const counter = index ? `${(index - 1) % 4 + 1}` : `-`
+			$('<span class="block">')
+				.width(width / 10)
+				.html(counter)
+				.appendTo('#tempo')
 			return end
-		}, 0)
+		})
 	}
 }
 
-export async function renderWaveform(audio: AudioData) {
-	if (audio.waveform) {
-		console.log('render audio waveform')
+export async function renderWaveform() {
+	if (!$waveform) return
+	$waveform.innerHTML = ''
+	updateSize()
+	if (store.waveform && store.waveform.length) {
+		console.log('render waveform')
 		const height = $waveform.offsetHeight
 		const halfHeight = height / 2
 		const canvas = document.createElement('canvas')
-		const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+		const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
 		const size = 1
 
-		canvas.width = audio.duration / 10;
-		canvas.height = height;
+		canvas.width = store.duration / 10
+		canvas.height = height
 		ctx.lineWidth = 2
-		ctx.lineJoin = 'round'
-		audio.waveform.forEach(([max, min, pos, neg], i) => {
+		store.waveform.forEach(([max, min, pos, neg], i) => {
 			const x = i * size
 			ctx.fillStyle = '#333333'
-			const p1 = neg / height * halfHeight + halfHeight;
-			ctx.fillRect(x, p1, size, (pos / height * halfHeight + halfHeight) - p1);
+			const p1 = neg / height * halfHeight + halfHeight
+			ctx.fillRect(x, p1, size, (pos / height * halfHeight + halfHeight) - p1)
 
 			ctx.fillStyle = '#000000'
-			const p2 = Math.round(min / height * halfHeight) + halfHeight;
-			ctx.fillRect(x, p2, size, Math.round(max / height * halfHeight + halfHeight) - p2);
+			const p2 = Math.round(min / height * halfHeight) + halfHeight
+			ctx.fillRect(x, p2, size, Math.round(max / height * halfHeight + halfHeight) - p2)
 		})
-		if (audio.beats) {
-			console.log('render audio tempo')
-			audio.beats.forEach((time, i) => {
-				if (i % 8 === 0) {
-					ctx.fillStyle = '#c924ff'
-					ctx.fillRect(time / 10 - 1, 0, 1, height);
-				}
-			})
-		}
 		$waveform.appendChild(canvas)
 	}
 }
 
-export async function renderShow(show: ShowData) {
+export async function renderTracks() {
+	if (!$tracks) return
+	updateSize()
 	$tracks.innerHTML = ''
-	await updateSize()
-	if (store.show) {
-		store.show.tracks.forEach((track:any) => {
+	if (store.tracks && store.tracks.length) {
+		store.tracks.forEach((track: any) => {
 			const $track = document.createElement('div')
 			const { frames, ...params } = track
 			Object.assign($track.dataset, params)
@@ -141,6 +112,7 @@ export async function renderShow(show: ShowData) {
 }
 
 export function renderLight(container: any, track: any) {
+	if (!track.device || !track.frames) return
 	switch (track.device) {
 		case 1:
 		case 2:
@@ -171,7 +143,7 @@ export function renderLight(container: any, track: any) {
 						$el.style.backgroundImage = `url(${drawPulse(color[0], period)})`
 						break
 					default:
-						console.log("unhandled light type", [params.type])
+						console.log('unhandled light type', [params.type])
 				}
 				container.appendChild($el)
 			})
@@ -189,9 +161,9 @@ function drawFlash(color1, color2, period, ratio) {
 		const len1 = period * (ratio / 100) / 10
 		const len2 = period * ((100 - ratio) / 100) / 10
 		ctx.fillStyle = color1
-		ctx.fillRect(0, 0, len1, 1);
+		ctx.fillRect(0, 0, len1, 1)
 		ctx.fillStyle = color2
-		ctx.fillRect(len1, 0, len2, 1);
+		ctx.fillRect(len1, 0, len2, 1)
 	}
 	return tmpCanvas.toDataURL()
 }
@@ -201,9 +173,9 @@ function drawDots(color, spacing) {
 	const ctx = tmpCanvas.getContext('2d')
 	if (ctx) {
 		ctx.fillStyle = color
-		ctx.fillRect(0, 0, 1, 1);
+		ctx.fillRect(0, 0, 1, 1)
 		ctx.fillStyle = 'black'
-		ctx.fillRect(1, 0, 1, 1);
+		ctx.fillRect(1, 0, 1, 1)
 	}
 	return tmpCanvas.toDataURL()
 }
@@ -213,11 +185,11 @@ function drawPulse(color, period) {
 	const ctx = tmpCanvas.getContext('2d')
 	if (ctx) {
 		ctx.fillStyle = color
-		ctx.fillRect(0, 0, period, 1);
+		ctx.fillRect(0, 0, period, 1)
 		ctx.fillStyle = 'black'
-		ctx.fillRect(0, 0, 24, 1);
+		ctx.fillRect(0, 0, 24, 1)
 		ctx.fillStyle = 'white'
-		ctx.fillRect(12, 0, 2, 1);
+		ctx.fillRect(12, 0, 2, 1)
 	}
 	return tmpCanvas.toDataURL()
 }
@@ -226,17 +198,17 @@ function drawRainbow(period) {
 	tmpCanvas.height = 1
 	const ctx = tmpCanvas.getContext('2d')
 	if (ctx) {
-		var gradient = ctx.createLinearGradient(0, 0, period, 0);
-		gradient.addColorStop(1 / 7 * 0, 'red');
-		gradient.addColorStop(1 / 7 * 1, 'orange');
-		gradient.addColorStop(1 / 7 * 2, 'yellow');
-		gradient.addColorStop(1 / 7 * 3, 'green');
-		gradient.addColorStop(1 / 7 * 4, 'cyan');
-		gradient.addColorStop(1 / 7 * 5, 'blue');
-		gradient.addColorStop(1 / 7 * 6, 'violet');
-		gradient.addColorStop(1 / 7 * 7, 'red');
+		var gradient = ctx.createLinearGradient(0, 0, period, 0)
+		gradient.addColorStop(1 / 7 * 0, 'red')
+		gradient.addColorStop(1 / 7 * 1, 'orange')
+		gradient.addColorStop(1 / 7 * 2, 'yellow')
+		gradient.addColorStop(1 / 7 * 3, 'green')
+		gradient.addColorStop(1 / 7 * 4, 'cyan')
+		gradient.addColorStop(1 / 7 * 5, 'blue')
+		gradient.addColorStop(1 / 7 * 6, 'violet')
+		gradient.addColorStop(1 / 7 * 7, 'red')
 		ctx.fillStyle = gradient
-		ctx.fillRect(0, 0, period, 1);
+		ctx.fillRect(0, 0, period, 1)
 	}
 	return tmpCanvas.toDataURL()
 }

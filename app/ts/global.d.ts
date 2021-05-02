@@ -29,11 +29,11 @@ declare type WaveformData = [
 ]
 
 declare interface AudioData {
-	name: string
-	duration: number
-	beats: number[]
-	waveform: WaveformData[]
-	url: string
+	name?: string
+	duration?: number
+	tempo?: number
+	beats?: number[]
+	waveform?: WaveformData[]
 }
 
 declare interface ShowData {
@@ -41,12 +41,26 @@ declare interface ShowData {
 }
 
 declare interface StoreData {
-	serial_port: string
-	serial_connection: number
-	serial_connected: boolean
-	show_file: string
-	show_sync: true
-	show_selected: 1,
+
+	port: string
+	connection: number
+	connected: boolean
+
+	sync: boolean
+	file: string
+	time: number
+	slot: number
+	duration: number
+	paused: boolean
+	ended: boolean
+
+	tempo: number
+	division: number
+
+	beats: number[]
+	tracks: TrackData[]
+	waveform: WaveformData[]
+
 	show: ShowData
 	audio: AudioData
 }

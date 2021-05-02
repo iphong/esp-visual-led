@@ -336,7 +336,7 @@ void test()
 
 void setup(void)
 {
-  Serial.begin(921600);
+  Serial.begin(460800);
   Serial.print(F("Hello! ST77xx TFT Test"));
   tft.init(240, 240);
   tft.setRotation(2);

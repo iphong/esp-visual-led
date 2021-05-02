@@ -65,7 +65,7 @@ void light() {
 }
 
 void setup() {
-	Serial.begin(921600);
+	Serial.begin(460800);
 	auto offset = 0;
 	FastLED.addLeds<WS2812B, D1, GRB>(&leds[0], LED_NUMS);
 	FastLED.addLeds<WS2812B, D2, GRB>(&leds[offset += LED_NUMS], LED_NUMS);

@@ -1,56 +1,85 @@
-import { sendFile } from './serial'
-import { set, store, openShowEntry, saveShowEntry, cache, convertTracks, DEFAULT_STORE_DATA } from './store'
-import { $player, renderShow, updateSize, updateTime } from './view'
-
-export async function newShow() {
-	$player.currentTime = 0
-	await updateSize()
-	await updateTime()
-	$player.src = ''
-	await set(Object.assign({}, DEFAULT_STORE_DATA))
-}
+import { sendFile, serialConnect, serialDisconnect } from './serial'
+export * from './serial'
+import {
+	set,
+	store,
+	cache,
+	openShowEntry,
+	saveShowEntry,
+	convertTracks,
+	DEFAULT_STORE_DATA
+} from './store'
+import { $player } from './view'
 
 export { logHex } from './store'
 
-export async function startShow() {
-	store.show.running = true
-	await $player.play()
+export async function clear() {
+	$player.src = ''
+	cache.audio = null
+	cache.show = null
+	await set({...DEFAULT_STORE_DATA})
 }
-
-export async function stopShow() {
-	store.show.running = false
-	$player.pause()
-	$player.currentTime = 0
-}
-
-export async function saveShow() {
+export async function save() {
 	return new Promise(async (resolve) => {
-		if (store.show_file) {
-			chrome['fileSystem'].restoreEntry( store.show_file, async (entry:FileEntry) => {
-				await saveShowEntry(entry)
+		if (store.file) {
+			chrome['fileSystem'].restoreEntry(store.file, async (entry:FileEntry) => {
+				if (entry) await saveShowEntry(entry)
 				resolve()
 			})
-		} else {
-			chrome['fileSystem'].chooseEntry({ type: 'saveFile' }, async (entry:FileEntry) => {
-				await saveShowEntry(entry)
-				resolve()
-			})
-		}
+		} else await saveAs()
+	})
+}
+export async function saveAs() {
+	return new Promise(async (resolve) => {
+		chrome['fileSystem'].chooseEntry({ type: 'saveFile' }, async (entry:FileEntry) => {
+			if (entry) await saveShowEntry(entry)
+			resolve()
+		})
 	})
 }
 
-export async function openShow() {
-	return new Promise(resolve => {
+export async function open() {
+	return new Promise((resolve) => {
 		chrome['fileSystem'].chooseEntry({ type: 'openWritableFile' }, async (entry:FileEntry) => {
-			await newShow()
-			await renderShow(await openShowEntry(entry))
-
-			if (cache.audio) {
-				$player.src = URL.createObjectURL(cache.audio)
-				console.log('set player src', [$player.src])
+			if (entry) {
+				await clear()
+				await openShowEntry(entry)
+				if (cache.audio) {
+					$player.src = URL.createObjectURL(cache.audio)
+					console.log('set player src', [$player.src])
+				}
+				resolve()
+			} else {
+				resolve()
 			}
-			resolve()
 		})
+	})
+}
+export async function connect() {
+	if (store.connected)
+		await serialDisconnect()
+	else
+		await serialConnect()
+}
+export function openManager() {
+	chrome['app'].window.create('../manager.html', {
+		id: 'manager',
+		width: 800,
+		height: 200
+	})
+}
+export function openUtils() {
+	chrome['app'].window.create('../utils.html', {
+		id: 'utils',
+		width: 270,
+		height: 400
+	})
+}
+export function openRemote() {
+	chrome['app'].window.create('../remote.html', {
+		id: 'remote',
+		width: 250,
+		height: 250
 	})
 }
 export async function sendShowFile() {
@@ -58,26 +87,3 @@ export async function sendShowFile() {
 	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5A.lsb')
 	await sendFile(new Blob(convertTracks(store.show.tracks[index].frames)), '/show/5B.lsb')
 }
-export function openManager() {
-	chrome['app'].window.create('../manager.html', {
-		id: 'manager',
-		width: 800,
-		height: 200
-	});
-}
-export function openUtils() {
-	chrome['app'].window.create('../utils.html', {
-		id: 'utils',
-		width: 270,
-		height: 370
-	});
-}
-export function openRemote() {
-	chrome['app'].window.create('../remote.html', {
-		id: 'remote',
-		width: 250,
-		height: 250
-	});
-}
-
-export * from './serial'

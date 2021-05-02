@@ -15,7 +15,7 @@ u8 *peers[] = {cast};
 char chipID[6];
 
 void setup() {
-    Serial.begin(921600);
+    Serial.begin(460800);
     #ifdef ESP32
     esp_now_init();
     esp_now_add_peer(peers);

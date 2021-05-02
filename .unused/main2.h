@@ -206,7 +206,7 @@ void btn_setup() {
 }
 
 void setup() {
-	Serial.begin(921600);
+	Serial.begin(460800);
 
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.softAP("led_poi");

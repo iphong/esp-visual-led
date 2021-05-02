@@ -17,13 +17,13 @@
 		<strong>LIGHT</strong>
 		<small>MASTER</small>
 	</div>
-	<nav>
-		<button id="new-button" data-action="newShow" class="mdi mdi-note-outline"></button>
-		<button id="save-button" data-action="saveShow" class="mdi mdi-content-save-outline"></button>
-		<button id="open-button" data-action="openShow" class="mdi mdi-folder-open-outline"></button>
+	<nav id="file-toolbar">
+		<!-- <button data-action="clear" class="mdi mdi-note-outline"></button> -->
+		<!-- <button data-action="save" class="mdi mdi-content-save-outline"></button> -->
+		<button data-action="open" class="mdi mdi-folder-open-outline"></button>
 	</nav>
-	<nav>
-		<select data-key="show_selected">
+	<nav id="controls-toolbar">
+		<!-- <select data-key="slot">
 			<option value="1">Show 1</option>
 			<option value="2">Show 2</option>
 			<option value="3">Show 3</option>
@@ -32,19 +32,17 @@
 			<option value="6">Show 6</option>
 			<option value="7">Show 7</option>
 			<option value="8">Show 8</option>
-		</select>
+		</select> -->
+	</nav>
+	<nav id="misc-toolbar">
+		<!-- <button data-action="openManager" class="mdi mdi-devices"></button> -->
+		<button data-action="openRemote" class="mdi mdi-remote"></button>
+		<button data-action="openUtils" class="mdi mdi-console"></button>
 	</nav>
 	<nav id="serial-toolbar">
-		<button id="open-manager" data-action="openManager" class="mdi mdi-devices"></button>
-		<button id="open-remote" data-action="openRemote" class="mdi mdi-remote"></button>
-		<button id="open-tools" data-action="openUtils" class="mdi mdi-console"></button>
-	</nav>
-	<nav>
-		<select id="serial-dev-select" data-key="serial_port"></select>
-		<button id="upload-show" data-action="sendShowFile" class="mdi mdi-send"></button>
-		<button id="toggle-sync" data-key="show_sync" class="mdi mdi-sync" ></button>
-		<button id="serial-connect" data-action="serialConnect" class="mdi mdi-play-network-outline"></button>
-		<button id="serial-disconnect" data-action="serialDisconnect" class="mdi mdi-play-network-outline selected"></button>
+		<select data-key="port"></select>
+		<button data-key="connected" data-action="connect" class="mdi mdi-play-network-outline"></button>
+		<button data-key="sync" class="mdi mdi-sync"></button>
 	</nav>
 </header>
 <main id="main">

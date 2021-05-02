@@ -19,7 +19,7 @@ void foo(String str) {
 
 char blank[64];
 void setup() {
-	Serial.begin(921600);
+	Serial.begin(460800);
 	Serial.print("\n\n\n\n\n");
 
 	WiFi.mode(WIFI_OFF);

@@ -95,7 +95,7 @@ void send(u8 type, u8 *data, u8 size)
 
 void setup()
 {
-    Serial.begin(921600);
+    Serial.begin(460800);
     WiFi.mode(WIFI_AP_STA);
     WiFi.disconnect();
     WiFi.softAPdisconnect();

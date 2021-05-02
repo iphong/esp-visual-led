@@ -8,6 +8,20 @@
 #ifndef __NET_H__
 #define __NET_H__
 
+#define MSG_BLINK  		"#>BLINK"
+#define MSG_PING  		"#>PING"
+#define MSG_SYNC  		"#>SYNC"
+#define MSG_PAIR  		"#>PAIR"
+#define MSG_NAME  		"#>NAME"
+#define MSG_RGB  		"#>RGB"
+#define MSG_SET  		"#>SET"
+#define MSG_DIM  		"#>DIM"
+#define MSG_WIFI_ON  	"#>WIFI"
+#define MSG_WIFI_OFF  	"#>WIFI"
+#define MSG_FBEGIN  	"#>FBEGIN"
+#define MSG_FWRITE  	"#>FWRITE"
+#define MSG_FCLOSE  	"#>FCLOSE"
+
 namespace Net {
 
 Ticker pingTimer;
@@ -155,22 +169,22 @@ void closeFile(u8* buf, u8 len) {
 }
 
 void setup() {
-	MeshRC::on("#>BLINK", Net::setBlink);
-	MeshRC::on("#>PING", Net::sendPing);
-	MeshRC::on("#>SYNC", Net::setSync);
-	MeshRC::on("#>PAIR", Net::setPair);
+	MeshRC::on(MSG_BLINK, 	setBlink);
+	MeshRC::on(MSG_PING, 	sendPing);
+	MeshRC::on(MSG_SYNC, 	setSync);
+	MeshRC::on(MSG_PAIR, 	setPair);
+	MeshRC::on(MSG_NAME, 	setName);
+	
+	MeshRC::on(MSG_RGB, 	setRGB);
+	MeshRC::on(MSG_SET, 	setColor);
+	MeshRC::on(MSG_DIM, 	setAlpha);
 
-	MeshRC::on("#>NAME", Net::setName);
-	MeshRC::on("#>RGB", Net::setRGB);
-	MeshRC::on("#>SET", Net::setColor);
-	MeshRC::on("#>DIM", Net::setAlpha);
+	MeshRC::on(MSG_WIFI_ON,  wifiOn);
+	MeshRC::on(MSG_WIFI_OFF, wifiOff);
 
-	MeshRC::on("#>WIFI+", Net::wifiOn);
-	MeshRC::on("#>WIFI-", Net::wifiOff);
-
-	MeshRC::on("#>FBEGIN", Net::beginFile);
-	MeshRC::on("#>FWRITE", Net::writeFile);
-	MeshRC::on("#>FCLOSE", Net::closeFile);
+	MeshRC::on(MSG_FBEGIN, 	beginFile);
+	MeshRC::on(MSG_FWRITE, 	writeFile);
+	MeshRC::on(MSG_FCLOSE, 	closeFile);
 
 	MeshRC::on("", [](u8* data, u8 size) {
 		if (size > 6 && equals(data, (u8*)App::chipID, 6) && (data[6] == '>' || data[6] == '<')) {

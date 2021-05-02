@@ -86,5 +86,5 @@ function toHEX(bytes: Uint8Array): string {
 }
 
 $send.addEventListener('click', e => {
-	chrome['app'].window.get('app').contentWindow.postMessage(new Uint8Array([1, ...codes]))
+	chrome['app'].window.get('app').contentWindow.postMessage(new Uint8Array([0, ...codes]))
 })

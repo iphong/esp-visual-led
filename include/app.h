@@ -22,9 +22,12 @@
 #define LOGD(x...) Serial.printf(x)
 #define LOGL(x...) Serial.println(x)
 #else
-#define LOG(x...) Serial.print("")
-#define LOGL(x...) Serial.print("")
-#define LOGD(x...) Serial.print("")
+void foo(String x) {}
+void foo(const char* x) {}
+void foo(char* x, char) {}
+#define LOG(x...) foo(x)
+#define LOGL(x...) foo(x)
+#define LOGD(x...) foo(x)
 #endif
 
 namespace App {

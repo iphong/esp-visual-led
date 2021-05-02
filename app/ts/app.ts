@@ -1,6 +1,6 @@
-import { init, set, store, openShowEntry, parseAudioFile, parseShowFile, cache } from './store'
-import { $player, renderAudio, renderSerial, renderShow, updateTime } from './view'
-import { decodeMsg, encodeMsg, sendSync, sendRaw } from './serial'
+import { init, set, store, parseAudioFile, parseShowFile, cache, openShowEntry } from './store'
+import { $player, renderBeats, renderSerial, renderTracks, renderWaveform, updateSize, updateTime } from './view'
+import { encodeMsg, sendRaw, sendSync } from './serial'
 import { serialConnect } from './serial'
 import * as actions from './actions'
 import $ from 'jquery'
@@ -8,8 +8,8 @@ import $ from 'jquery'
 Object.assign(window, actions)
 window['player'] = $player
 
-function render() {
-	document.querySelectorAll('[data-key]').forEach((control:any) => {
+function update() {
+	document.querySelectorAll('[data-key]').forEach((control: any) => {
 		const key = control.dataset.key
 		if ((control instanceof HTMLInputElement) || (control instanceof HTMLSelectElement)) {
 			if (control.type === 'checkbox') {
@@ -27,8 +27,7 @@ function render() {
 		}
 	})
 }
-
-chrome.serial.onReceiveError.addListener( ({ connectionId: id }) => {
+chrome.serial.onReceiveError.addListener(({ connectionId: id }) => {
 	if (id === store.serial_connection) {
 		const current = chrome.app.window.current()
 		chrome.app.window.getAll().forEach(view => {
@@ -37,96 +36,71 @@ chrome.serial.onReceiveError.addListener( ({ connectionId: id }) => {
 	}
 })
 
-function updateSerialView() {
-	if (store.serial_connected) {
-		$('#open-manager').removeAttr('hidden')
-		$('#open-remote').removeAttr('hidden')
-		$('#open-tools').removeAttr('hidden')
-		$('#serial-disconnect').removeAttr('hidden')
-		$('#toggle-sync').removeAttr('hidden')
-		$('#serial-connect').attr('hidden', 'true')
-		$('#serial-dev-select').attr('hidden', 'true')
-	} else {
-		$('#open-manager').attr('hidden', 'true')
-		$('#open-remote').attr('hidden', 'true')
-		$('#open-tools').attr('hidden', 'true')
-		$('#serial-connect').removeAttr('hidden')
-		$('#serial-disconnect').attr('hidden', 'true')
-		$('#toggle-sync').attr('hidden', 'true')
-		$('#serial-dev-select').removeAttr('hidden')
-	}
-}
-
 chrome.storage.onChanged.addListener(async (changes) => {
-	if ('serial_connected' in changes) {
-		updateSerialView()
-	}
-	if ('show_sync' in changes) {
-		$('#toggle-sync')[store.show_sync ? 'addClass' : 'removeClass']('mdi-spin')
-	}
-	if ('audio' in changes) {
-		await renderAudio(changes.audio.newValue)
-	}
-	if ('show' in changes) {
-		await renderShow(changes.show.newValue)
-	}
-	if ('serial' in changes) {
+	update()
+	if (changes.port || changes.connection || changes.connected) {
 		await renderSerial()
 	}
-	render()
+	if (changes.waveform || changes.beats) {
+		await renderWaveform()
+		await renderBeats()
+	}
+	if (changes.tracks) {
+		await renderTracks()
+	}
 })
 
 addEventListener('load', async () => {
 	await init()
-	if (store.serial_connected) {
-		await serialConnect()
-	} else {
-		await renderSerial()
-	}
-	updateSerialView()
-	await renderShow(store.show)
-	await renderAudio(store.audio)
-	render();
-	if (store.show_file) {
-		chrome['fileSystem'].restoreEntry(store.show_file, async (entry:FileEntry) => {
-			if (entry) {
-				await openShowEntry(entry)
-				if (cache.audio) {
-					$player.src = URL.createObjectURL(cache.audio)
-					console.log('set player src', [$player.src])
-				}
-			} else {
-				console.log('unable to restore show entry', [store.show_file])
-				await set('show_file', '')
-			}
-			await renderShow(store.show)
-			await renderAudio(store.audio)
-			render()
-		})
-	}
+	store.connected ? await serialConnect() : await renderSerial()
+	await renderTracks()
+	await renderWaveform()
+	await renderBeats()
 	requestAnimationFrame(function tick() {
 		updateTime()
 		requestAnimationFrame(tick)
 	})
 	setInterval(() => {
-		if (store.show_sync) {
-			sendSync(Math.round($player.currentTime * 1000), store.show_selected, !store.show.running, $player.paused)
+		if (store.sync) {
+			sendSync(store.time, store.slot, store.ended, store.paused)
 		}
 	}, 100)
+	if (store.file) {
+		chrome['fileSystem'].restoreEntry(store.file, async (entry: FileEntry) => {
+			if (entry) {
+				await openShowEntry(entry)
+				if (cache.audio) {
+					$player.src = URL.createObjectURL(cache.audio)
+					console.log('set player src')
+					await renderTracks()
+					await renderWaveform()
+					await renderBeats()
+				}
+			} else {
+				console.log('unable to restore show entry', [store.file])
+				await set('file', '')
+			}
+		})
+	}
 })
 
-addEventListener('click', async (e:MouseEvent) => {
-	if (e.target.closest('*[data-action]')) {
-		let actionTarget = e.target.closest('*[data-action]')
+addEventListener('durationchange', async e => {
+	store.duration = Math.max($player.duration * 1000, store.duration)
+	await updateSize()
+}, true)
+
+addEventListener('click', async (e: MouseEvent) => {
+	const target = e.target as HTMLElement
+	if (target.closest('*[data-action]')) {
+		let actionTarget = target.closest('*[data-action]') as HTMLElement
 		if (actionTarget) {
 			const { action } = actionTarget.dataset
 			if (typeof actions[action] === 'function') {
 				actions[action].call(actionTarget, e)
 			}
 		}
-	}
-	if (e.target.closest('*[data-key]')) {
-		let actionTarget = e.target.closest('*[data-key]')
+	} else if (target.closest('*[data-key]')) {
+		let actionTarget = target.closest('*[data-key]') as HTMLElement
 		if (actionTarget && actionTarget instanceof HTMLButtonElement) {
 			const { key } = actionTarget.dataset
 			await set(key, !store[key])
@@ -151,28 +125,29 @@ addEventListener('dragover', async (e) => {
 	e.preventDefault()
 })
 
-addEventListener('drop', async (e:DragEvent) => {
+addEventListener('drop', async (e: DragEvent) => {
 	e.preventDefault()
 	if (!e.dataTransfer) return
 	for (let file of e.dataTransfer.files) {
 		if (file.type.startsWith('audio/')) {
-			await parseAudioFile(file, true)
-			cache.audio = file
-			$player.src = URL.createObjectURL(cache.audio)
-			console.log('set player src', [$player.src])
-			await updateTime()
+			const audio = await parseAudioFile(file)
+			if (audio) {
+				cache.audio = file
+				$player.src = URL.createObjectURL(file)
+				console.log('set player src')
+			}
 		}
 		if (file.name.endsWith('lt3')) {
-			await parseShowFile(file)
+			const show = await parseShowFile(file)
+			if (show) await set(show)
 		}
 	}
 })
 
 addEventListener('wheel', (e) => {
-	if ($player.duration) {
-		const delta = (e.deltaX + e.deltaY) / 2
-		$player.currentTime = Math.max(0, Math.min($player.duration, $player.currentTime + (delta / (e.altKey ? 200 : 10))))
-	}
+	const delta = (e.deltaX + e.deltaY) / 2
+	if ($player.src) $player.currentTime = Math.max(0, Math.min(store.duration / 1000, $player.currentTime + (delta / (e.altKey ? 200 : 10))))
+	else store.time = Math.max(0, Math.min(store.duration, store.time + (delta * (e.altKey ? 200 : 10))))
 })
 
 addEventListener('keydown', (e) => {
