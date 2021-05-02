@@ -24,7 +24,7 @@ export async function save() {
 		if (store.file) {
 			chrome['fileSystem'].restoreEntry(store.file, async (entry:FileEntry) => {
 				if (entry) await saveShowEntry(entry)
-				resolve()
+				resolve(null)
 			})
 		} else await saveAs()
 	})
@@ -33,7 +33,7 @@ export async function saveAs() {
 	return new Promise(async (resolve) => {
 		chrome['fileSystem'].chooseEntry({ type: 'saveFile' }, async (entry:FileEntry) => {
 			if (entry) await saveShowEntry(entry)
-			resolve()
+			resolve(null)
 		})
 	})
 }
@@ -48,9 +48,9 @@ export async function open() {
 					$player.src = URL.createObjectURL(cache.audio)
 					console.log('set player src', [$player.src])
 				}
-				resolve()
+				resolve(null)
 			} else {
-				resolve()
+				resolve(null)
 			}
 		})
 	})
