@@ -9,9 +9,10 @@ addEventListener('load', async () => {
 	await init()
 	await serialConnect()
 	await onSerialMessage(async (buf) => {
-		if (buf.length > 6 && [60, 62].includes(buf[6])) {
+		if (buf.length > 6 && [60, 62].includes(buf[1])) {
 			const id = readStr(buf, 6)
 			const msg = readStr(buf, buf.length-7, 7)
+			console.log(id, msg)
 			if (msg.startsWith('SELECT')) {
 				await sendCommand(id, 'BLINK')
 			}

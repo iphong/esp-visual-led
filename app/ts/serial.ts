@@ -3,7 +3,6 @@ import { set, store } from "./store"
 let handler = null
 
 chrome.serial.onReceive.addListener(async ({ connectionId: id, data }) => {
-	console.log(id, data)
 	let m = ''
 	let h = ''
 	if (id === store.connection) {
@@ -12,8 +11,11 @@ chrome.serial.onReceive.addListener(async ({ connectionId: id, data }) => {
 			h += byte.toString(16).padStart(2, '0') + ' '
 			decodeMsg(byte)
 		})
-		console.log(m)
-		console.log(h)
+		console.groupCollapsed('serial', id, 'received', m.length, 'byte(s)')
+		console.info('STR:', m)
+		console.info('HEX:', h)
+		console.info('BUF:', data)
+		console.groupEnd()
 	}
 })
 chrome.serial.onReceiveError.addListener(async ({ connectionId: id, error }) => {
@@ -44,7 +46,7 @@ export async function serialConnect(force = false) {
 		} else {
 			const options = {
 				name: 'connection',
-				bufferSize: 250,
+				bufferSize: 255,
 				bitrate: 115200,
 				receiveTimeout: 0
 			}

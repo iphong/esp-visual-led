@@ -83,6 +83,6 @@ export function openRemote() {
 	})
 }
 export async function sendShowFile(trackIndex:number = 1, showIndex:number = 1) {
-	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'A.lsb', 'FFFFFF')
-	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'B.lsb', 'EEEEEE')
+	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'A.lsb', '#')
+	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'B.lsb', '#')
 }

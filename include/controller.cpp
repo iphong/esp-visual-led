@@ -15,7 +15,6 @@ void setup() {
 	Net::apPSK = "11111111";
 
 	Serial.begin(115200);
-	Serial.println("\n\n\n\n\n");
 
 	btn.begin();
 	btn.onPress(buttonPressHandler);

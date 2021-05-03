@@ -4,6 +4,7 @@ import { encodeMsg, sendRaw, sendSync } from './serial'
 import { serialConnect } from './serial'
 import * as actions from './actions'
 import $ from 'jquery'
+import { openManager, openRemote, openUtils } from './actions'
 
 Object.assign(window, actions)
 window['player'] = $player
@@ -174,6 +175,7 @@ addEventListener('keydown', (e) => {
 addEventListener('message', e => {
 	const type = e.data[0]
 	const data = e.data.slice(1)
+	console.debug('message', type, data)
 	switch (type) {
 		case 0:
 			sendRaw(data)
