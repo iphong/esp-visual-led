@@ -12,7 +12,7 @@ void setup() {
 	sprintf(App::chipID, "%06X", system_get_chip_id());
 	
 	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
-	Net::apPSK = "11111111";
+	Net::apPSK = "";
 
 	Serial.begin(115200);
 
@@ -23,8 +23,8 @@ void setup() {
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	WiFi.disconnect();
-	Net::wifiOff();
-	// Net::wifiOn();
+	// Net::wifiOff();
+	Net::wifiOn();
 
 	ArduinoOTA.onProgress([](int percent, int total) {
 		App::LED_BLINK();

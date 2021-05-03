@@ -50,6 +50,7 @@ declare interface StoreData {
 	file: string
 	time: number
 	slot: number
+	channel: string
 	duration: number
 	paused: boolean
 	ended: boolean

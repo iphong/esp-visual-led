@@ -34,6 +34,7 @@ export const DEFAULT_STORE_DATA: StoreData = {
 	file: '',
 	time: 0,
 	slot: 1,
+	channel: 'A',
 	duration: 0,
 	paused: false,
 	ended: false,

@@ -28,14 +28,14 @@ Ticker pingTimer;
 String apSSID;
 String apPSK;
 
-// IPAddress apAddr = {10, 1, 1, 1};
-// IPAddress apMask = {255, 255, 255, 0};
+IPAddress apAddr = {10, 1, 1, 1};
+IPAddress apMask = {255, 255, 255, 0};
 
 bool wifiActive = false;
 
 void wifiOn() {
 	wifiActive = true;
-	// WiFi.softAPConfig(apAddr, apAddr, apMask);
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK);
 }
 void wifiOff() {

@@ -8,7 +8,7 @@
 
 namespace Api {
 
-ESP8266WebServer server(80);
+ESP8266WebServer server(API_PORT);
 
 String unsupportedFiles = String();
 File uploadFile;
@@ -38,23 +38,33 @@ String toStringIp(IPAddress ip) {
 	return res;
 }
 
+void sendHeaders() {
+	server.sendHeader("Access-Control-Allow-Origin", "*");
+	server.sendHeader("Access-Control-Allow-Methods", "*");
+}
+
 void replyOK() {
+	sendHeaders();
 	server.send(200, FPSTR(TEXT_PLAIN), "");
 }
 
 void replyOKWithMsg(String msg) {
+	sendHeaders();
 	server.send(200, FPSTR(TEXT_PLAIN), msg);
 }
 
 void replyNotFound(String msg) {
+	sendHeaders();
 	server.send(404, FPSTR(TEXT_PLAIN), msg);
 }
 
 void replyBadRequest(String msg) {
+	sendHeaders();
 	server.send(400, FPSTR(TEXT_PLAIN), msg + "\r\n");
 }
 
 void replyServerError(String msg) {
+	sendHeaders();
 	server.send(500, FPSTR(TEXT_PLAIN), msg + "\r\n");
 }
 

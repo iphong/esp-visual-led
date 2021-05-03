@@ -17,12 +17,12 @@ export async function clear() {
 	$player.src = ''
 	cache.audio = null
 	cache.show = null
-	await set({...DEFAULT_STORE_DATA})
+	await set({ ...DEFAULT_STORE_DATA })
 }
 export async function save() {
 	return new Promise(async (resolve) => {
 		if (store.file) {
-			chrome['fileSystem'].restoreEntry(store.file, async (entry:FileEntry) => {
+			chrome['fileSystem'].restoreEntry(store.file, async (entry: FileEntry) => {
 				if (entry) await saveShowEntry(entry)
 				resolve(null)
 			})
@@ -31,7 +31,7 @@ export async function save() {
 }
 export async function saveAs() {
 	return new Promise(async (resolve) => {
-		chrome['fileSystem'].chooseEntry({ type: 'saveFile' }, async (entry:FileEntry) => {
+		chrome['fileSystem'].chooseEntry({ type: 'saveFile' }, async (entry: FileEntry) => {
 			if (entry) await saveShowEntry(entry)
 			resolve(null)
 		})
@@ -40,7 +40,7 @@ export async function saveAs() {
 
 export async function open() {
 	return new Promise((resolve) => {
-		chrome['fileSystem'].chooseEntry({ type: 'openWritableFile' }, async (entry:FileEntry) => {
+		chrome['fileSystem'].chooseEntry({ type: 'openWritableFile' }, async (entry: FileEntry) => {
 			if (entry) {
 				await clear()
 				await openShowEntry(entry)
@@ -82,7 +82,33 @@ export function openRemote() {
 		height: 250
 	})
 }
-export async function sendShowFile(trackIndex:number = 1, showIndex:number = 1) {
-	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'A.lsb', '#')
-	await sendFile(new Blob(convertTracks(store.tracks[trackIndex].frames)), '/show/'+ showIndex +'B.lsb', '#')
+export async function uploadShowHandle() {
+	await uploadFile(createLightShowBinaryFile(0), `/show/${store.slot}${store.channel}.lsb`)
+}
+
+const NODE_ADDR = '10.1.1.1'
+const NODE_PORT = '11111'
+
+export async function uploadFile(file: Blob, path: string) {
+	return new Promise((resolve, reject) => {
+		if (!file || !path) throw 'Missing file or path'
+		if (!path.startsWith("/")) path = "/" + path;
+		let req = new XMLHttpRequest();
+		var form = new FormData();
+		form.append("data", file, path);
+		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
+		req.send(form);
+		req.addEventListener('load', e => {
+			console.debug('upload completed.')
+			resolve(null)
+		})
+		req.addEventListener('error', e => {
+			console.debug('upload error.')
+			reject(e)
+		})
+	})
+}
+
+export function createLightShowBinaryFile(trackIndex: number) {
+	return new Blob(convertTracks(store.tracks[trackIndex].frames))
 }

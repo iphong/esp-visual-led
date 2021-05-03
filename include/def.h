@@ -3,6 +3,8 @@
 #ifndef __DEF_H__
 #define __DEF_H__
 
+#define API_PORT	(u16)11111
+
 #define HEADER 		(u8)0x36 // character '$'
 #define VERSION 	(u8)0x05
 
