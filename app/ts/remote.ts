@@ -1,6 +1,6 @@
 
 addEventListener('message', e => {
-	console.log('message', e.data)
+	console.debug('message', e.data)
 })
 addEventListener('click', e => {
 	const target = e.target as HTMLButtonElement

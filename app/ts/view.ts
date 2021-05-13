@@ -29,7 +29,7 @@ export async function updateSize() {
 }
 
 export async function renderSerial() {
-	console.log('render serial')
+	console.debug('render serial')
 	updateSize()
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
@@ -53,7 +53,7 @@ export async function renderBeats() {
 	if (!$tempo) return
 	updateSize()
 	if (store.beats && store.beats.length) {
-		console.log('render beats')
+		console.debug('render beats')
 		store.beats.reduce((start = 0, end: number, index: number) => {
 			const width = end - start
 			const counter = index ? `${(index - 1) % 4 + 1}` : `-`
@@ -71,7 +71,7 @@ export async function renderWaveform() {
 	$waveform.innerHTML = ''
 	updateSize()
 	if (store.waveform && store.waveform.length) {
-		console.log('render waveform')
+		console.debug('render waveform')
 		const height = $waveform.offsetHeight
 		const halfHeight = height / 2
 		const canvas = document.createElement('canvas')
@@ -100,10 +100,11 @@ export async function renderTracks() {
 	updateSize()
 	$tracks.innerHTML = ''
 	if (store.tracks && store.tracks.length) {
-		store.tracks.forEach((track: any) => {
+		store.tracks.forEach((track: any, index: number) => {
 			const $track = document.createElement('div')
 			const { frames, ...params } = track
 			Object.assign($track.dataset, params)
+			$track.dataset.index = `${index}`
 			$track.classList.add('track')
 			$tracks.appendChild($track)
 			renderLight($track, track)
@@ -143,13 +144,13 @@ export function renderLight(container: any, track: any) {
 						$el.style.backgroundImage = `url(${drawPulse(color[0], period)})`
 						break
 					default:
-						console.log('unhandled light type', [params.type])
+						console.debug('unhandled light type', [params.type])
 				}
 				container.appendChild($el)
 			})
 			break
 		default:
-			return console.log('unsupported device type', [track.device])
+			return console.debug('unsupported device type', [track.device])
 	}
 }
 const tmpCanvas = document.createElement('canvas')

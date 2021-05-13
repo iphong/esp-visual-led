@@ -9,7 +9,7 @@ import {
 	convertTracks,
 	DEFAULT_STORE_DATA
 } from './store'
-import { $player } from './view'
+import { $player, $tracks } from './view'
 
 export { logHex } from './store'
 
@@ -46,7 +46,7 @@ export async function open() {
 				await openShowEntry(entry)
 				if (cache.audio) {
 					$player.src = URL.createObjectURL(cache.audio)
-					console.log('set player src', [$player.src])
+					console.debug('set player src')
 				}
 				resolve(null)
 			} else {
@@ -82,8 +82,24 @@ export function openRemote() {
 		height: 250
 	})
 }
-export async function uploadShowHandle() {
-	await uploadFile(createLightShowBinaryFile(0), `/show/${store.slot}${store.channel}.lsb`)
+export async function sendToChannelA() {
+	await uploadShowHandle('A')
+}
+export async function sendToChannelB() {
+	await uploadShowHandle('B')
+}
+export async function sendToChannelAB() {
+	await uploadShowHandle('A')
+	await uploadShowHandle('B')
+}
+export async function uploadShowHandle(channel) {
+	let index = 0
+	const $selected: HTMLElement = $tracks.querySelector('.selected')
+	if ($selected) {
+		index = parseInt($selected.dataset.index, 10)
+	}
+	await uploadFile(createLightShowBinaryFile(index), `/show/${store.slot}${channel}.lsb`)
+	console.info('upload completed.', index, store.slot, channel)
 }
 
 const NODE_ADDR = '10.1.1.1'
@@ -99,11 +115,9 @@ export async function uploadFile(file: Blob, path: string) {
 		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
 		req.send(form);
 		req.addEventListener('load', e => {
-			console.debug('upload completed.')
 			resolve(null)
 		})
 		req.addEventListener('error', e => {
-			console.debug('upload error.')
 			reject(e)
 		})
 	})

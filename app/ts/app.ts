@@ -1,5 +1,5 @@
 import { init, set, store, parseAudioFile, parseShowFile, cache, openShowEntry } from './store'
-import { $player, renderBeats, renderSerial, renderTracks, renderWaveform, updateSize, updateTime } from './view'
+import { $player, $tracks, renderBeats, renderSerial, renderTracks, renderWaveform, updateSize, updateTime } from './view'
 import { encodeMsg, sendRaw, sendSync } from './serial'
 import { serialConnect } from './serial'
 import * as actions from './actions'
@@ -19,11 +19,11 @@ function update() {
 				control.value = store[key]
 		} else {
 			if (control instanceof HTMLButtonElement) {
-				if (store[key]) {
-					control.classList.add('selected')
-				} else {
-					control.classList.remove('selected')
+				let selected = !!store[key]
+				if (control.hasAttribute('value')) {
+					selected = store[key] == control.getAttribute('value')
 				}
+				control.classList[selected ? 'add' : 'remove']('selected')
 			}
 		}
 	})
@@ -53,6 +53,7 @@ chrome.storage.onChanged.addListener(async (changes) => {
 
 addEventListener('load', async () => {
 	await init()
+	await update()
 	store.connected ? await serialConnect() : await renderSerial()
 	await renderTracks()
 	await renderWaveform()
@@ -72,18 +73,33 @@ addEventListener('load', async () => {
 				await openShowEntry(entry)
 				if (cache.audio) {
 					$player.src = URL.createObjectURL(cache.audio)
-					console.log('set player src')
+					console.debug('set player src')
 					await renderTracks()
 					await renderWaveform()
 					await renderBeats()
 				}
 			} else {
-				console.log('unable to restore show entry', [store.file])
+				console.debug('unable to restore show entry', [store.file])
 				await set('file', '')
 			}
 		})
 	}
 })
+
+addEventListener('pause', async e => {
+	store.paused = true
+	store.ended = false
+}, true)
+
+addEventListener('play', async e => {
+	store.paused = false
+	store.ended = false
+}, true)
+
+addEventListener('ended', async e => {
+	store.paused = false
+	store.ended = true
+}, true)
 
 addEventListener('durationchange', async e => {
 	await set('duration', Math.max($player.duration * 1000, store.duration))
@@ -105,7 +121,11 @@ addEventListener('click', async (e: MouseEvent) => {
 		let actionTarget = target.closest('*[data-key]') as HTMLElement
 		if (actionTarget && actionTarget instanceof HTMLButtonElement) {
 			const { key } = actionTarget.dataset
-			await set(key, !store[key])
+			let value:any = !store[key]
+			if (actionTarget.hasAttribute('value')) {
+				value = actionTarget.getAttribute('value')
+			}
+			await set(key, value)
 		}
 	}
 })
@@ -136,7 +156,7 @@ addEventListener('drop', async (e: DragEvent) => {
 			if (audio) {
 				cache.audio = file
 				$player.src = URL.createObjectURL(file)
-				console.log('set player src')
+				console.debug('set player src')
 			}
 		}
 		if (file.name.endsWith('lt3')) {
@@ -152,7 +172,20 @@ addEventListener('wheel', (e) => {
 	else store.time = Math.max(0, Math.min(store.duration, store.time + (delta * (e.altKey ? 200 : 10))))
 })
 
+addEventListener('mousedown', (e) => {
+	const $track = e.target.closest('.track')
+	if ($track) {
+		const $selected = $track.parentElement.querySelector('.selected')
+		if ($selected) {
+			$selected.classList.remove('selected')
+		}
+		$track.classList.add('selected')
+		$track.focus()
+	}
+})
+
 addEventListener('keydown', (e) => {
+	e.preventDefault()
 	switch (e.key) {
 		case ' ':
 			$player.paused || $player.ended ? $player.play() : $player.pause()
@@ -175,7 +208,6 @@ addEventListener('keydown', (e) => {
 addEventListener('message', e => {
 	const type = e.data[0]
 	const data = e.data.slice(1)
-	console.debug('message', type, data)
 	switch (type) {
 		case 0:
 			sendRaw(data)

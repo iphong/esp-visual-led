@@ -20,37 +20,42 @@
 	<nav id="file-toolbar">
 		<!-- <button data-action="clear" class="mdi mdi-note-outline"></button> -->
 		<!-- <button data-action="save" class="mdi mdi-content-save-outline"></button> -->
-		<button data-action="open" class="mdi mdi-folder-open-outline"></button>
+		<button data-action="open" class="mdi mdi-file-plus"></button>
 	</nav>
 	<nav id="controls-toolbar">
-		<select data-key="slot">
-			<option value="1">Show 1</option>
-			<option value="2">Show 2</option>
-			<option value="3">Show 3</option>
-			<option value="4">Show 4</option>
-			<option value="5">Show 5</option>
-			<option value="6">Show 6</option>
-			<option value="7">Show 7</option>
-			<option value="8">Show 8</option>
-		</select>
-		<select data-key="channel">
-			<option value="A">Channel A</option>
-			<option value="B">Channel B</option>
-		</select>
+		<!-- <select data-key="slot">
+			<option value="1"># 01</option>
+			<option value="2"># 02</option>
+			<option value="3"># 03</option>
+			<option value="4"># 04</option>
+		</select> -->
+		<!-- <select data-key="channel">
+			<option value="A">@ A</option>
+			<option value="B">@ B</option>
+		</select> -->
+		<!-- <button data-action="uploadShowHandle" class="mdi mdi-upload"></button> -->
+		
+		<button data-key="slot" value="1">1</button>
+		<button data-key="slot" value="2">2</button>
+		<button data-key="slot" value="3">3</button>
+		<button data-key="slot" value="4">4</button>
 	</nav>
 	<nav id="misc-toolbar">
-		<button data-action="uploadShowHandle" class="mdi mdi-upload"></button>
+		<button data-action="sendToChannelA">A</button>
+		<button data-action="sendToChannelB">B</button>
+		<button data-action="sendToChannelAB">AB</button>
 		<!-- <button data-action="openManager" class="mdi mdi-devices"></button> -->
 		<!-- <button data-action="openRemote" class="mdi mdi-remote"></button> -->
 		<!-- <button data-action="openUtils" class="mdi mdi-console"></button> -->
 	</nav>
 	<nav id="serial-toolbar">
 		<select data-key="port"></select>
-		<button data-key="connected" data-action="connect" class="mdi mdi-play-network-outline"></button>
-		<button data-key="sync" class="mdi mdi-sync"></button>
+		<button data-key="connected" data-action="connect" class="mdi mdi-connection"></button>
+		<button data-key="sync" class="mdi mdi-access-point"></button>
 	</nav>
 </header>
 <main id="main">
+	<div id="timeline"></div>
 	<div id="tracks"></div>
 	<div id="tempo"></div>
 	<div id="waveform"></div>

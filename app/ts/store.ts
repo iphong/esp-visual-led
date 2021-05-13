@@ -56,14 +56,14 @@ chrome.storage.onChanged.addListener(async (changes) => {
 	for (let key in changes) {
 		store[key] = changes[key].newValue
 	}
-	console.debug('changed', [changes])
+	// console.debug('changed', [changes])
 	// await renderTracks()
 	// await renderWaveform()
 	// await renderBeats()
 })
 
 export async function init() {
-	console.log('init storage')
+	console.debug('init storage')
 	return new Promise(resolve => {
 		chrome.storage.local.get(async (res: any) => {
 			// const { tracks, duration, solution, ...data } = res
@@ -86,7 +86,7 @@ export async function set(key: string | object, value?: any) {
 }
 
 export async function parseShowFile(file: File | Blob): Promise<ShowData> {
-	console.log('parse show file')
+	console.debug('parse show file')
 	return new Promise(async (resolve) => {
 		if (file instanceof File) file = new Blob([file], { type: file.type })
 		let result = null
@@ -94,8 +94,8 @@ export async function parseShowFile(file: File | Blob): Promise<ShowData> {
 		try {
 			result = JSON.parse(body)
 		} catch (e) {
-			console.log(e)
-			console.log(await file.text())
+			console.debug(e)
+			console.debug(await file.text())
 		}
 		if (file.type !== 'lmp' && result) result = {
 			tracks: parseShowTracks(result.tracks)
@@ -105,7 +105,7 @@ export async function parseShowFile(file: File | Blob): Promise<ShowData> {
 }
 
 export async function parseAudioFile(file: File | Blob): Promise<AudioData> {
-	console.log('parse audio file')
+	console.debug('parse audio file')
 	return {}
 	// const { duration, waveform, beats, tempo }:any = await parseAudio(file)
 	// return { duration: Math.max(duration, store.duration), waveform, beats, tempo }
@@ -122,7 +122,7 @@ export async function parseAudio(file: File | Blob | ArrayBuffer): Promise<Audio
 		if (buffer instanceof Blob)
 			buffer = await buffer.arrayBuffer()
 		new AudioContext().decodeAudioData(buffer, res => {
-			console.log('decoded audio', [res])
+			console.debug('decoded audio', [res])
 			const data = res.getChannelData(0)
 			if (res.numberOfChannels == 2) {
 				const data2 = res.getChannelData(1)
@@ -130,7 +130,7 @@ export async function parseAudio(file: File | Blob | ArrayBuffer): Promise<Audio
 					data[i] = (data[i] + data2[i]) / 2
 				}
 			}
-			console.log('getting music tempo')
+			console.debug('getting music tempo')
 			const { beats, tempo } = new MusicTempo(data) as { beats: Float32Array, tempo: number }
 			resolve({
 				name,
@@ -275,13 +275,13 @@ export async function openShowEntry(entry: FileEntry) {
 export async function saveShowEntry(entry: FileEntry) {
 	if (!entry) return
 	const upName = entry.name.toUpperCase()
-	console.log(`open file`, [entry.fullPath])
+	console.debug(`open file`, [entry.fullPath])
 	if (upName.endsWith('LMP')) {
 		try {
 			await set('file', chrome['fileSystem'].retainEntry(entry))
 		}
 		catch (e) {
-			console.log(e)
+			console.debug(e)
 		}
 	}
 	return new Promise((resolve, reject) => {
@@ -298,7 +298,7 @@ export async function saveShowEntry(entry: FileEntry) {
 						} else {
 							await set('file', '')
 						}
-						console.log(`save LMP file`, [entry.fullPath])
+						console.debug(`save LMP file`, [entry.fullPath])
 						resolve(null)
 					})
 				}).catch(reject)
@@ -367,12 +367,21 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 				createLoopFrame(start, duration),
 				createColorFrame(0, dur, 0, ...hex2rgb(color[0])),
 				createColorFrame(dur, period - dur, 0, ...hex2rgb(color[1])),
-				createEndFrame(period),
-				createColorFrame(period, 0, 0, ...hex2rgb(color[0]))
+				createEndFrame(period)
 			]
 		case 5: // rainbow
+			const seg = Math.floor(period / 7)
+			let pos = 0
 			return [
-				createColorFrame(start, duration, 0, 0, 0, 0)
+				createLoopFrame(start, duration),
+				createColorFrame(seg * 0, seg, seg, 255, 0, 0),
+				createColorFrame(seg * 1, seg, seg, 255, 165, 0),
+				createColorFrame(seg * 2, seg, seg, 255, 255, 0),
+				createColorFrame(seg * 3, seg, seg, 0, 128, 0),
+				createColorFrame(seg * 4, seg, seg, 0, 0, 255),
+				createColorFrame(seg * 5, seg, seg, 75, 0, 130),
+				createColorFrame(seg * 6, seg, seg, 238, 130, 238),
+				createEndFrame(seg * 7)
 			]
 		case 6: // dots
 			return [
@@ -417,7 +426,7 @@ export function convertTracks(tracks) {
 }
 
 export function logHex(data) {
-	console.log(data.map((c: number) => c.toString(16).padStart(2, '0')).join(' '))
+	console.debug(data.map((c: number) => c.toString(16).padStart(2, '0')).join(' '))
 }
 
 

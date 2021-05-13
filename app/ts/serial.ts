@@ -3,24 +3,13 @@ import { set, store } from "./store"
 let handler = null
 
 chrome.serial.onReceive.addListener(async ({ connectionId: id, data }) => {
-	let m = ''
-	let h = ''
 	if (id === store.connection) {
-		(new Uint8Array(data)).forEach((byte) => {
-			m += String.fromCharCode(byte)
-			h += byte.toString(16).padStart(2, '0') + ' '
-			decodeMsg(byte)
-		})
-		console.groupCollapsed('serial', id, 'received', m.length, 'byte(s)')
-		console.info('STR:', m)
-		console.info('HEX:', h)
-		console.info('BUF:', data)
-		console.groupEnd()
+		(new Uint8Array(data)).forEach((byte) => decodeMsg(byte))
 	}
 })
 chrome.serial.onReceiveError.addListener(async ({ connectionId: id, error }) => {
 	if (id === store.connection) {
-		console.log("serial closed:", error)
+		console.debug("serial closed:", error)
 		await set({ connection: 0, connected: false })
 	}
 })
@@ -38,7 +27,7 @@ export async function serialConnect(force = false) {
 				if (!found) {
 					resolve(await serialConnect(true))
 				} else {
-					console.log('serial resumed:', found.connectionId, store.port)
+					console.debug('serial resumed:', found.connectionId, store.port)
 					await set({ connection: found.connectionId, connected: true })
 					resolve(found.connectionId)
 				}
@@ -52,10 +41,10 @@ export async function serialConnect(force = false) {
 			}
 			chrome.serial.connect(store.port, options, async (conn) => {
 				if (conn) {
-					console.log('serial connected:', conn.connectionId)
+					console.debug('serial connected:', conn.connectionId)
 					await set({ connection: conn.connectionId, connected: true })
 				} else {
-					console.log('can not connect to serial port')
+					console.debug('can not connect to serial port')
 					await set({ connection: 0, connected: false })
 				}
 				resolve(conn)
@@ -80,7 +69,7 @@ export async function sendRaw(data: ArrayBuffer) {
 }
 
 export async function sendCommand(id: string, head: string, ...bytes: number[]): Promise<any> {
-	console.log('send', id, head, ...bytes.map(c => c.toString(16).padStart(2, '0')))
+	// console.debug('send', id, head, ...bytes.map(c => c.toString(16).padStart(2, '0')))
 	const i = id.split('').map(c => c.charCodeAt(0))
 	const h = head.split('').map(c => c.charCodeAt(0))
 	await sendRaw(encodeMsg([...i, 62, ...h, ...bytes]))
@@ -157,7 +146,7 @@ export async function sendSync(time: number, show: number, ended: boolean, pause
 	await sendCommand('#', 'SYNC', ...data);
 }
 export async function sendFile(file: File | Blob, path?: string, id: string = '#') {
-	console.log('begin uploading')
+	console.debug('begin uploading')
 	let bytesSent = 0
 	if (file instanceof File)
 		file = new Blob([file])
@@ -176,7 +165,7 @@ export async function sendFile(file: File | Blob, path?: string, id: string = '#
 	}
 	await sendCommand(id, 'FCLOSE')
 	await delay(100);
-	console.log('file uploaded')
+	console.debug('file uploaded')
 }
 
 export async function delay(ms: number = 1000) {

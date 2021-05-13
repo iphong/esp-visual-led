@@ -12,7 +12,7 @@ addEventListener('load', async () => {
 		if (buf.length > 6 && [60, 62].includes(buf[1])) {
 			const id = readStr(buf, 6)
 			const msg = readStr(buf, buf.length-7, 7)
-			console.log(id, msg)
+			console.debug(id, msg)
 			if (msg.startsWith('SELECT')) {
 				await sendCommand(id, 'BLINK')
 			}
@@ -20,7 +20,7 @@ addEventListener('load', async () => {
 				const type = buf[11]
 				const vbat = (buf[12] << 8) | buf[13]
 				const name = readStr(buf, 20, 14);
-				console.log(id, type, (vbat/1000+0.04).toPrecision(3), name)
+				console.debug(id, type, (vbat/1000+0.04).toPrecision(3), name)
 			}
 		}
 	})
