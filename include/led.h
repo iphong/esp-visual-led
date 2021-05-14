@@ -7,6 +7,8 @@ namespace LED {
 class Show {
    protected:
 	const char id;
+	bool is_addressable_led_strip;
+	u8 o_pin;
 	u8 r_pin;
 	u8 g_pin;
 	u8 b_pin;
@@ -34,6 +36,10 @@ class Show {
 
 	Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin)
 		: id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) {
+	}
+
+	Show(const char id, u8 o_pin)
+		: id(id), o_pin(o_pin), is_addressable_led_strip(true) {
 	}
 
 	u32 readUint32(unsigned char* buffer) {
@@ -204,27 +210,35 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		r = map(r, 0, 255, 0, App::data.brightness);
-		g = map(g, 0, 255, 0, App::data.brightness);
-		b = map(b, 0, 255, 0, App::data.brightness);
-		r /= 1;
-		g /= 1;
-		b /= 1;
+		if (is_addressable_led_strip) {
+
+		} else {
+			r = map(r, 0, 255, 0, App::data.brightness);
+			g = map(g, 0, 255, 0, App::data.brightness);
+			b = map(b, 0, 255, 0, App::data.brightness);
+			r /= 1;
+			g /= 1;
+			b /= 1;
 #ifdef INVERTED_RGB
-		analogWrite(r_pin, 255 - r);
-		analogWrite(g_pin, 255 - g);
-		analogWrite(b_pin, 255 - b);
+			analogWrite(r_pin, 255 - r);
+			analogWrite(g_pin, 255 - g);
+			analogWrite(b_pin, 255 - b);
 #else
-		analogWrite(r_pin, r);
-		analogWrite(g_pin, g);
-		analogWrite(b_pin, b);
+			analogWrite(r_pin, r);
+			analogWrite(g_pin, g);
+			analogWrite(b_pin, b);
 #endif
+		}
 	}
 
 	void setup() {
-		pinMode(r_pin, OUTPUT);
-		pinMode(g_pin, OUTPUT);
-		pinMode(b_pin, OUTPUT);
+		if (is_addressable_led_strip) {
+
+		} else {
+			pinMode(r_pin, OUTPUT);
+			pinMode(g_pin, OUTPUT);
+			pinMode(b_pin, OUTPUT);
+		}
 		setRGB(0, 0, 0);
 	}
 
@@ -245,13 +259,14 @@ class Show {
 			tick(true);
 		});
 	}
-};	// namespace LED
+};
 
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
+// Show C('C', 12);
 
 void setup() {
-	analogWriteFreq(10000);
+	analogWriteFreq(1000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();

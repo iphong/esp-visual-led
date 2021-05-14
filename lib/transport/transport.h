@@ -1,27 +1,31 @@
+#ifdef ESP32
+#include <arduino.h>
+#else
 #include <c_types.h>
 #include <string>
 #include <functional>
 #include <Stream.h>
+#endif
 
 #ifndef __PROTOCOL_H__
 #define __PROTOCOL_H__
 
 using namespace std;
 
-static u8 syncword[] = {0x24};
-static u8 broadcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
+static uint8_t syncword[] = {0x24};
+static uint8_t broadcast[] = {0xff,0xff,0xff,0xff,0xff,0xff};
 
 class Transport {
    protected:
 	Stream *_stream;
-	function<void(u8*, u8*, u8)> _receive;
+	function<void(uint8_t*, uint8_t*, uint8_t)> _receive;
 
-	u8 buffer[64];
-	u8 length = 0;
-	u8 crc = 0;
+	uint8_t buffer[64];
+	uint8_t length = 0;
+	uint8_t crc = 0;
 	bool synced = false;
 
-	bool equals(u8 *a, u8 *b, u8 size, u8 offset = 0) {
+	bool equals(uint8_t *a, uint8_t *b, uint8_t size, uint8_t offset = 0) {
 		for (auto i = offset; i < (offset + size); i++)
 			if (a[i] != b[i])
 				return false;
@@ -31,7 +35,7 @@ class Transport {
 		return synced = synced || equals(buffer, syncword, sizeof(syncword));
 	}
 	bool isValidSize() {
-		return length >= (u8)(sizeof(syncword) + buffer[1] + 2);
+		return length >= (uint8_t)(sizeof(syncword) + buffer[1] + 2);
 	}
 	bool checksum() {
 		return buffer[length - 1] == crc;
@@ -44,14 +48,14 @@ class Transport {
 	Transport();
 	Transport(Stream *stream) : _stream(stream) {}
 
-	void receive(function<void(u8*, u8*, u8)> cb) { _receive = cb; }
+	void receive(function<void(uint8_t*, uint8_t*, uint8_t)> cb) { _receive = cb; }
 
-	void parse(u8 data) {
+	void parse(uint8_t data) {
 		buffer[length++] = data;
 		if (isValidFrame()) {
 			synced = false;
-			u8 size = buffer[1];
-			u8 *buf = &buffer[2];
+			uint8_t size = buffer[1];
+			uint8_t *buf = &buffer[2];
 
 			if (_receive)
 				_receive(broadcast, buf, size);
@@ -68,14 +72,14 @@ class Transport {
 			crc = 0;
 		}
 	}
-	void parse(u8 *data, u8 size) {
+	void parse(uint8_t *data, uint8_t size) {
 		for (auto i = 0; i < size; i++) parse(data[i]);
 	}
-	void send(u8* addr, u8 *data, u8 size) {
-		u8 sum = 0;
-		u8 len = size + sizeof(syncword) + 2;
-		u8 payload[len];
-		for (auto i = 0; i < (u8)sizeof(syncword); i++) {
+	void send(uint8_t* addr, uint8_t *data, uint8_t size) {
+		uint8_t sum = 0;
+		uint8_t len = size + sizeof(syncword) + 2;
+		uint8_t payload[len];
+		for (auto i = 0; i < (uint8_t)sizeof(syncword); i++) {
 			payload[i] = syncword[i];
 			sum += payload[i];
 		}
@@ -96,13 +100,13 @@ class Transport {
 		// LOGL();
 		// parse(payload, len);
 	}
-	void send(u8* addr, const char *data, size_t size) {
-		send(addr, (u8 *)data, (u8)size);
+	void send(uint8_t* addr, const char *data, size_t size) {
+		send(addr, (uint8_t *)data, (uint8_t)size);
 	}
-	void send(u8* addr, string data) {
+	void send(uint8_t* addr, string data) {
 		send(addr, data.c_str(), data.length());
 	}
-	void send(u8 * data, u8 size) {
+	void send(uint8_t * data, uint8_t size) {
 		send(broadcast, data, size);
 	}
 	void send(const char * data, size_t size) {
