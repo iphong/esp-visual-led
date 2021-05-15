@@ -216,18 +216,9 @@ class Show {
 			r = map(r, 0, 255, 0, App::data.brightness);
 			g = map(g, 0, 255, 0, App::data.brightness);
 			b = map(b, 0, 255, 0, App::data.brightness);
-			r /= 1;
-			g /= 1;
-			b /= 1;
-#ifdef INVERTED_RGB
-			analogWrite(r_pin, 255 - r);
-			analogWrite(g_pin, 255 - g);
-			analogWrite(b_pin, 255 - b);
-#else
 			analogWrite(r_pin, r);
 			analogWrite(g_pin, g);
 			analogWrite(b_pin, b);
-#endif
 		}
 	}
 
@@ -263,10 +254,10 @@ class Show {
 
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
-// Show C('C', 12);
+// Show C('C', 2);
 
 void setup() {
-	analogWriteFreq(1000);
+	analogWriteFreq(500);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();

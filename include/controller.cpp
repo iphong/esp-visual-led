@@ -14,7 +14,9 @@ void setup() {
 	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
 	Net::apPSK = "";
 
+#ifdef ENABLE_DEBUG_LOGS
 	Serial.begin(115200);
+#endif
 
 	btn.begin();
 	btn.onPress(buttonPressHandler);
@@ -38,8 +40,10 @@ void setup() {
 }
 
 void loop() {
-	ArduinoOTA.handle();
-	App::loop();
-	Api::loop();
-	Net::loop();
+	if (!LED::isRunning()) {
+		ArduinoOTA.handle();
+		Api::loop();
+	}
+	// App::loop();
+	// Net::loop();
 }

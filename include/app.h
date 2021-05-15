@@ -17,15 +17,9 @@
 #ifndef __APP_H__
 #define __APP_H__
 
-#ifdef ENABLE_DEBUG_LOGS
 #define LOG(x...) Serial.print(x)
 #define LOGD(x...) Serial.printf(x)
 #define LOGL(x...) Serial.println(x)
-#else
-#define LOG(x...) Serial1.print(x)
-#define LOGD(x...) Serial1.printf(x)
-#define LOGL(x...) Serial1.println(x)
-#endif
 
 namespace App {
 
@@ -151,6 +145,10 @@ void setup() {
 	LOGL(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
 	if (!fs->exists("/show")) fs->mkdir("/show");
 	if (!fs->exists("/tmp")) fs->mkdir("/tmp");
+	// if (!fs->exists("/1")) fs->mkdir("/1");
+	// if (!fs->exists("/2")) fs->mkdir("/2");
+	// if (!fs->exists("/3")) fs->mkdir("/3");
+	// if (!fs->exists("/4")) fs->mkdir("/4");
 }
 void loop() {
 }

@@ -18,7 +18,7 @@ void setup() {
 	WiFi.softAPdisconnect();
 
 	bridge.receive([](uint8_t* addr, uint8_t* data, size_t size) {
-		esp_now_send((const uint8_t*)addr, (const uint8_t*)data, size);
+		esp_now_send(addr, data, size);
 	});
 	esp_now_init();
 	#ifdef ESP8266

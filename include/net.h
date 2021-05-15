@@ -8,7 +8,6 @@
 #ifndef __NET_H__
 #define __NET_H__
 
-#define MSG_BLINK  		"#>BLINK"
 #define MSG_PING  		"#>PING"
 #define MSG_SYNC  		"#>SYNC"
 #define MSG_PAIR  		"#>PAIR"
@@ -87,17 +86,6 @@ void setPair() {
 		App::save();
 	}
 }
-void setBlink(u8* data, u8 size) {
-	if (!size) {
-		App::toggleBlink(200);
-	} else if (size == 1) {
-		// App::toggleBlink(data[0] * 10);
-		data[0] ? App::startBlink(data[0] * 10) : App::stopBlink();
-	} else if (size == 2) {
-		// App::toggleBlink(data[0] * 10, data[1]);
-		data[0] ? App::startBlink(data[0] * 10, data[1]) : App::stopBlink();
-	}
-}
 void setName(u8* buf, u8 len) {
 	memset(App::data.name, 0, 20);
 	memcpy(App::data.name, buf, len);
@@ -169,7 +157,6 @@ void closeFile(u8* buf, u8 len) {
 }
 
 void setup() {
-	MeshRC::on(MSG_BLINK, 	setBlink);
 	MeshRC::on(MSG_PING, 	sendPing);
 	MeshRC::on(MSG_SYNC, 	setSync);
 	MeshRC::on(MSG_PAIR, 	setPair);

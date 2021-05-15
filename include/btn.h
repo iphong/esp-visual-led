@@ -35,8 +35,5 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 			}
 			LOGD("mode = %i\n", App::mode);
 			break;
-		case 2:
-			Net::wifiToggle();
-			break;
 	}
 };

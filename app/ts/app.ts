@@ -66,7 +66,7 @@ addEventListener('load', async () => {
 		if (store.sync) {
 			sendSync(store.time, store.slot, store.ended, store.paused)
 		}
-	}, 200)
+	}, 100)
 	if (store.file) {
 		chrome['fileSystem'].restoreEntry(store.file, async (entry: FileEntry) => {
 			if (entry) {
