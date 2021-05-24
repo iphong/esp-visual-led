@@ -127,7 +127,7 @@ void beginFile(u8* buf, u8 len) {
 		file.write(blank, 128);
 		file.seek(0);
 		App::LED_LOW();
-		LOGD("%u us OK\n", micros() - time);
+		LOGD("%lu us OK\n", micros() - time);
 	} else
 		LOG("\n");
 }
@@ -142,7 +142,7 @@ void writeFile(u8* buf, u8 len) {
 		file.write(buf[i]);
 	}
 	App::LED_BLINK();
-	LOGD("%u us\n", micros() - time);
+	LOGD("%lu us\n", micros() - time);
 }
 void closeFile(u8* buf, u8 len) {
 	LOG("CLOSE: ");
@@ -153,7 +153,7 @@ void closeFile(u8* buf, u8 len) {
 	}
 	file.close();
 	App::LED_HIGH();
-	LOGD("%u us\n", micros() - time);
+	LOGD("%lu us\n", micros() - time);
 }
 
 void setup() {

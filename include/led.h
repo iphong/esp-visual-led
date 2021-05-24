@@ -1,3 +1,5 @@
+#include <functional>
+
 #include "def.h"
 
 #ifndef __LED_H__
@@ -7,8 +9,6 @@ namespace LED {
 class Show {
    protected:
 	const char id;
-	bool is_addressable_led_strip;
-	u8 o_pin;
 	u8 r_pin;
 	u8 g_pin;
 	u8 b_pin;
@@ -34,12 +34,14 @@ class Show {
 	bool paused = false;
 	bool repeat = false;
 
+	Show() :id('#') {}
+
 	Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin)
 		: id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) {
 	}
 
-	Show(const char id, u8 o_pin)
-		: id(id), o_pin(o_pin), is_addressable_led_strip(true) {
+	bool isActive() {
+		return id != '#';
 	}
 
 	u32 readUint32(unsigned char* buffer) {
@@ -145,7 +147,7 @@ class Show {
 				currentTime = frame.start;
 			}
 			while (currentTime < time) {
-				if (!tick(true))
+				if (!tick(false))
 					continue;
 			}
 		} else if (offset < -1) {
@@ -154,7 +156,7 @@ class Show {
 				currentTime = frame.start;
 			}
 			while (currentTime < time) {
-				if (!tick(true))
+				if (!tick(false))
 					continue;
 			}
 		}
@@ -178,7 +180,9 @@ class Show {
 				if (shouldUpdate && loopFrame.type == RGB_FRAME) {
 					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
-				if (++loopTime >= loopFrame.start + loopFrame.duration) {
+				loopTime += shouldUpdate ? 1 : 10;
+				if (loopTime >= loopFrame.start + loopFrame.duration) {
+					loopTime = loopFrame.start + loopFrame.duration;
 					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
 						lastColor.set(loopFrame.r, loopFrame.g, loopFrame.b);
@@ -195,7 +199,9 @@ class Show {
 				// LOGL("ended");
 				repeat ? begin() : end();
 		}
-		if (++currentTime >= frame.start + frame.duration) {
+		currentTime += shouldUpdate ? 1 : 10;
+		if (currentTime >= frame.start + frame.duration) {
+			currentTime = frame.start + frame.duration;
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
 				loopTime = 0;
@@ -210,26 +216,18 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		if (is_addressable_led_strip) {
-
-		} else {
-			r = map(r, 0, 255, 0, App::data.brightness);
-			g = map(g, 0, 255, 0, App::data.brightness);
-			b = map(b, 0, 255, 0, App::data.brightness);
-			analogWrite(r_pin, r);
-			analogWrite(g_pin, g);
-			analogWrite(b_pin, b);
-		}
+		r = map(r, 0, 255, 0, App::data.brightness);
+		g = map(g, 0, 255, 0, App::data.brightness);
+		b = map(b, 0, 255, 0, App::data.brightness);
+		analogWrite(r_pin, r);
+		analogWrite(g_pin, g);
+		analogWrite(b_pin, b);
 	}
 
 	void setup() {
-		if (is_addressable_led_strip) {
-
-		} else {
-			pinMode(r_pin, OUTPUT);
-			pinMode(g_pin, OUTPUT);
-			pinMode(b_pin, OUTPUT);
-		}
+		pinMode(r_pin, OUTPUT);
+		pinMode(g_pin, OUTPUT);
+		pinMode(b_pin, OUTPUT);
 		setRGB(0, 0, 0);
 	}
 
@@ -254,43 +252,59 @@ class Show {
 
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
-// Show C('C', 2);
+
+const Show shows[8] = {
+	Show('A', R1_PIN, G1_PIN, B1_PIN),
+	Show('B', R2_PIN, G2_PIN, B2_PIN)};
+
+typedef std::function<void(Show*)> show_iterator;
+
+void each(show_iterator callback) {
+	for (auto show : shows) {
+		if (show.isActive() != ' ') {
+			callback(&show);
+		}
+	}
+}
 
 void setup() {
-	analogWriteFreq(500);
+	analogWriteFreq(1000);
 	analogWriteRange(255);
-	A.setup();
-	B.setup();
+	each([](Show* show) { show->setup(); });
 }
 void end() {
-	A.end();
-	B.end();
+	each([](Show* show) { show->end(); });
 }
 void begin() {
-	A.begin();
-	B.begin();
+	each([](Show* show) { show->begin(); });
 }
 void pause() {
-	A.pause();
-	B.pause();
+	each([](Show* show) { show->pause(); });
 }
 void resume() {
-	A.resume();
-	B.resume();
+	each([](Show* show) { show->resume(); });
 }
 void toggle() {
-	A.toggle();
-	B.toggle();
+	each([](Show* show) { show->toggle(); });
 }
 void setTime(u32 time) {
-	A.setTime(time);
-	B.setTime(time);
+	each([time](Show* show) { show->setTime(time); });
 }
 bool isRunning() {
-	return A.running || B.running;
+	for (auto show : shows) {
+		if (show.isActive() != '#' && !A.running) {
+			return false;
+		}
+	}
+	return true;
 }
 bool isPaused() {
-	return A.paused && B.paused;
+	for (auto show : shows) {
+		if (show.isActive() != '#' && !A.paused) {
+			return false;
+		}
+	}
+	return true;
 }
 }  // namespace LED
 

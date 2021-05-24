@@ -58,12 +58,12 @@ static void startBlink(u32 time = 1000, u8 pin = 0) {
 	}
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
-static void toggleBlink(u32 time = 1000, u8 pin = led_pin) {
-	if (blinkTimer.active())
-		stopBlink();
-	else
-		startBlink(time, pin);
-}
+// static void toggleBlink(u32 time = 1000, u8 pin = led_pin) {
+// 	if (blinkTimer.active())
+// 		stopBlink();
+// 	else
+// 		startBlink(time, pin);
+// }
 bool isPaired() {
 	return !equals(data.master, MeshRC::broadcast, 6);
 }
