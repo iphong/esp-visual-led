@@ -180,8 +180,8 @@ class Show {
 				if (shouldUpdate && loopFrame.type == RGB_FRAME) {
 					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
-				loopTime += shouldUpdate ? 1 : 10;
-				if (loopTime >= loopFrame.start + loopFrame.duration) {
+				// loopTime += shouldUpdate ? 1 : 1;
+				if (++loopTime >= loopFrame.start + loopFrame.duration) {
 					loopTime = loopFrame.start + loopFrame.duration;
 					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
@@ -199,8 +199,8 @@ class Show {
 				// LOGL("ended");
 				repeat ? begin() : end();
 		}
-		currentTime += shouldUpdate ? 1 : 10;
-		if (currentTime >= frame.start + frame.duration) {
+		// currentTime += shouldUpdate ? 1 : 1;
+		if (++currentTime >= frame.start + frame.duration) {
 			currentTime = frame.start + frame.duration;
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
@@ -252,60 +252,109 @@ class Show {
 
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
-
-const Show shows[8] = {
-	Show('A', R1_PIN, G1_PIN, B1_PIN),
-	Show('B', R2_PIN, G2_PIN, B2_PIN)};
-
-typedef std::function<void(Show*)> show_iterator;
-
-void each(show_iterator callback) {
-	for (auto show : shows) {
-		if (show.isActive() != ' ') {
-			callback(&show);
-		}
-	}
-}
+// Show C('C', 2);
 
 void setup() {
-	analogWriteFreq(1000);
+	analogWriteFreq(10000);
 	analogWriteRange(255);
-	each([](Show* show) { show->setup(); });
+	A.setup();
+	B.setup();
 }
 void end() {
-	each([](Show* show) { show->end(); });
+	A.end();
+	B.end();
 }
 void begin() {
-	each([](Show* show) { show->begin(); });
+	A.begin();
+	B.begin();
 }
 void pause() {
-	each([](Show* show) { show->pause(); });
+	A.pause();
+	B.pause();
 }
 void resume() {
-	each([](Show* show) { show->resume(); });
+	A.resume();
+	B.resume();
 }
 void toggle() {
-	each([](Show* show) { show->toggle(); });
+	A.toggle();
+	B.toggle();
 }
 void setTime(u32 time) {
-	each([time](Show* show) { show->setTime(time); });
+	A.setTime(time);
+	B.setTime(time);
 }
 bool isRunning() {
-	for (auto show : shows) {
-		if (show.isActive() != '#' && !A.running) {
-			return false;
-		}
-	}
-	return true;
+	return A.running || B.running;
 }
 bool isPaused() {
-	for (auto show : shows) {
-		if (show.isActive() != '#' && !A.paused) {
-			return false;
-		}
-	}
-	return true;
+	return A.paused && B.paused;
 }
 }  // namespace LED
+
+
+// -------------------------
+
+// Show A('A', R1_PIN, G1_PIN, B1_PIN);
+// Show B('B', R2_PIN, G2_PIN, B2_PIN);
+
+// const Show shows[8] = {
+// 	Show('A', R1_PIN, G1_PIN, B1_PIN),
+// 	Show('B', R2_PIN, G2_PIN, B2_PIN)};
+
+// typedef std::function<void(Show*)> show_iterator;
+
+// void each(show_iterator callback) {
+// 	for (auto show : shows) {
+// 		if (show.isActive() != ' ') {
+// 			callback(&show);
+// 		}
+// 	}
+// }
+
+// void setup() {
+// 	analogWriteFreq(1000);
+// 	analogWriteRange(255);
+// 	each([](Show* show) { show->setup(); });
+// }
+// void end() {
+// 	each([](Show* show) { show->end(); });
+// }
+// void begin() {
+// 	each([](Show* show) { show->begin(); });
+// }
+// void pause() {
+// 	each([](Show* show) { show->pause(); });
+// }
+// void resume() {
+// 	each([](Show* show) { show->resume(); });
+// }
+// void toggle() {
+// 	each([](Show* show) { show->toggle(); });
+// }
+// void setTime(u32 time) {
+// 	A.setTime(time);
+// 	B.setTime(time);
+// 	each([time](Show* show) { show->setTime(time); });
+// }
+// bool isRunning() {
+// 	for (auto show : shows) {
+// 		if (show.isActive() != '#' && !A.running) {
+// 			return false;
+// 		}
+// 	}
+// 	return true;
+// }
+// bool isPaused() {
+// 	for (auto show : shows) {
+// 		if (show.isActive() != '#' && !A.paused) {
+// 			return false;
+// 		}
+// 	}
+// 	return true;
+// }
+// }  // namespace LED
+
+// --------------------------
 
 #endif

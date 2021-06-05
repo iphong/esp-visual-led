@@ -53,9 +53,9 @@ static void stopBlink() {
 static void startBlink(u32 time = 1000, u8 pin = 0) {
 	if (pin && pin != led_pin) {
 		stopBlink();
-		led_pin = pin;
-		pinMode(led_pin, OUTPUT);
 	}
+	led_pin = pin;
+	pinMode(led_pin, OUTPUT);
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
 // static void toggleBlink(u32 time = 1000, u8 pin = led_pin) {

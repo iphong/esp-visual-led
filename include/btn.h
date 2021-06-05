@@ -25,7 +25,7 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 		case 0:
 			if (!App::isPairing()) {
 				LED::end();
-				App::startBlink(200, LED_PIN);
+				App::startBlink(200, 2);
 				App::mode = MODE_BIND;
 				MeshRC::master = NULL;
 			} else {
