@@ -97,19 +97,10 @@ void setAlpha(u8* buf, u8 len) {
 	App::save();
 }
 void setRGB(u8* buf, u8 len) {
-	u8 r = buf[0];
-	u8 g = buf[1];
-	u8 b = buf[2];
-	LED::A.setRGB(r, g, b);
-	LED::B.setRGB(r, g, b);
+	LED::setRGB(buf, len);
 }
 void setColor(u8* buf, u8 len) {
-	char segment = buf[0];
-	u8 r = buf[1];
-	u8 g = buf[2];
-	u8 b = buf[3];
-	if (segment == 'A' || segment == '*') LED::A.setRGB(r, g, b);
-	if (segment == 'B' || segment == '*') LED::B.setRGB(r, g, b);
+	LED::setColor(buf, len);
 }
 
 File file;
