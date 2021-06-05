@@ -40,8 +40,10 @@ void setup() {
 }
 
 void loop() {
-	ArduinoOTA.handle();
-	Api::loop();
+	if (!LED::isRunning()) {
+		ArduinoOTA.handle();
+		Api::loop();
+	}
 	// App::loop();
 	// Net::loop();
 }
