@@ -34,6 +34,9 @@ bool wifiActive = false;
 
 void wifiOn() {
 	wifiActive = true;
+	WiFi.mode(WIFI_AP_STA);
+	WiFi.setSleepMode(WIFI_NONE_SLEEP);
+	WiFi.disconnect();
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK);
 }
@@ -62,8 +65,7 @@ void setSync(u8* data, u8 size) {
 			LED::pause();
 		} else if (!state.paused && LED::isPaused()) {
 			LED::resume();
-		}
-		if (!state.paused) {
+		} else {
 			LED::setTime(state.time);
 		}
 	}
@@ -74,7 +76,7 @@ void sendPing() {
 	data[0] = 2;
 	setUint16(&data[1], ESP.getVcc());
 	memcpy(&data[3], App::data.name, sizeof(App::data.name));
-	MeshRC::send(String(App::chipID) + "<PING", data, size);
+	MeshRC::send(String(App::chipID).substring(0, 6) + "<PING", data, size);
 	LOGL(F("sent ping"));
 }
 void setPair() {

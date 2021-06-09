@@ -145,7 +145,7 @@ class Show {
 			begin();
 		else if (paused)
 			resume();
-		if (offset > 1) {
+		if (offset > 16) {
 			while (frame.start >= time) {
 				frame = prev();
 				currentTime = frame.start;
@@ -154,7 +154,7 @@ class Show {
 				if (!tick(false))
 					continue;
 			}
-		} else if (offset < -1) {
+		} else if (offset < -16) {
 			while (frame.start + frame.duration < time) {
 				frame = next();
 				currentTime = frame.start;
@@ -168,8 +168,8 @@ class Show {
 	// true = playing
 	// false = ended
 	bool tick(bool shouldUpdate = true) {
-		if (paused & shouldUpdate)
-			return false;
+		// if (paused && shouldUpdate)
+		// 	return false;
 		switch (frame.type) {
 			case RGB_FRAME:
 				if (shouldUpdate)
@@ -223,15 +223,15 @@ class Show {
 		r = map(r, 0, 255, 0, App::data.brightness);
 		g = map(g, 0, 255, 0, App::data.brightness);
 		b = map(b, 0, 255, 0, App::data.brightness);
-		analogWrite(r_pin, r);
-		analogWrite(g_pin, g);
-		analogWrite(b_pin, b);
+		analogWriteMode(r_pin, (int)r, false);
+		analogWriteMode(g_pin, (int)g, false);
+		analogWriteMode(b_pin, (int)b, false);
 	}
 
 	void setup() {
-		pinMode(r_pin, OUTPUT);
-		pinMode(g_pin, OUTPUT);
-		pinMode(b_pin, OUTPUT);
+		pinMode(r_pin, OUTPUT_OPEN_DRAIN);
+		pinMode(g_pin, OUTPUT_OPEN_DRAIN);
+		pinMode(b_pin, OUTPUT_OPEN_DRAIN);
 		setRGB(0, 0, 0);
 	}
 
@@ -254,15 +254,12 @@ class Show {
 	}
 };
 
-// Show A('A', R1_PIN, G1_PIN, B1_PIN);
-// Show B('B', R2_PIN, G2_PIN, B2_PIN);
-
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 
 void setup() {
-	analogWriteFreq(10000);
+	analogWriteFreq(40000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();

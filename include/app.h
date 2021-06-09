@@ -28,42 +28,30 @@ SaveData data;
 Ticker saveTimer;
 Ticker blinkTimer;
 
-char chipID[6];
+char chipID[10];
 
 FS* fs = &LittleFS;
 bool fsOK;
 bool sdOK;
 
-u8 led_pin = LED_PIN;
-
 static void LED_HIGH() {
-	digitalWrite(led_pin, 1);
+	digitalWrite(LED_PIN, 1);
 }
 static void LED_LOW() {
-	digitalWrite(led_pin, 0);
+	digitalWrite(LED_PIN, 0);
 }
 static void LED_BLINK() {
-	digitalWrite(led_pin, !digitalRead(led_pin));
+	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 }
 
 static void stopBlink() {
 	LED_HIGH();
 	if (blinkTimer.active()) blinkTimer.detach();
 }
-static void startBlink(u32 time = 1000, u8 pin = 0) {
-	if (pin && pin != led_pin) {
-		stopBlink();
-	}
-	led_pin = pin;
-	pinMode(led_pin, OUTPUT);
+static void startBlink(u32 time = 1000) {
+	pinMode(LED_PIN, OUTPUT);
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
-// static void toggleBlink(u32 time = 1000, u8 pin = led_pin) {
-// 	if (blinkTimer.active())
-// 		stopBlink();
-// 	else
-// 		startBlink(time, pin);
-// }
 bool isPaired() {
 	return !equals(data.master, MeshRC::broadcast, 6);
 }
@@ -140,15 +128,13 @@ void setMaster(u8* addr) {
 	}
 }
 void setup() {
+	pinMode(LED_PIN, OUTPUT);
+	LED_HIGH();
 	loadData();
 	fsOK = fs->begin();
 	LOGL(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
 	if (!fs->exists("/show")) fs->mkdir("/show");
 	if (!fs->exists("/tmp")) fs->mkdir("/tmp");
-	// if (!fs->exists("/1")) fs->mkdir("/1");
-	// if (!fs->exists("/2")) fs->mkdir("/2");
-	// if (!fs->exists("/3")) fs->mkdir("/3");
-	// if (!fs->exists("/4")) fs->mkdir("/4");
 }
 void loop() {
 }

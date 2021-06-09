@@ -1,6 +1,6 @@
 
-#include "app.h"
 #include "api.h"
+#include "app.h"
 #include "btn.h"
 #include "def.h"
 #include "led.h"
@@ -10,7 +10,7 @@ ADC_MODE(ADC_VCC);
 
 void setup() {
 	sprintf(App::chipID, "%06X", system_get_chip_id());
-	
+
 	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
 	Net::apPSK = "";
 
@@ -22,15 +22,11 @@ void setup() {
 	btn.onPress(buttonPressHandler);
 	btn.onPressHold(buttonPressHoldHandler);
 
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-	WiFi.disconnect();
-	// Net::wifiOff();
 	Net::wifiOn();
 
-	ArduinoOTA.onProgress([](int percent, int total) {
-		App::LED_BLINK();
-	});
+	ArduinoOTA.onStart([]() { if (LED::isRunning()) LED::end(); });
+	ArduinoOTA.onProgress([](int percent, int total) { App::LED_BLINK(); });
+	ArduinoOTA.onEnd([]() { App::LED_HIGH(); });
 	ArduinoOTA.begin();
 
 	App::setup();
@@ -40,10 +36,8 @@ void setup() {
 }
 
 void loop() {
-	if (!LED::isRunning()) {
-		ArduinoOTA.handle();
-		Api::loop();
-	}
-	// App::loop();
-	// Net::loop();
+	ArduinoOTA.handle();
+	Api::loop();
+	App::loop();
+	Net::loop();
 }

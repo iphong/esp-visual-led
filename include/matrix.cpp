@@ -2,7 +2,7 @@
 #include <espnow.h>
 #include <littlefs.h>
 
-#include "FastLED.h"
+// #include "FastLED.h"
 
 static u8 broadcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 

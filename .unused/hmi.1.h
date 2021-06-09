@@ -17,7 +17,7 @@ Ticker timer;
 
 void sendTime() {
 	if (LED::isRunning()) {
-		u32 time = (float)LED::A.getTime() / 1000;
+		u32 time = (float)LED::shows[0].getTime() / 1000;
 		u16 hour = (float)time / 3600;
 		u16 min = (float)time / 60;
 		u16 sec = time % 60;
