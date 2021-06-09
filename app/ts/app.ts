@@ -62,11 +62,12 @@ addEventListener('load', async () => {
 		updateTime()
 		requestAnimationFrame(tick)
 	})
+	setInterval(renderSerial, 5000)
 	setInterval(() => {
 		if (store.sync) {
 			sendSync(store.time, store.slot, store.ended, store.paused)
 		}
-	}, 100)
+	}, 200)
 	if (store.file) {
 		chrome['fileSystem'].restoreEntry(store.file, async (entry: FileEntry) => {
 			if (entry) {

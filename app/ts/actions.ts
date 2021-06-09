@@ -1,4 +1,4 @@
-import { sendFile, serialConnect, serialDisconnect } from './serial'
+import { sendFile, sendSync, serialConnect, serialDisconnect } from './serial'
 export * from './serial'
 import {
 	set,
@@ -54,6 +54,17 @@ export async function open() {
 			}
 		})
 	})
+}
+export async function play() {
+	await set('sync', true)
+	$player.play()
+}
+export async function stop() {
+	$player.currentTime = $player.duration
+	await set({ sync: false, time: 0, ended: true, paused: false })
+	await sendSync(0, 0, true, false)
+	await sendSync(0, 0, true, false)
+	await sendSync(0, 0, true, false)
 }
 export async function connect() {
 	if (store.connected)
