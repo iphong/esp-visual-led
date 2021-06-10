@@ -76,7 +76,7 @@ export async function stop() {
 	$player.pause()
 	$player.src = $player.src
 	await set({ sync: false, time: 0, ended: true, paused: false })
-	await sendCommand('#', 'RESET')
+	await sendCommand('#', 'RESTART')
 }
 export async function connect() {
 	if (store.connected)
@@ -108,16 +108,16 @@ export async function openRemote() {
 }
 export async function sendToChannelA() {
 	await uploadShowHandle('A')
-	await sendCommand('#', 'RESET')
+	await sendCommand('#', 'RESTART')
 }
 export async function sendToChannelB() {
 	await uploadShowHandle('B')
-	await sendCommand('#', 'RESET')
+	await sendCommand('#', 'RESTART')
 }
 export async function sendToChannelAB() {
 	await uploadShowHandle('A')
 	await uploadShowHandle('B')
-	await sendCommand('#', 'RESET')
+	await sendCommand('#', 'RESTART')
 }
 export async function uploadShowHandle(channel) {
 	let index = 0
