@@ -2,6 +2,7 @@ import { set, store } from "./store"
 
 let handler = null
 
+chrome.serial.on
 chrome.serial.onReceive.addListener(async ({ connectionId: id, data }) => {
 	if (id === store.connection) {
 		(new Uint8Array(data)).forEach((byte) => decodeMsg(byte))
@@ -19,6 +20,7 @@ export async function onSerialMessage(cb) {
 }
 
 export async function serialConnect(force = false) {
+	await set({ connected: false })
 	return new Promise(resolve => {
 		if (!force && store.connection) {
 			chrome.serial.getConnections(async (connections) => {

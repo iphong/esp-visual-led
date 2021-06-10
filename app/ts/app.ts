@@ -54,7 +54,7 @@ chrome.storage.onChanged.addListener(async (changes) => {
 addEventListener('load', async () => {
 	await init()
 	await update()
-	store.connected ? await serialConnect() : await renderSerial()
+	store.connected ? await serialConnect(true) : await renderSerial()
 	await renderTracks()
 	await renderWaveform()
 	await renderBeats()
