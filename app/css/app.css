@@ -45,6 +45,7 @@ button {
 	font-size: 14px;
 	white-space: nowrap;
 	outline: none;
+	transition: all ease 0.1s;
 }
 button.mdi {
 	font-size: 20px;
@@ -70,7 +71,7 @@ button, select {
 	-webkit-appearance: none;
 	outline: none;
 	border-radius: 5px;
-
+	font-weight: 500;
 }
 button {
 }
@@ -107,7 +108,7 @@ select {
 	padding: 5px 20px;
 	grid-gap: 10px;
 	background: #222326;
-	grid-template-columns: 120px 1fr 1fr 1fr auto;
+	grid-template-columns: 120px 1fr 2fr 3fr auto;
 	align-items: center;
 	justify-content: center;
 }

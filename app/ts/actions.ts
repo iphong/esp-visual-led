@@ -1,4 +1,4 @@
-import { sendFile, sendSync, serialConnect, serialDisconnect } from './serial'
+import { sendCommand, sendFile, sendSync, serialConnect, serialDisconnect } from './serial'
 export * from './serial'
 import {
 	set,
@@ -55,6 +55,9 @@ export async function open() {
 		})
 	})
 }
+export async function bind() {
+	sendCommand('#', 'PAIR')
+}
 export async function play() {
 	if (!store.connected) {
 		await serialConnect()
@@ -100,10 +103,10 @@ export function openRemote() {
 	})
 }
 export async function sendToChannelA() {
-	await uploadShowHandle('A')
+	return await uploadShowHandle('A')
 }
 export async function sendToChannelB() {
-	await uploadShowHandle('B')
+	return await uploadShowHandle('B')
 }
 export async function sendToChannelAB() {
 	await uploadShowHandle('A')
@@ -129,13 +132,23 @@ export async function uploadFile(file: Blob, path: string) {
 		let req = new XMLHttpRequest();
 		var form = new FormData();
 		form.append("data", file, path);
+		req.timeout = 1000
 		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
 		req.send(form);
 		req.addEventListener('load', e => {
-			resolve(null)
+			setTimeout(() => {
+				resolve(null)
+			}, 500)
+		})
+		req.addEventListener('abort', e => {
+			setTimeout(() => {
+				resolve(null)
+			}, 500)
 		})
 		req.addEventListener('error', e => {
-			reject(e)
+			setTimeout(() => {
+				reject(e)
+			}, 500)
 		})
 	})
 }

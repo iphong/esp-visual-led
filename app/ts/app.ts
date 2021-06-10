@@ -115,7 +115,15 @@ addEventListener('click', async (e: MouseEvent) => {
 		if (actionTarget) {
 			const { action } = actionTarget.dataset
 			if (typeof actions[action] === 'function') {
-				actions[action].call(actionTarget, e)
+				const prevContent = actionTarget.innerHTML
+				const prevClassNames = actionTarget.getAttribute('class')
+				actionTarget.setAttribute('class', 'mdi mdi-loading mdi-spin')
+				actionTarget.innerHTML = ''
+				actionTarget.setAttribute('disabled', 'true')
+				await actions[action].call(actionTarget, e)
+				actionTarget.setAttribute('class', prevClassNames)
+				actionTarget.innerHTML = prevContent
+				actionTarget.removeAttribute('disabled')
 			}
 		}
 	} else if (target.closest('*[data-key]')) {

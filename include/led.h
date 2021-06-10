@@ -168,8 +168,8 @@ class Show {
 	// true = playing
 	// false = ended
 	bool tick(bool shouldUpdate = true) {
-		// if (paused && shouldUpdate)
-		// 	return false;
+		if (paused && shouldUpdate)
+			return false;
 		switch (frame.type) {
 			case RGB_FRAME:
 				if (shouldUpdate)
@@ -259,7 +259,7 @@ Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 
 void setup() {
-	analogWriteFreq(40000);
+	analogWriteFreq(10000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
@@ -278,8 +278,7 @@ void begin() {
 void pause() {
 	A.pause();
 	B.pause();
-	// for (Show show : shows) show.pause
-	();
+	// for (Show show : shows) show.pause();
 }
 void resume() {
 	A.resume();
