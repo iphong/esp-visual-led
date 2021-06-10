@@ -187,7 +187,19 @@ void setup() {
 	});
 	MeshRC::begin();
 }
+uint8_t lastCount = 0;
 void loop() {
+	uint8_t cnt = wifi_softap_get_station_num();
+	if (lastCount == 0 && cnt) {
+		App::startBlink(100);
+	}
+	if (lastCount && cnt == 0) {
+		App::stopBlink();
+	}
+	if (cnt) {
+		wifi_softap_get_station_info();
+	}
+	lastCount = cnt;
 }
 }  // namespace Net
 
