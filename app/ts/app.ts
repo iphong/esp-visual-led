@@ -67,7 +67,7 @@ addEventListener('load', async () => {
 		if (store.sync) {
 			sendSync(store.time, store.slot, store.ended, store.paused)
 		}
-	}, 200)
+	}, 100)
 	if (store.file) {
 		chrome['fileSystem'].restoreEntry(store.file, async (entry: FileEntry) => {
 			if (entry) {
@@ -189,7 +189,8 @@ addEventListener('keydown', (e) => {
 	e.preventDefault()
 	switch (e.key) {
 		case ' ':
-			$player.paused || $player.ended ? $player.play() : $player.pause()
+			store.ended || $player.paused ? actions.play() : $player.pause()
+			// $player.paused || $player.ended ? $player.play() : $player.pause()
 			break
 		case 'ArrowLeft':
 			$player.currentTime -= e.altKey ? 0.01 : 1

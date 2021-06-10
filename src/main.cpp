@@ -1,15 +1,15 @@
 #include <Arduino.h>
 
 #ifdef CONTROLLER
-#include "controller.cpp"
+#include "controller.h"
 #endif
 
 #ifdef REMOTE
-#include "remote.cpp"
+#include "remote.h"
 #endif
 
 #ifdef MATRIX
-#include "matrix.cpp"
+#include "matrix.h"
 #endif
 
 // #include <ArduinoOTA.h>

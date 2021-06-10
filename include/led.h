@@ -220,9 +220,9 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		r = map(r, 0, 255, 0, App::data.brightness);
-		g = map(g, 0, 255, 0, App::data.brightness);
-		b = map(b, 0, 255, 0, App::data.brightness);
+		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.25);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.20);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);
@@ -259,7 +259,7 @@ Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 
 void setup() {
-	analogWriteFreq(40000);
+	analogWriteFreq(10000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
