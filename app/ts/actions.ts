@@ -63,11 +63,13 @@ export async function play() {
 	$player.play()
 }
 export async function stop() {
-	$player.currentTime = $player.duration
+	$player.currentTime = 0
+	$player.pause()
+	$player.src = $player.src
 	await set({ sync: false, time: 0, ended: true, paused: false })
-	await sendSync(0, 0, true, false)
-	await sendSync(0, 0, true, false)
-	await sendSync(0, 0, true, false)
+	await sendSync(0, store.slot, true, false)
+	await sendSync(0, store.slot, true, false)
+	await sendSync(0, store.slot, true, false)
 }
 export async function connect() {
 	if (store.connected)
@@ -90,6 +92,7 @@ export function openUtils() {
 	})
 }
 export function openRemote() {
+	stop()
 	chrome['app'].window.create('../remote.html', {
 		id: 'remote',
 		width: 250,
