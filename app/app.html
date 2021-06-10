@@ -23,8 +23,8 @@
 		<button data-action="open" class="mdi mdi-file-plus"></button>
 	</nav>
 	<nav id="controls-toolbar">
-		<button data-action="play" class="mdi mdi-play"></button>
-		<button data-action="stop" class="mdi mdi-stop"></button>
+		<button data-action="play" class="mdi mdi-play-speed"></button>
+		<button data-action="stop" class="mdi mdi-stop-circle"></button>
 		<!-- <select data-key="slot">
 			<option value="1"># 01</option>
 			<option value="2"># 02</option>
@@ -39,10 +39,20 @@
 		
 	</nav>
 	<nav id="misc-toolbar">
-		<button data-key="slot" value="1">1</button>
+		<select data-key="slot">
+			<option value="1">Show 1</option>
+			<option value="2">Show 2</option>
+			<option value="3">Show 3</option>
+			<option value="4">Show 4</option>
+			<option value="5">Show 5</option>
+			<option value="6">Show 6</option>
+			<option value="7">Show 7</option>
+			<option value="8">Show 8</option>
+		</select>
+		<!-- <button data-key="slot" value="1">1</button>
 		<button data-key="slot" value="2">2</button>
 		<button data-key="slot" value="3">3</button>
-		<button data-key="slot" value="4">4</button>
+		<button data-key="slot" value="4">4</button> -->
 
 		<button data-action="sendToChannelA">A</button>
 		<button data-action="sendToChannelB">B</button>
@@ -53,8 +63,8 @@
 	<nav id="serial-toolbar">
 		<select data-key="port"></select>
 		<button data-key="connected" data-action="connect" class="mdi mdi-connection"></button>
-		<button data-key="sync" class="mdi mdi-access-point"></button>
-		<button data-action="openRemote" class="mdi mdi-remote"></button>
+		<!-- <button data-key="sync" class="mdi mdi-access-point"></button> -->
+		<button data-action="openRemote" class="mdi mdi-remote-tv"></button>
 	</nav>
 </header>
 <main id="main">

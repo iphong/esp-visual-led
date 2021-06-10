@@ -259,7 +259,7 @@ Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
 
 void setup() {
-	analogWriteFreq(10000);
+	analogWriteFreq(40000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
@@ -278,7 +278,8 @@ void begin() {
 void pause() {
 	A.pause();
 	B.pause();
-	// for (Show show : shows) show.pause();
+	// for (Show show : shows) show.pause
+	();
 }
 void resume() {
 	A.resume();

@@ -56,6 +56,9 @@ export async function open() {
 	})
 }
 export async function play() {
+	if (!store.connected) {
+		await serialConnect()
+	}
 	await set('sync', true)
 	$player.play()
 }
