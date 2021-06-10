@@ -28,23 +28,20 @@ export async function updateSize() {
 	}
 }
 
+let portsList = ''
 export async function renderSerial() {
-	console.debug('render serial')
-	updateSize()
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
-			const $devices = $('[data-key="port"]')
-			$devices.html('<option value="">...</option>')
-			devices.forEach(dev => {
-				if (dev.path.startsWith('/dev/cu.')) {
-					$(`<option>`)
-						.val(dev.path)
-						.html(dev.path.replace('/dev/cu.', ''))
-						.appendTo($devices)
-				}
-			})
-			$devices.val(store.port)
-			resolve(null)
+			const list = devices.filter(dev => dev.path.startsWith('/dev/cu.')).map(dev => dev.path.replace('/dev/cu.', ''))
+			if (list.join() != portsList) {
+				portsList = list.join()
+				console.debug('serial devices', list)
+				$('[data-key="port"]')
+					.html('<option value="">...</option>')
+					.append(list.map(path => $(`<option>`).val('/dev/cu.' + path).html(path)))
+					.val(store.port)
+				resolve(null)
+			}
 		})
 	})
 }

@@ -43,10 +43,10 @@ export async function serialConnect(force = false) {
 			}
 			chrome.serial.connect(store.port, options, async (conn) => {
 				if (conn) {
-					console.debug('serial connected:', conn.connectionId)
+					console.debug('serial connected:', conn.connectionId, store.port)
 					await set({ connection: conn.connectionId, connected: true })
 				} else {
-					console.debug('can not connect to serial port')
+					console.debug('can not connect to serial port', store.port)
 					await set({ connection: 0, connected: false })
 				}
 				resolve(conn)
@@ -63,7 +63,10 @@ export async function serialDisconnect() {
 }
 
 export async function sendRaw(data: ArrayBuffer) {
-	return new Promise(resolve => {
+	return new Promise(async resolve => {
+		if (!store.connected) {
+			await serialConnect()
+		}
 		if (store.connected)
 			chrome.serial.send(store.connection, data, resolve)
 		else resolve(null)

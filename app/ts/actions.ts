@@ -80,18 +80,11 @@ export async function stop() {
 }
 export async function connect() {
 	if (store.connected)
-		await serialDisconnect()
-	else
 		await serialConnect()
+	else
+		await serialDisconnect()
 }
-export function openManager() {
-	chrome['app'].window.create('../manager.html', {
-		id: 'manager',
-		width: 800,
-		height: 200
-	})
-}
-export function openUtils() {
+export async function openUtils() {
 	chrome['app'].window.create('../utils.html', {
 		id: 'utils',
 		width: 270,
@@ -139,24 +132,19 @@ export async function uploadFile(file: Blob, path: string) {
 		let req = new XMLHttpRequest();
 		var form = new FormData();
 		form.append("data", file, path);
-		req.timeout = 1000
+		req.timeout = 5000
 		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
 		req.send(form);
-		req.addEventListener('load', e => {
-			setTimeout(() => {
-				resolve(null)
-			}, 500)
-		})
-		req.addEventListener('abort', e => {
-			setTimeout(() => {
-				resolve(null)
-			}, 500)
-		})
-		req.addEventListener('error', e => {
-			setTimeout(() => {
-				reject(e)
-			}, 500)
-		})
+		// const done = () => setTimeout(() => resolve(null), 500)
+		// const fail = (err:any) => setTimeout(() => reject(err), 500)
+		req.addEventListener('load', resolve)
+		req.addEventListener('abort', resolve)
+		req.addEventListener('error', reject)
+		setTimeout(() => {
+			if (req.readyState !== req.DONE) {
+				req.abort()
+			}
+		}, 5000)
 	})
 }
 

@@ -4,7 +4,7 @@ import { encodeMsg, sendRaw, sendSync } from './serial'
 import { serialConnect } from './serial'
 import * as actions from './actions'
 import $ from 'jquery'
-import { openManager, openRemote, openUtils } from './actions'
+import { openRemote, openUtils } from './actions'
 
 Object.assign(window, actions)
 window['player'] = $player
@@ -62,7 +62,7 @@ addEventListener('load', async () => {
 		updateTime()
 		requestAnimationFrame(tick)
 	})
-	setInterval(renderSerial, 5000)
+	setInterval(renderSerial, 1000)
 	setInterval(() => {
 		if (store.sync) {
 			sendSync(store.time, store.slot, store.ended, store.paused)
@@ -110,6 +110,17 @@ addEventListener('durationchange', async e => {
 
 addEventListener('click', async (e: MouseEvent) => {
 	const target = e.target as HTMLElement
+	if (target.closest('*[data-key]')) {
+		let actionTarget = target.closest('*[data-key]') as HTMLElement
+		if (actionTarget && actionTarget instanceof HTMLButtonElement) {
+			const { key } = actionTarget.dataset
+			let value:any = !store[key]
+			if (actionTarget.hasAttribute('value')) {
+				value = actionTarget.getAttribute('value')
+			}
+			await set(key, value)
+		}
+	}
 	if (target.closest('*[data-action]')) {
 		let actionTarget = target.closest('*[data-action]') as HTMLElement
 		if (actionTarget) {
@@ -120,21 +131,18 @@ addEventListener('click', async (e: MouseEvent) => {
 				actionTarget.setAttribute('class', 'mdi mdi-loading mdi-spin')
 				actionTarget.innerHTML = ''
 				actionTarget.setAttribute('disabled', 'true')
-				await actions[action].call(actionTarget, e)
+				
+				try {
+					await actions[action].call(actionTarget, e)
+					actionTarget.style.color = ''
+				} catch(err) {
+					actionTarget.style.color = 'red'
+				}
+
 				actionTarget.setAttribute('class', prevClassNames)
 				actionTarget.innerHTML = prevContent
 				actionTarget.removeAttribute('disabled')
 			}
-		}
-	} else if (target.closest('*[data-key]')) {
-		let actionTarget = target.closest('*[data-key]') as HTMLElement
-		if (actionTarget && actionTarget instanceof HTMLButtonElement) {
-			const { key } = actionTarget.dataset
-			let value:any = !store[key]
-			if (actionTarget.hasAttribute('value')) {
-				value = actionTarget.getAttribute('value')
-			}
-			await set(key, value)
 		}
 	}
 })

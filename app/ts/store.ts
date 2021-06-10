@@ -6,6 +6,7 @@ import JSZip from 'jszip'
 import unzip from 'unzip-js'
 import MusicTempo from 'music-tempo'
 import flattenDeep from 'lodash/flattenDeep'
+import { serialDisconnect } from './serial'
 
 export const cache: CacheData = {
 	audio: null,
@@ -55,6 +56,9 @@ window['store'] = store
 chrome.storage.onChanged.addListener(async (changes) => {
 	for (let key in changes) {
 		store[key] = changes[key].newValue
+	}
+	if (changes.port) {
+		serialDisconnect()
 	}
 	// console.debug('changed', [changes])
 	// await renderTracks()

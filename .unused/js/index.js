@@ -1,7 +1,0 @@
-import './log.js'
-import './color.js'
-import './data.js'
-import './app.js'
-import './api.js'
-import './audio.js'
-import './events.js'
