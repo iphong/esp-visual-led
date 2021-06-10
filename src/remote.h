@@ -7,15 +7,23 @@
 #include <esp_now.h>
 #endif
 #include <transport.h>
+#include <ArduinoOTA.h>
 
 Transport bridge(&Serial);
 
 void setup() {
 	Serial.begin(115200);
 
+	char chipID[10];
+	IPAddress apAddr = {10, 1, 1, 1};
+	IPAddress apMask = {255, 255, 255, 0};
+	sprintf(chipID, "%06X", system_get_chip_id());
+	String apSSID = "SDC_" + String(chipID).substring(0, 6);
+	String apPSK = "";
 	WiFi.mode(WIFI_AP_STA);
-	WiFi.disconnect();
-	WiFi.softAPdisconnect();
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
+	WiFi.softAP(apSSID, apPSK);
+	ArduinoOTA.begin();
 
 	bridge.receive([](uint8_t* addr, uint8_t* data, size_t size) {
 		esp_now_send(addr, data, size);
