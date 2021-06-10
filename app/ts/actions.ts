@@ -58,6 +58,12 @@ export async function open() {
 export async function bind() {
 	sendCommand('#', 'PAIR')
 }
+export async function reset() {
+	sendCommand('#', 'RESET')
+}
+export async function restart() {
+	sendCommand('#', 'RESTART')
+}
 export async function play() {
 	if (!store.connected) {
 		await serialConnect()
@@ -70,9 +76,7 @@ export async function stop() {
 	$player.pause()
 	$player.src = $player.src
 	await set({ sync: false, time: 0, ended: true, paused: false })
-	await sendSync(0, store.slot, true, false)
-	await sendSync(0, store.slot, true, false)
-	await sendSync(0, store.slot, true, false)
+	sendCommand('#', 'RESTART')
 }
 export async function connect() {
 	if (store.connected)

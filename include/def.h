@@ -6,7 +6,7 @@
 #define API_PORT	(u16)11111
 
 #define HEADER 		(u8)0x36 // character '$'
-#define VERSION 	(u8)0x05
+#define VERSION 	(u8)0x06
 
 #define RGB_FRAME 	(u8)0x01
 #define END_FRAME 	(u8)0x02

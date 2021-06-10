@@ -185,7 +185,7 @@ class Show {
 					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
 				// loopTime += shouldUpdate ? 1 : 1;
-				if (++loopTime >= loopFrame.start + loopFrame.duration) {
+				if (loopTime++ >= loopFrame.start + loopFrame.duration) {
 					loopTime = loopFrame.start + loopFrame.duration;
 					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
@@ -204,7 +204,7 @@ class Show {
 				repeat ? begin() : end();
 		}
 		// currentTime += shouldUpdate ? 1 : 1;
-		if (++currentTime >= frame.start + frame.duration) {
+		if (currentTime++ >= frame.start + frame.duration) {
 			currentTime = frame.start + frame.duration;
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
@@ -222,7 +222,7 @@ class Show {
 	void setRGB(u8 r, u8 g, u8 b) {
 		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
 		g = map(g, 0, 255, 0, App::data.brightness * 0.25);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.20);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.25);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);

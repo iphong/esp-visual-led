@@ -15,6 +15,8 @@
 #define MSG_RGB  		"#>RGB"
 #define MSG_SET  		"#>SET"
 #define MSG_DIM  		"#>DIM"
+#define MSG_RESET  		"#>RESET"
+#define MSG_RESTART  	"#>RESTART"
 #define MSG_WIFI_ON  	"#>WIFI"
 #define MSG_WIFI_OFF  	"#>WIFI"
 #define MSG_FBEGIN  	"#>FBEGIN"
@@ -149,7 +151,17 @@ void closeFile(u8* buf, u8 len) {
 	LOGD("%lu us\n", micros() - time);
 }
 
+void reset() {
+	ESP.reset();
+}
+void restart() {
+	ESP.restart();
+}
+
 void setup() {
+
+	MeshRC::on(MSG_RESET, 	reset);
+	MeshRC::on(MSG_RESTART, restart);
 	MeshRC::on(MSG_PING, 	sendPing);
 	MeshRC::on(MSG_SYNC, 	setSync);
 	MeshRC::on(MSG_PAIR, 	setPair);
