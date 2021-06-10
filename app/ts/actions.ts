@@ -56,13 +56,13 @@ export async function open() {
 	})
 }
 export async function bind() {
-	sendCommand('#', 'PAIR')
+	await sendCommand('#', 'PAIR')
 }
 export async function reset() {
-	sendCommand('#', 'RESET')
+	await sendCommand('#', 'RESET')
 }
 export async function restart() {
-	sendCommand('#', 'RESTART')
+	await sendCommand('#', 'RESTART')
 }
 export async function play() {
 	if (!store.connected) {
@@ -76,7 +76,7 @@ export async function stop() {
 	$player.pause()
 	$player.src = $player.src
 	await set({ sync: false, time: 0, ended: true, paused: false })
-	sendCommand('#', 'RESTART')
+	await sendCommand('#', 'RESET')
 }
 export async function connect() {
 	if (store.connected)
@@ -98,8 +98,8 @@ export function openUtils() {
 		height: 400
 	})
 }
-export function openRemote() {
-	stop()
+export async function openRemote() {
+	await stop()
 	chrome['app'].window.create('../remote.html', {
 		id: 'remote',
 		width: 250,
@@ -107,14 +107,17 @@ export function openRemote() {
 	})
 }
 export async function sendToChannelA() {
-	return await uploadShowHandle('A')
+	await uploadShowHandle('A')
+	await sendCommand('#', 'RESET')
 }
 export async function sendToChannelB() {
-	return await uploadShowHandle('B')
+	await uploadShowHandle('B')
+	await sendCommand('#', 'RESET')
 }
 export async function sendToChannelAB() {
 	await uploadShowHandle('A')
 	await uploadShowHandle('B')
+	await sendCommand('#', 'RESET')
 }
 export async function uploadShowHandle(channel) {
 	let index = 0

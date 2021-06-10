@@ -220,9 +220,9 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.25);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.25);
+		r = map(r, 0, 255, 0, App::data.brightness * 1.00);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.60);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.60);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);
