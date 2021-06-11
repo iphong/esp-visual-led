@@ -1,8 +1,0 @@
-#!/bin/bash
-
-pio run --target build --environment ota
-pio run --target buildfs --environment ota
-cp -Rf ./.pio/build/ota/firmware.bin ./firmware/firmware.bin
-cp -Rf ./.pio/build/ota/littlefs.bin ./firmware/littlefs.bin
-
-echo "Done!"
