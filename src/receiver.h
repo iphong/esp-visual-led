@@ -24,9 +24,12 @@ void setup() {
 
 	Net::wifiOn();
 
-	ArduinoOTA.onStart([]() { if (LED::isRunning()) LED::end(); });
-	ArduinoOTA.onProgress([](int percent, int total) { App::LED_BLINK(); });
-	ArduinoOTA.onEnd([]() { App::LED_HIGH(); });
+	ArduinoOTA.onStart([]() { App::LED_HIGH(); });
+	ArduinoOTA.onProgress([](int percent, int total) {
+		if (LED::isRunning()) LED::end();
+		App::LED_BLINK();
+	});
+	ArduinoOTA.onEnd([]() { App::LED_LOW(); });
 	ArduinoOTA.begin();
 
 	App::setup();
