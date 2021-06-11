@@ -1,3 +1,5 @@
+const path = require('path')
+
 module.exports = {
 	devtool: 'inline-source-map',
 	mode: 'development',
@@ -9,10 +11,15 @@ module.exports = {
 	},
 	output: {
 		filename: '[name].js',
-		path: __dirname + '/app/dist'
+		path: __dirname + '/dist'
 	},
 	resolve: {
-		extensions: ['.js', '.ts', '.json']
+		extensions: ['.js', '.ts', '.json'],
+		alias: {
+			css: path.resolve(__dirname, 'css/'),
+			fonts: path.resolve(__dirname, 'fonts/'),
+			ts: path.resolve(__dirname, 'ts/')
+		}
 	},
 	module: {
 		rules: [
