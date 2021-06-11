@@ -25,30 +25,6 @@
 
 namespace Net {
 
-Ticker pingTimer;
-String apSSID;
-String apPSK;
-
-IPAddress apAddr = {10, 1, 1, 1};
-IPAddress apMask = {255, 255, 255, 0};
-
-bool wifiActive = false;
-
-void wifiOn() {
-	wifiActive = true;
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-	WiFi.disconnect();
-	WiFi.softAPConfig(apAddr, apAddr, apMask);
-	WiFi.softAP(apSSID, apPSK);
-}
-void wifiOff() {
-	wifiActive = false;
-	WiFi.softAPdisconnect();
-}
-void wifiToggle() {
-	!wifiActive ? wifiOn() : wifiOff();
-}
 void setSync(u8* data, u8 size) {
 	SyncData state;
 	memcpy(&state, data, size);
@@ -78,16 +54,16 @@ void sendPing() {
 	data[0] = 2;
 	setUint16(&data[1], ESP.getVcc());
 	memcpy(&data[3], App::data.name, sizeof(App::data.name));
-	MeshRC::send(String(App::chipID).substring(0, 6) + "<PING", data, size);
+	MeshRC::send(String(chipID).substring(0, 6) + "<PING", data, size);
 	LOGL(F("sent ping"));
 }
 void setPair() {
 	LOGL(F("received pair"));
 	if (App::isPairing()) {
-		App::stopBlink();
 		App::setMaster(MeshRC::sender);
 		App::setMode(MODE_SHOW);
 		App::save();
+		stopBlink();
 	}
 }
 void setName(u8* buf, u8 len) {
@@ -95,64 +71,8 @@ void setName(u8* buf, u8 len) {
 	memcpy(App::data.name, buf, len);
 	App::save();
 }
-void setAlpha(u8* buf, u8 len) {
-	if (buf[0] == '-' && App::data.brightness > 0) App::data.brightness -= 16;
-	if (buf[0] == '+' && App::data.brightness < 255) App::data.brightness += 16;
-	App::save();
-}
 void setRGB(u8* buf, u8 len) {
 	LED::setRGB(buf, len);
-}
-void setColor(u8* buf, u8 len) {
-	LED::setColor(buf, len);
-}
-
-File file;
-String path;
-u32 time;
-u8 blank[128];
-void beginFile(u8* buf, u8 len) {
-	LOG("FBEGIN: ");
-	time = micros();
-	path = "";
-	if (file) file.close();
-	for (u8 i = 0; i < len; i++) path += buf[i];
-	file = App::fs->open((const char*)buf, "w");
-	if (file) {
-		file.write(blank, 128);
-		file.seek(0);
-		App::LED_LOW();
-		LOGD("%lu us OK\n", micros() - time);
-	} else
-		LOG("\n");
-}
-void writeFile(u8* buf, u8 len) {
-	time = micros();
-	LOG("FWRITE : ");
-	if (!file) {
-		LOG("\n");
-		return;
-	}
-	for (auto i = 0; i < len; i++) {
-		file.write(buf[i]);
-	}
-	App::LED_BLINK();
-	LOGD("%lu us\n", micros() - time);
-}
-void closeFile(u8* buf, u8 len) {
-	LOG("CLOSE: ");
-	time = micros();
-	if (!file) {
-		LOG("\n");
-		return;
-	}
-	file.close();
-	App::LED_HIGH();
-	LOGD("%lu us\n", micros() - time);
-}
-
-void reset() {
-	ESP.reset();
 }
 void restart() {
 	ESP.restart();
@@ -160,7 +80,6 @@ void restart() {
 
 void setup() {
 
-	MeshRC::on(MSG_RESET, 	reset);
 	MeshRC::on(MSG_RESTART, restart);
 	MeshRC::on(MSG_PING, 	sendPing);
 	MeshRC::on(MSG_SYNC, 	setSync);
@@ -168,18 +87,10 @@ void setup() {
 	MeshRC::on(MSG_NAME, 	setName);
 	
 	MeshRC::on(MSG_RGB, 	setRGB);
-	MeshRC::on(MSG_SET, 	setColor);
-	MeshRC::on(MSG_DIM, 	setAlpha);
-
-	MeshRC::on(MSG_WIFI_ON,  wifiOn);
-	MeshRC::on(MSG_WIFI_OFF, wifiOff);
-
-	MeshRC::on(MSG_FBEGIN, 	beginFile);
-	MeshRC::on(MSG_FWRITE, 	writeFile);
-	MeshRC::on(MSG_FCLOSE, 	closeFile);
+	MeshRC::on(MSG_SET, 	setRGB);
 
 	MeshRC::on("", [](u8* data, u8 size) {
-		if (size > 6 && equals(data, (u8*)App::chipID, 6) && (data[6] == '>' || data[6] == '<')) {
+		if (size > 6 && equals(data, (u8*)chipID, 6) && (data[6] == '>' || data[6] == '<')) {
 			u8* newData = &data[5];
 			newData[0] = '#';
 			MeshRC::recvHandler(MeshRC::sender, newData, size - 5);
@@ -192,9 +103,9 @@ void loop() {
 	uint8_t cnt = wifi_softap_get_station_num();
 	if (cnt > 0) {
 		wifi_softap_get_station_info();
-		if (lastCount == 0) App::startBlink(100);
+		if (lastCount == 0) startBlink(100);
 	} else {
-		App::stopBlink();
+		stopBlink();
 	}
 	lastCount = cnt <= 0 ? 0 : cnt;
 }

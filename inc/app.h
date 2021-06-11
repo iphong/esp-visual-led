@@ -26,32 +26,10 @@ namespace App {
 u8 mode;
 SaveData data;
 Ticker saveTimer;
-Ticker blinkTimer;
-
-char chipID[10];
 
 FS* fs = &LittleFS;
 bool fsOK;
-bool sdOK;
 
-static void LED_HIGH() {
-	digitalWrite(LED_PIN, 1);
-}
-static void LED_LOW() {
-	digitalWrite(LED_PIN, 0);
-}
-static void LED_BLINK() {
-	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-}
-
-static void stopBlink() {
-	LED_HIGH();
-	if (blinkTimer.active()) blinkTimer.detach();
-}
-static void startBlink(u32 time = 1000) {
-	pinMode(LED_PIN, OUTPUT);
-	blinkTimer.attach_ms(time, LED_BLINK);
-}
 bool isPaired() {
 	return !equals(data.master, MeshRC::broadcast, 6);
 }
@@ -128,15 +106,11 @@ void setMaster(u8* addr) {
 	}
 }
 void setup() {
-	pinMode(LED_PIN, OUTPUT);
-	LED_HIGH();
 	loadData();
 	fsOK = fs->begin();
 	LOGL(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
 	if (!fs->exists("/show")) fs->mkdir("/show");
 	if (!fs->exists("/tmp")) fs->mkdir("/tmp");
-}
-void loop() {
 }
 }  // namespace App
 

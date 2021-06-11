@@ -34,18 +34,8 @@ class Show {
 	bool paused = false;
 	bool repeat = false;
 
-	Show() : id('#') {}
-
 	Show(const char id, u8 r_pin, u8 g_pin, u8 b_pin)
 		: id(id), r_pin(r_pin), g_pin(g_pin), b_pin(b_pin) {
-	}
-
-	char getID() {
-		return id;
-	}
-
-	bool isActive() {
-		return id != '#';
 	}
 
 	u32 readUint32(unsigned char* buffer) {
@@ -126,10 +116,6 @@ class Show {
 
 	void resume() {
 		paused = false;
-	}
-
-	void toggle() {
-		paused = !paused;
 	}
 
 	u32 getTime() {
@@ -237,14 +223,14 @@ class Show {
 
 	void begin() {
 		end();
-		running = 1;
-		paused = 0;
 		String path = "/show/" + String(App::data.show) + (id) + ".lsb";
 		if (!App::fs->exists(path)) {
 			LOGD("Show not found: %s\n", path.c_str());
 			return;
 		}
 		LOGD("Playing show: %s\n", path.c_str());
+		running = 1;
+		paused = 0;
 		file = App::fs->open(path, "r");
 		file.setTimeout(0);
 		frame = next();
@@ -257,57 +243,37 @@ class Show {
 Show A('A', R1_PIN, G1_PIN, B1_PIN);
 Show B('B', R2_PIN, G2_PIN, B2_PIN);
 
-
 void setup() {
 	analogWriteFreq(10000);
 	analogWriteRange(255);
 	A.setup();
 	B.setup();
-	// for (Show show : shows) show.setup();
 }
 void end() {
 	A.end();
 	B.end();
-	// for (Show show : shows) show.end();
 }
 void begin() {
 	A.begin();
 	B.begin();
-	// for (Show show : shows) show.begin();
 }
 void pause() {
 	A.pause();
 	B.pause();
-	// for (Show show : shows) show.pause();
 }
 void resume() {
 	A.resume();
 	B.resume();
-	// for (Show show : shows) show.resume();
-}
-void toggle() {
-	A.toggle();
-	B.toggle();
-	// for (Show show : shows) show.toggle();
 }
 void setTime(u32 time) {
 	A.setTime(time);
 	B.setTime(time);
-	// for (Show show : shows) show.setTime(time);
 }
 bool isRunning() {
 	return A.running || B.running;
-	// for (Show show : shows)
-	// 	if (show.running)
-	// 		return true;
-	// return false;
 }
 bool isPaused() {
 	return A.paused && B.paused;
-	// for (Show show : shows)
-	// 	if (!show.paused)
-	// 		return false;
-	// return true;
 }
 void setRGB(u8* buf, u8 len) {
 	u8 r = buf[0];
@@ -315,18 +281,6 @@ void setRGB(u8* buf, u8 len) {
 	u8 b = buf[2];
 	A.setRGB(r, g, b);
 	B.setRGB(r, g, b);
-	// for (Show show : shows) show.setRGB(r, g, b);
-}
-void setColor(u8* buf, u8 len) {
-	char segment = buf[0];
-	u8 r = buf[1];
-	u8 g = buf[2];
-	u8 b = buf[3];
-	if (segment == 'A' || segment == '*') A.setRGB(r, g, b);
-	if (segment == 'B' || segment == '*') B.setRGB(r, g, b);
-	// for (Show show : shows)
-	// 	if (segment == show.getID() || segment == '*')
-	// 		show.setRGB(r, g, b);
 }
 
 }  // namespace LED

@@ -9,27 +9,26 @@
 ADC_MODE(ADC_VCC);
 
 void setup() {
-	sprintf(App::chipID, "%06X", system_get_chip_id());
-
-	Net::apSSID = "SDC_" + String(App::chipID).substring(0, 6);
-	Net::apPSK = "";
-
+	LED_SETUP();
 #ifdef ENABLE_DEBUG_LOGS
 	Serial.begin(115200);
 #endif
+
+	sprintf(chipID, "%06X", system_get_chip_id());
+
+	WiFi.mode(WIFI_AP_STA);
+	WiFi.setSleepMode(WIFI_NONE_SLEEP);
+	WiFi.disconnect();
+	WiFi.softAPConfig(apAddr, apAddr, apMask);
+	WiFi.softAP("SDC_" + String(chipID).substring(0, 6), "");
 
 	btn.begin();
 	btn.onPress(buttonPressHandler);
 	btn.onPressHold(buttonPressHoldHandler);
 
-	Net::wifiOn();
-
-	ArduinoOTA.onStart([]() { App::LED_HIGH(); });
-	ArduinoOTA.onProgress([](int percent, int total) {
-		if (LED::isRunning()) LED::end();
-		App::LED_BLINK();
-	});
-	ArduinoOTA.onEnd([]() { App::LED_LOW(); });
+	// ArduinoOTA.onProgress([](int percent, int total) { if (LED::isRunning()) LED::end(); });
+	ArduinoOTA.onProgress([](int percent, int total) { LED_BLINK(); });
+	ArduinoOTA.onEnd([]() { LED_LOW(); });
 	ArduinoOTA.begin();
 
 	App::setup();
@@ -41,6 +40,5 @@ void setup() {
 void loop() {
 	ArduinoOTA.handle();
 	Api::loop();
-	App::loop();
 	Net::loop();
 }

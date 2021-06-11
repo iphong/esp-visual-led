@@ -9,10 +9,7 @@ Button::callback_t buttonPressHandler = [](u8 repeats) {
 	if (repeats == 1) LOGD("Button pressed %u time.\n", repeats);
 	else LOGD("Button pressed %u times.\n", repeats);
 	switch (repeats) {
-		case 1:
-			MeshRC::send(String(App::chipID).substring(0, 6) + "<SELECT");
-			break;
-		case 2:
+		case 0:
 			Net::sendPing();
 			break;
 	}
@@ -25,13 +22,13 @@ Button::callback_t buttonPressHoldHandler = [](u8 repeats) {
 		case 0:
 			if (!App::isPairing()) {
 				LED::end();
-				App::startBlink(200);
 				App::mode = MODE_BIND;
 				MeshRC::master = NULL;
+				startBlink(200);
 			} else {
-				App::stopBlink();
 				App::mode = MODE_SHOW;
 				MeshRC::master = App::data.master;
+				stopBlink();
 			}
 			LOGD("mode = %i\n", App::mode);
 			break;

@@ -15,6 +15,10 @@
 #define MODE_SHOW 	(u8)0x00
 #define MODE_BIND 	(u8)0x01
 
+char chipID[10];
+IPAddress apAddr = {10, 1, 1, 1};
+IPAddress apMask = {255, 255, 255, 0};
+
 enum MSG_ID {
 
 	PING_MSG        = 0x01,
@@ -122,6 +126,29 @@ u8* setUint32(u8* buffer, u16 value, size_t offset = 0) {
 	buffer[offset + 1] = (value & 0x00ff0000) >> 16;
 	buffer[offset + 0] = (value & 0xff000000) >> 24;
 	return &buffer[offset + 4];
+}
+
+Ticker blinkTimer;
+void LED_SETUP() {
+	pinMode(LED_PIN, OUTPUT);
+}
+void LED_HIGH() {
+	digitalWrite(LED_PIN, HIGH);
+}
+void LED_LOW() {
+	digitalWrite(LED_PIN, LOW);
+}
+void LED_BLINK() {
+	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+}
+
+void stopBlink() {
+	LED_HIGH();
+	if (blinkTimer.active()) blinkTimer.detach();
+}
+void startBlink(u32 time = 1000) {
+	LED_LOW();
+	blinkTimer.attach_ms(time, LED_BLINK);
 }
 
 #endif
