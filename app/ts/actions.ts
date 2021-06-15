@@ -101,16 +101,16 @@ export async function openRemote() {
 }
 export async function sendToChannelA() {
 	await uploadShowHandle('A')
-	await sendCommand('#', 'RESTART')
+	// await sendCommand('#', 'RESTART')
 }
 export async function sendToChannelB() {
 	await uploadShowHandle('B')
-	await sendCommand('#', 'RESTART')
+	// await sendCommand('#', 'RESTART')
 }
 export async function sendToChannelAB() {
 	await uploadShowHandle('A')
 	await uploadShowHandle('B')
-	await sendCommand('#', 'RESTART')
+	// await sendCommand('#', 'RESTART')
 }
 export async function uploadShowHandle(channel) {
 	let index = 0
@@ -140,11 +140,11 @@ export async function uploadFile(file: Blob, path: string) {
 		req.addEventListener('load', resolve)
 		req.addEventListener('abort', resolve)
 		req.addEventListener('error', reject)
-		setTimeout(() => {
-			if (req.readyState !== req.DONE) {
-				req.abort()
-			}
-		}, 5000)
+		// setTimeout(() => {
+		// 	if (req.readyState !== req.DONE) {
+		// 		req.abort()
+		// 	}
+		// }, 5000)
 	})
 }
 

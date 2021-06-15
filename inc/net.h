@@ -90,10 +90,11 @@ void setup() {
 	MeshRC::on(MSG_SET, 	setRGB);
 
 	MeshRC::on("", [](u8* data, u8 size) {
-		if (size > 6 && equals(data, (u8*)chipID, 6) && (data[6] == '>' || data[6] == '<')) {
+		if (size > 6 && equals(data, (u8*)chipID, 6) && (data[6] == '>')) {
 			u8* newData = &data[5];
 			newData[0] = '#';
 			MeshRC::recvHandler(MeshRC::sender, newData, size - 5);
+			MeshRC::send("#<OK");
 		}
 	});
 	MeshRC::begin();

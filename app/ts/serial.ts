@@ -62,14 +62,28 @@ export async function serialDisconnect() {
 	})
 }
 
-export async function sendRaw(data: ArrayBuffer) {
-	return new Promise(async resolve => {
-		if (!store.connected) {
+let responseHandler:Function;
+
+export async function sendRaw(data: ArrayBuffer, waitResponse = false) {
+	// if (responseHandler) return
+	return new Promise(async (resolve, reject) => {
+		if (store.port && !store.connected) {
 			await serialConnect()
 		}
-		if (store.connected)
+		else if (store.connected) {
 			chrome.serial.send(store.connection, data, resolve)
-		else resolve(null)
+			// if (waitResponse) {
+			// 	responseHandler = async (err = true) => {
+			// 		if (err) {
+			// 			reject()
+			// 		} else {
+			// 			resolve(null)
+			// 		}
+			// 		responseHandler = null
+			// 	}
+			// 	setTimeout(responseHandler, 100)
+			// } else resolve(null)
+		} else resolve(null)
 	})
 }
 
@@ -118,7 +132,9 @@ export function decodeMsg(byte: number) {
 	if (isValidStart() && isValidSize() && checksum()) {
 		synced = false;
 		let frame = buffer.slice(2, buffer[1] + 2)
-		if (handler) handler(frame)
+		if (responseHandler && equals(frame, [35, 60, 79, 75], 4)) {
+			responseHandler(false)
+		} else if (handler) handler(frame)
 	}
 	if (!synced) {
 		crc = 0;

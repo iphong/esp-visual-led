@@ -18,7 +18,7 @@ void setup() {
 	IPAddress apAddr = {10, 1, 1, 1};
 	IPAddress apMask = {255, 255, 255, 0};
 	sprintf(chipID, "%06X", system_get_chip_id());
-	String apSSID = "SDC_" + String(chipID).substring(0, 6);
+	String apSSID = "SDC_" + String(chipID).substring(0, 6) + "_TX";
 	String apPSK = "";
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
