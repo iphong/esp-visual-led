@@ -6,7 +6,7 @@
 #define API_PORT	(u16)11111
 
 #define HEADER 		(u8)0x36 // character '$'
-#define VERSION 	(u8)0x06
+#define VERSION 	(u8)0x07
 
 #define RGB_FRAME 	(u8)0x01
 #define END_FRAME 	(u8)0x02
@@ -15,7 +15,6 @@
 #define MODE_SHOW 	(u8)0x00
 #define MODE_BIND 	(u8)0x01
 
-char chipID[10];
 IPAddress apAddr = {10, 1, 1, 1};
 IPAddress apMask = {255, 255, 255, 0};
 
@@ -150,5 +149,18 @@ void startBlink(u32 time = 1000) {
 	LED_LOW();
 	blinkTimer.attach_ms(time, LED_BLINK);
 }
+
+String get_mac_address(bool short_addr = true) {
+	char tmp[20];
+	uint8_t mac[6];
+#ifdef ARDUINO_ARCH_ESP32
+	esp_efuse_mac_get_default(mac);
+#endif
+#ifdef ARDUINO_ARCH_ESP8266
+	WiFi.macAddress(mac);
+#endif
+	sprintf(tmp, "%02X%02X%02X", mac[3], mac[4], mac[5]);
+	return String(tmp).substring(0, 6);
+};
 
 #endif

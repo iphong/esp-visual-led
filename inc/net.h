@@ -26,6 +26,7 @@
 namespace Net {
 
 void setSync(u8* data, u8 size) {
+	LED_BLINK();
 	SyncData state;
 	memcpy(&state, data, size);
 	LOGD("received sync: %u %u %u %u\n", state.show, state.ended, state.paused, state.time);
@@ -49,12 +50,13 @@ void setSync(u8* data, u8 size) {
 	}
 }
 void sendPing() {
+	LED_BLINK();
 	size_t size = sizeof(App::data.name) + 3;
 	u8 data[size];
 	data[0] = 2;
 	setUint16(&data[1], ESP.getVcc());
 	memcpy(&data[3], App::data.name, sizeof(App::data.name));
-	MeshRC::send(String(chipID).substring(0, 6) + "<PING", data, size);
+	MeshRC::send(get_mac_address(false) + "<PING", data, size);
 	LOGL(F("sent ping"));
 }
 void setPair() {
@@ -67,11 +69,13 @@ void setPair() {
 	}
 }
 void setName(u8* buf, u8 len) {
+	LED_BLINK();
 	memset(App::data.name, 0, 20);
 	memcpy(App::data.name, buf, len);
 	App::save();
 }
 void setRGB(u8* buf, u8 len) {
+	LED_BLINK();
 	LED::setRGB(buf, len);
 }
 void restart() {
@@ -90,7 +94,7 @@ void setup() {
 	MeshRC::on(MSG_SET, 	setRGB);
 
 	MeshRC::on("", [](u8* data, u8 size) {
-		if (size > 6 && equals(data, (u8*)chipID, 6) && (data[6] == '>')) {
+		if (size > 6 && equals(data, (u8*)get_mac_address(false).c_str(), 6) && (data[6] == '>')) {
 			u8* newData = &data[5];
 			newData[0] = '#';
 			MeshRC::recvHandler(MeshRC::sender, newData, size - 5);

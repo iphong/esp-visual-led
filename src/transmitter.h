@@ -11,16 +11,32 @@
 
 Transport bridge(&Serial);
 
+String get_mac_address(bool short_addr = true) {
+	char tmp[20];
+	uint8_t mac[6];
+#ifdef ARDUINO_ARCH_ESP32
+	esp_efuse_mac_get_default(mac);
+#endif
+#ifdef ARDUINO_ARCH_ESP8266
+	WiFi.macAddress(mac);
+#endif
+sprintf(tmp, "%02X%02X%02X", mac[3], mac[4], mac[5]);
+	if (short_addr) {
+		return String(tmp).substring(0, 6);
+	} else {
+		return String(tmp).substring(0, 6);
+	}
+};
+
 void setup() {
 	Serial.begin(115200);
 
-	char chipID[10];
 	IPAddress apAddr = {10, 1, 1, 1};
 	IPAddress apMask = {255, 255, 255, 0};
-	sprintf(chipID, "%06X", system_get_chip_id());
-	String apSSID = "SDC_" + String(chipID).substring(0, 6) + "_TX";
+	String apSSID = "SDC_" + get_mac_address() + "_TX";
 	String apPSK = "";
 	WiFi.mode(WIFI_AP_STA);
+	WiFi.setPhyMode(WIFI_PHY_MODE_11G);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK);
 	ArduinoOTA.begin();

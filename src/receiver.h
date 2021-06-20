@@ -6,7 +6,7 @@
 #include "led.h"
 #include "net.h"
 
-ADC_MODE(ADC_VCC);
+// ADC_MODE(ADC_VCC);
 
 void setup() {
 	LED_SETUP();
@@ -14,13 +14,12 @@ void setup() {
 	Serial.begin(115200);
 #endif
 
-	sprintf(chipID, "%06X", system_get_chip_id());
-
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
+	WiFi.setPhyMode(WIFI_PHY_MODE_11G);
 	WiFi.disconnect();
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
-	WiFi.softAP("SDC_" + String(chipID).substring(0, 6), "");
+	WiFi.softAP("SDC_" + get_mac_address(false).substring(0, 6), "");
 
 	btn.begin();
 	btn.onPress(buttonPressHandler);
