@@ -105,14 +105,14 @@ void setup() {
 }
 uint8_t lastCount = 0;
 void loop() {
-	uint8_t cnt = wifi_softap_get_station_num();
-	if (cnt > 0) {
-		wifi_softap_get_station_info();
-		if (lastCount == 0) startBlink(100);
-	} else {
-		stopBlink();
-	}
-	lastCount = cnt <= 0 ? 0 : cnt;
+	// uint8_t cnt = wifi_softap_get_station_num();
+	// if (cnt > 0) {
+	// 	wifi_softap_get_station_info();
+	// 	if (lastCount == 0) startBlink(500);
+	// } else {
+	// 	stopBlink();
+	// }
+	// lastCount = cnt <= 0 ? 0 : cnt;
 }
 }  // namespace Net
 

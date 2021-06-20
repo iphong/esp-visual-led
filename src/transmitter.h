@@ -9,6 +9,9 @@
 #include <Transport.h>
 #include <ArduinoOTA.h>
 
+
+u8 psk[] = {'1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f'};
+
 Transport bridge(&Serial);
 
 String get_mac_address(bool short_addr = true) {
@@ -46,6 +49,7 @@ void setup() {
 	});
 	esp_now_init();
 	#ifdef ESP8266
+	// esp_now_set_kok(psk, sizeof(psk));
 	esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
 	esp_now_add_peer(broadcast, ESP_NOW_ROLE_COMBO, 1, 0, 0);
 	esp_now_register_recv_cb([](uint8_t *addr, uint8_t* data, uint8_t size) {

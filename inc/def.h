@@ -128,9 +128,6 @@ u8* setUint32(u8* buffer, u16 value, size_t offset = 0) {
 }
 
 Ticker blinkTimer;
-void LED_SETUP() {
-	pinMode(LED_PIN, OUTPUT);
-}
 void LED_HIGH() {
 	digitalWrite(LED_PIN, HIGH);
 }
@@ -140,14 +137,23 @@ void LED_LOW() {
 void LED_BLINK() {
 	digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 }
-
-void stopBlink() {
+void LED_SETUP() {
+	pinMode(LED_PIN, OUTPUT);
 	LED_HIGH();
-	if (blinkTimer.active()) blinkTimer.detach();
+}
+
+bool isBlinking;
+void stopBlink() {
+	if (isBlinking) {
+		LED_HIGH();
+		if (blinkTimer.active()) blinkTimer.detach();
+	}
+	isBlinking = false;
 }
 void startBlink(u32 time = 1000) {
 	LED_LOW();
 	blinkTimer.attach_ms(time, LED_BLINK);
+	isBlinking = true;
 }
 
 String get_mac_address(bool short_addr = true) {
