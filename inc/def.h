@@ -3,38 +3,38 @@
 #ifndef __DEF_H__
 #define __DEF_H__
 
-#define API_PORT	(u16)11111
+#define API_PORT (u16)11111
 
-#define HEADER 		(u8)0x36 // character '$'
-#define VERSION 	(u8)0x07
+#define HEADER (u8)0x36	 // character '$'
+#define VERSION (u8)0x07
 
-#define RGB_FRAME 	(u8)0x01
-#define END_FRAME 	(u8)0x02
-#define LOOP_FRAME 	(u8)0x03
+#define RGB_FRAME (u8)0x01
+#define END_FRAME (u8)0x02
+#define LOOP_FRAME (u8)0x03
 
-#define MODE_SHOW 	(u8)0x00
-#define MODE_BIND 	(u8)0x01
+#define MODE_SHOW (u8)0x00
+#define MODE_BIND (u8)0x01
 
 IPAddress apAddr = {10, 1, 1, 1};
 IPAddress apMask = {255, 255, 255, 0};
 
 enum MSG_ID {
 
-	PING_MSG        = 0x01,
-	PAIR_MSG        = 0x02,
-	NODE_MSG        = 0x03,
-	NAME_MSG        = 0x04,
-	INFO_MSG        = 0x05,
+	PING_MSG = 0x01,
+	PAIR_MSG = 0x02,
+	NODE_MSG = 0x03,
+	NAME_MSG = 0x04,
+	INFO_MSG = 0x05,
 
-	SET_RGB_MSG     = 0x10,
-	SET_DIM_MSG     = 0x11,
+	SET_RGB_MSG = 0x10,
+	SET_DIM_MSG = 0x11,
 
-	FILE_BEGIN_MSG  = 0x20,
-	FILE_WRITE_MSG  = 0x21,
-	FILE_CLOSE_MSG  = 0x22,
+	FILE_BEGIN_MSG = 0x20,
+	FILE_WRITE_MSG = 0x21,
+	FILE_CLOSE_MSG = 0x22,
 
-	WIFI_ON_MSG     = 0x70,
-	WIFI_OFF_MSG    = 0x71
+	WIFI_ON_MSG = 0x70,
+	WIFI_OFF_MSG = 0x71
 };
 
 struct RGB {
@@ -126,6 +126,12 @@ u8* setUint32(u8* buffer, u16 value, size_t offset = 0) {
 	buffer[offset + 0] = (value & 0xff000000) >> 24;
 	return &buffer[offset + 4];
 }
+#ifndef LED_OFF
+#define LED_OFF LED_HIGH
+#endif
+#ifndef LED_ON
+#define LED_ON LED_LOW
+#endif
 
 Ticker blinkTimer;
 void LED_HIGH() {

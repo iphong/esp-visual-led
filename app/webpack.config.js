@@ -10,6 +10,7 @@ module.exports = {
 		background: './ts/background.ts'
 	},
 	output: {
+		publicPath: '/dist/',
 		filename: '[name].js',
 		path: __dirname + '/dist'
 	},
@@ -25,7 +26,8 @@ module.exports = {
 		rules: [
 			{ test: /\.css$/, use: 'css-loader' },
 			{ test: /\.ts$/, use: 'ts-loader' },
-			{ test: /\.js$/, use: 'babel-loader' }
+			{ test: /\.js$/, use: 'babel-loader' },
+			{ test: /\.(woff|woff2|ttf|eot)$/, use: 'file-loader' }
 		]
 	},
 	target: 'webworker'

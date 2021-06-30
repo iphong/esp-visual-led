@@ -42,6 +42,8 @@ void setup() {
 	WiFi.setPhyMode(WIFI_PHY_MODE_11G);
 	WiFi.softAPConfig(apAddr, apAddr, apMask);
 	WiFi.softAP(apSSID, apPSK);
+	WiFi.disconnect();
+	// WiFi.softAPdisconnect();
 	ArduinoOTA.begin();
 
 	bridge.receive([](uint8_t* addr, uint8_t* data, size_t size) {

@@ -26,7 +26,7 @@
 namespace Net {
 
 void setSync(u8* data, u8 size) {
-	LED_BLINK();
+	LED_ON();
 	SyncData state;
 	memcpy(&state, data, size);
 	LOGD("received sync: %u %u %u %u\n", state.show, state.ended, state.paused, state.time);
@@ -48,9 +48,10 @@ void setSync(u8* data, u8 size) {
 			LED::setTime(state.time);
 		}
 	}
+	LED_OFF();
 }
 void sendPing() {
-	LED_BLINK();
+	LED_ON();
 	size_t size = sizeof(App::data.name) + 3;
 	u8 data[size];
 	data[0] = 2;
@@ -58,6 +59,7 @@ void sendPing() {
 	memcpy(&data[3], App::data.name, sizeof(App::data.name));
 	MeshRC::send(get_mac_address(false) + "<PING", data, size);
 	LOGL(F("sent ping"));
+	LED_OFF();
 }
 void setPair() {
 	LOGL(F("received pair"));
@@ -69,14 +71,16 @@ void setPair() {
 	}
 }
 void setName(u8* buf, u8 len) {
-	LED_BLINK();
+	LED_ON();
 	memset(App::data.name, 0, 20);
 	memcpy(App::data.name, buf, len);
 	App::save();
+	LED_OFF();
 }
 void setRGB(u8* buf, u8 len) {
-	LED_BLINK();
+	LED_ON();
 	LED::setRGB(buf, len);
+	LED_OFF();
 }
 void restart() {
 	ESP.restart();
