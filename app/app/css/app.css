@@ -1,0 +1,221 @@
+
+* {
+	-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+	font-family: "system-ui", "Helvetica Neue", Verdana, Geneva, Tahoma, sans-serif;
+}
+
+*:not(input) {
+	user-select: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+header {
+	-webkit-app-region: drag;
+}
+
+button, input, select, label {
+	-webkit-app-region: no-drag;
+	vertical-align: middle;
+}
+
+html {
+	height: 100%;
+	width: 100%;
+	padding: 0;
+	margin: 0;
+}
+
+body {
+	display: grid;
+	font-size: 14px;
+	font-family: system-ui, serif;
+	grid-template-rows: 60px auto;
+	background: black;
+	color: white;
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+button {
+	font-size: 14px;
+	white-space: nowrap;
+	outline: none;
+	transition: all ease 0.1s;
+}
+button.mdi {
+	font-size: 20px;
+}
+
+nav {
+	display: flex;
+    flex-wrap: nowrap;
+}
+
+nav > * {
+	vertical-align: middle;
+	margin-left: 2px;
+}
+button, select {
+	vertical-align: middle;
+	height: 35px;
+	min-width: 40px;
+	padding: 0 10px;
+	background: rgba(255,255,255,0.05);
+	border: 1px solid rgba(0,0,0,0.1);
+	color: white;
+	-webkit-appearance: none;
+	outline: none;
+	border-radius: 5px;
+	font-weight: 500;
+}
+button {
+}
+button:focus, input:focus, select:focus {
+
+}
+
+button:hover {
+	text-shadow: 0 0 10px #c000ff;
+	background: rgba(255,255,255,0.1);
+}
+button:active,
+button.selected {
+	background: rgba(0,0,0,0.2);
+}
+button.selected {
+	color: #d143ff;
+	text-shadow: 0 0 10px #c000ff;
+}
+
+button[disabled],
+select[disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}
+select {
+	max-width: 150px;
+	padding: 2px 10px 0px 13px;
+}
+
+#header {
+	position: relative;
+	display: grid;
+	padding: 5px 20px;
+	grid-gap: 10px;
+	background: #222326;
+	grid-template-columns: 120px 1fr 2fr 4fr auto;
+	align-items: center;
+	justify-content: center;
+}
+#logo {
+	text-shadow: 0 0 10px #bd00f1;
+}
+#logo strong {
+	font-size: 30px;
+	display: block;
+	line-height: 1em;
+}
+
+#logo small {
+	display: block;
+	font-size: small;
+	letter-spacing: 0.5em;
+	line-height: 1em;
+}
+
+#main {
+	position: relative;
+	width: 100%;
+	display: grid;
+	/* grid-template-rows: auto 20px 60px; */
+	grid-template-rows: 30px auto 0px 0px;
+	overflow-x: hidden;
+	background: #191919;
+}
+
+#tracks {
+	display: grid;
+	padding: 2px 0;
+	grid-gap: 2px;
+	box-sizing: border-box;
+	/* background: url(../img/checker.jpg); */
+}
+
+#tracks .track {
+	position: relative;
+	background: #111;
+}
+
+#tracks .track > span {
+	display: block;
+    position: absolute;
+    /* top: 50%; */
+    height: 100%;
+    /* max-height: 20px; */
+	/* box-sizing: border-box; */
+    /* transform: translateY(-50%); */
+    /* border-radius: 0px; */
+}
+#tracks .track:focus {
+	z-index: 2;
+}
+#tracks .track.selected {
+	/* background: #b905ff66; */
+}
+#tracks .track.selected:before {
+	content: "";
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba(36, 36, 37, 0.712);
+    outline: 1px solid rgb(255, 255, 255);
+	outline-offset: 1px;
+    z-index: 5;
+}
+
+#timeline {
+	background: #111;
+}
+
+#tempo {
+	white-space: nowrap;
+}
+
+#waveform {
+	/* background: #222326; */
+}
+
+#handle {
+    position: fixed;
+    left: 0;
+    top: 60px;
+    bottom: 0px;
+    /* height: 34px; */
+    width: 2px;
+    /* border-radius: 50%; */
+    background-color: white;
+    box-shadow: 0px 0px 2px 2px #673ab7, 0px 0px 10px 2px #9c27b0;
+    transform: translateX(-100%);
+	z-index: 20;
+}
+
+.block {
+	display: inline-block;
+	height: 100%;
+	border: 1px solid #222;
+	box-sizing: border-box;
+	background-color: #000;
+	font-size: 12px;
+	line-height: 18px;
+	text-align: center;
+	font-weight: bold;
+	color: white;
+}

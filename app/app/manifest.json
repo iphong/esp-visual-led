@@ -1,0 +1,28 @@
+{
+	"name": "SDC LightMaster",
+	"description": "Light composer and player",
+	"version": "0.1",
+	"manifest_version": 2,
+	"app": {
+		"background": {
+			"scripts": [
+				"dist/background.js"
+			]
+		}
+	},
+	"icons": {
+		"128": "img/icon.png"
+	},
+	"permissions": [
+		"usb",
+		"serial",
+		"storage",
+		{
+			"fileSystem": [
+				"write",
+				"retainEntries",
+				"directory"
+			]
+		}
+	]
+}

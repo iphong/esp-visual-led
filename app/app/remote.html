@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<title>Utils</title>
+<meta charset="UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="LED">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: filesystem:; connect-src * data: blob: filesystem:; style-src 'self' blob: filesystem: data: 'unsafe-inline'; img-src 'self' blob: filesystem: data:; frame-src 'self' blob: filesystem: data:; font-src 'self' blob: filesystem: data:; media-src * data: blob: filesystem:; script-src 'self' blob: filesystem: 'wasm-eval'">
+
+<link rel="stylesheet" type="text/css" href="css/materialdesignicons.css">
+<style>
+	html {
+		height: 100%;
+		width: 100%;
+	}
+
+	body {
+		display: grid;
+		grid-template: auto / 1fr 1fr 1fr;
+		grid-gap: 5px;
+		height: 100%;
+		width: 100%;
+		padding: 5px;
+		margin: 0;
+		box-sizing: border-box;
+	}
+
+	button {
+		font-weight: bold;
+		font-size: 16px;
+		border: 2px solid black;
+	}
+	button::before {
+		content: " ";
+	}
+</style>
+
+<button data-send="53 45 54 FF FF FF" style="background: #FFF;"></button>
+<button data-send="53 45 54 88 88 88" style="background: #888;"></button>
+<!-- <button data-send="50 41 49 52" style="background: #222; color: white;">BIND</button> -->
+<button id="off" data-send="53 45 54 00 00 00" style="background: #222; color: white;"></button>
+<!-- <button data-send="57 49 46 49 2B" style="background: #222; color: white;">WIFI</button> -->
+
+<button data-send="53 45 54 FF 00 00" style="background: #F00;"></button>
+<button id="green" data-send="53 45 54 00 FF 00" style="background: #0F0;"></button>
+<button data-send="53 45 54 00 00 FF" style="background: #00F;"></button>
+<!-- <button data-send="57 49 46 49 2D" style="background: #777;"></button> -->
+
+<button data-send="53 45 54 FF 44 00" style="background: #F40;"></button>
+<button data-send="53 45 54 00 FF 44" style="background: #0F4;"></button>
+<button data-send="53 45 54 44 00 FF" style="background: #40F;"></button>
+<!-- <button data-send="4C 4F 4F 50 01" style="background: #777;"></button> -->
+
+<button data-send="53 45 54 FF 88 00" style="background: #F80;"></button>
+<button data-send="53 45 54 00 FF 88" style="background: #0F8;"></button>
+<button data-send="53 45 54 88 00 FF" style="background: #80F;"></button>
+<!-- <button data-send="4C 4F 4F 50 02" style="background: #777;"></button> -->
+
+<button data-send="53 45 54 FF CC 00" style="background: #FC0;"></button>
+<button data-send="53 45 54 00 FF CC" style="background: #0FC;"></button>
+<button data-send="53 45 54 CC 00 FF" style="background: #C0F;"></button>
+<!-- <button data-send="4C 4F 4F 50 03" style="background: #777;"></button> -->
+
+<button data-send="53 45 54 FF FF 00" style="background: #FF0;"></button>
+<button data-send="53 45 54 00 FF FF" style="background: #0FF;"></button>
+<button data-send="53 45 54 FF 00 FF" style="background: #F0F;"></button>
+<!-- <button data-send="4C 4F 4F 50 04" style="background: #777;"></button> -->
+<!-- 
+<button data-send="44 49 4D 2D" style="background: #777;">DIM-</button>
+<button data-send="44 49 4D 2B" style="background: #777;">DIM+</button>
+<button data-send="53 50 44 2D" style="background: #777;">SPD-</button>
+<button data-send="53 50 44 2B" style="background: #777;">SPD+</button> -->
+
+<script src="../dist/remote.js"></script>
