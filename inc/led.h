@@ -132,7 +132,7 @@ class Show {
 #endif
 		if (!paused) {
 			if (offset > 16) {
-				while (running && frame.start > time) {
+				while (running && frame.start >= time) {
 					currentTime = frame.start;
 					frame = prev();
 				}
@@ -206,8 +206,8 @@ class Show {
 
 	void setRGB(u8 r, u8 g, u8 b) {
 		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.6);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.6);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.66);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.66);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);
