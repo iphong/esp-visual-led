@@ -28,6 +28,7 @@ class Show {
 	u32 loopEnd;
 
 	float ratio;
+	bool settingTime = false;
 
    public:
 	bool running = false;
@@ -122,40 +123,35 @@ class Show {
 		return currentTime;
 	}
 	void setTime(u32 time) {
-		if (!file) return;
+		settingTime = true;
 		int offset = (int)currentTime - (int)time;
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
 #endif
-		if (!running || !file || !time)
-			begin();
-		else if (paused)
-			resume();
-		if (offset > 16) {
-			while (frame.start >= time) {
-				frame = prev();
-				currentTime = frame.start;
-			}
-			while (currentTime < time) {
-				if (!tick(false))
-					continue;
-			}
-		} else if (offset < -16) {
-			while (frame.start + frame.duration < time) {
-				frame = next();
-				currentTime = frame.start;
-			}
-			while (currentTime < time) {
-				if (!tick(false))
-					continue;
+		if (!paused) {
+			if (offset > 16) {
+				while (frame.start >= time) {
+					currentTime = frame.start;
+					frame = prev();
+				}
+				while (currentTime < time) {
+					if (!tick(false)) continue;
+				}
+			} else if (offset < -16) {
+				while (frame.start + frame.duration < time) {
+					frame = next();
+					currentTime = frame.start;
+				}
+				while (currentTime < time) {
+					if (!tick(false)) continue;
+				}
 			}
 		}
+		settingTime = false;
 	}
 	// true = playing
 	// false = ended
 	bool tick(bool shouldUpdate = true) {
-		if (paused && shouldUpdate)
-			return false;
 		switch (frame.type) {
 			case RGB_FRAME:
 				if (shouldUpdate)
@@ -200,6 +196,9 @@ class Show {
 			if (frame.type == RGB_FRAME) {
 				lastColor.set(frame.r, frame.g, frame.b);
 			}
+			if (frame.type == END_FRAME) {
+				return false;
+			}
 			frame = next();
 		}
 		return true;
@@ -207,8 +206,8 @@ class Show {
 
 	void setRGB(u8 r, u8 g, u8 b) {
 		r = map(r, 0, 255, 0, App::data.brightness * 1.00);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.60);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.60);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.75);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.75);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);
@@ -235,7 +234,7 @@ class Show {
 		file.setTimeout(0);
 		frame = next();
 		tmr.attach_ms_scheduled_accurate(1, [this]() {
-			tick(true);
+			if (!paused && !settingTime) tick(true);
 		});
 	}
 };
