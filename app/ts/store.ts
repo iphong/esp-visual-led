@@ -355,60 +355,67 @@ function hex2rgb(hex: string): [number, number, number] {
 }
 
 export function convertFrame({ type, color, start, duration, ratio, spacing, period }) {
+	let output
 	switch (type) {
 		case 2: // solid
-			return [
+			output = [
 				createColorFrame(start, duration, 0, ...hex2rgb(color[0]))
 			]
+			break
 		case 3: // gradient
-			return [
+			output = [
 				createColorFrame(start, 0, 0, ...hex2rgb(color[0])),
 				createColorFrame(start, duration, duration, ...hex2rgb(color[1]))
 			]
+			break
 		case 4: // flash
-			const dur = period * (ratio / 100)
-			return [
+			const dur = period * 10 * ratio
+			output = [
 				createLoopFrame(start, duration),
 				createColorFrame(0, dur, 0, ...hex2rgb(color[0])),
 				createColorFrame(dur, period - dur, 0, ...hex2rgb(color[1])),
 				createEndFrame(period)
 			]
+			break
 		case 5: // rainbow
-			const seg = Math.floor(period / 7)
-			let pos = 0
-			return [
+			const seg = Math.floor(period * 10 / 7)
+			console.log(seg)
+			output = [
 				createLoopFrame(start, duration),
 				createColorFrame(seg * 0, seg, seg, 255, 0, 0),
 				createColorFrame(seg * 1, seg, seg, 255, 165, 0),
 				createColorFrame(seg * 2, seg, seg, 255, 255, 0),
 				createColorFrame(seg * 3, seg, seg, 0, 128, 0),
-				createColorFrame(seg * 4, seg, seg, 0, 0, 255),
-				createColorFrame(seg * 5, seg, seg, 75, 0, 130),
+				createColorFrame(seg * 4, seg, seg, 0, 255, 255),
+				createColorFrame(seg * 5, seg, seg, 0, 0, 225),
 				createColorFrame(seg * 6, seg, seg, 238, 130, 238),
 				createEndFrame(seg * 7)
 			]
+			break
 		case 6: // dots
-			return [
+			output = [
 				createLoopFrame(start, duration),
 				createColorFrame(0, 1, 0, ...hex2rgb(color[0])),
 				createColorFrame(1, spacing, 0, 0, 0, 0),
-				createEndFrame(spacing + 1),
-				createColorFrame(period, 0, 0, ...hex2rgb(color[0]))
+				createEndFrame(spacing * 10 + 1)
 			]
+			break
 		case 7: // pulse
+			// period = period * 10
 			if (period < 24) period = 24
-			return [
+			output = [
 				createLoopFrame(start, duration),
 				createColorFrame(0, 10, 0, 0, 0, 0),
-				createColorFrame(11, 2, 0, 255, 255, 255),
-				createColorFrame(13, 10, 0, 0, 0, 0),
-				createColorFrame(22, period - 22, 0, ...hex2rgb(color[0])),
-				createEndFrame(period),
-				createColorFrame(period, 0, 0, ...hex2rgb(color[0]))
+				createColorFrame(10, 2, 0, 255, 255, 255),
+				createColorFrame(12, 10, 0, 0, 0, 0),
+				createColorFrame(22, period * 10 - 22, 0, ...hex2rgb(color[0])),
+				createEndFrame(period * 10)
 			]
+			break
 		default:
-			return []
+			output = []
 	}
+	return output
 }
 
 export function convertTracks(tracks) {

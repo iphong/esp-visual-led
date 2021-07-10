@@ -121,6 +121,7 @@ export function renderLight(container: any, track: any) {
 				Object.assign($el.dataset, params)
 				$el.style.left = `${start / 10}px`
 				$el.style.width = `${duration / 10}px`
+				$el.style.backgroundRepeat = `repeat`
 				switch (params.type) {
 					case 2: // solid
 						$el.style.backgroundColor = color[0]
@@ -133,12 +134,15 @@ export function renderLight(container: any, track: any) {
 						break
 					case 5: // rainbow
 						$el.style.backgroundImage = `url(${drawRainbow(period)})`
+						$el.style.backgroundSize = `${period}px`
 						break
 					case 6: // dots
 						$el.style.backgroundImage = `url(${drawDots(color[0], spacing)})`
+						// $el.style.backgroundSize = `${spacing}px`
 						break
 					case 7: // pulse
 						$el.style.backgroundImage = `url(${drawPulse(color[0], period)})`
+						// $el.style.backgroundSize = `${period + 3}px`
 						break
 					default:
 						console.debug('unhandled light type', [params.type])
@@ -166,28 +170,31 @@ function drawFlash(color1, color2, period, ratio) {
 	return tmpCanvas.toDataURL()
 }
 function drawDots(color, spacing) {
-	tmpCanvas.width = spacing + 2
+	tmpCanvas.width = spacing + 1
 	tmpCanvas.height = 1
 	const ctx = tmpCanvas.getContext('2d')
 	if (ctx) {
 		ctx.fillStyle = color
 		ctx.fillRect(0, 0, 1, 1)
 		ctx.fillStyle = 'black'
-		ctx.fillRect(1, 0, 1, 1)
+		ctx.fillRect(1, 0, spacing, 1)
 	}
 	return tmpCanvas.toDataURL()
 }
 function drawPulse(color, period) {
-	tmpCanvas.width = period
+	tmpCanvas.width = period + 3
 	tmpCanvas.height = 1
 	const ctx = tmpCanvas.getContext('2d')
 	if (ctx) {
-		ctx.fillStyle = color
-		ctx.fillRect(0, 0, period, 1)
 		ctx.fillStyle = 'black'
-		ctx.fillRect(0, 0, 24, 1)
+		ctx.fillRect(0, 0, 1, 1)
 		ctx.fillStyle = 'white'
-		ctx.fillRect(12, 0, 2, 1)
+		ctx.fillRect(1, 0, 1, 1)
+		ctx.fillStyle = 'black'
+		ctx.fillRect(2, 0, 1, 1)
+		ctx.fillStyle = color
+		// ctx.fillRect(3, 0, 4, 1)
+		ctx.fillRect(3, 0, period, 1)
 	}
 	return tmpCanvas.toDataURL()
 }
@@ -204,7 +211,6 @@ function drawRainbow(period) {
 		gradient.addColorStop(1 / 7 * 4, 'cyan')
 		gradient.addColorStop(1 / 7 * 5, 'blue')
 		gradient.addColorStop(1 / 7 * 6, 'violet')
-		gradient.addColorStop(1 / 7 * 7, 'red')
 		ctx.fillStyle = gradient
 		ctx.fillRect(0, 0, period, 1)
 	}

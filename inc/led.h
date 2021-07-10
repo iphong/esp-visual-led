@@ -48,6 +48,8 @@ class Show {
 		if (file.available() >= 16) {
 			file.readBytes((char*)b, 16);
 			memcpy(&f, b, 16);
+		} else {
+			end();
 		}
 		// LOGD("- %u: %02x %02x %02x - %u %u %u\n", f.type, f.r, f.g, f.b, f.start, f.duration, frame.transition);
 		return f;
@@ -130,7 +132,7 @@ class Show {
 #endif
 		if (!paused) {
 			if (offset > 16) {
-				while (running && frame.start >= time) {
+				while (running && frame.start > time) {
 					currentTime = frame.start;
 					frame = prev();
 				}
@@ -183,7 +185,8 @@ class Show {
 				break;
 			case END_FRAME:
 				// LOGL("ended");
-				repeat ? begin() : end();
+				// repeat ? begin() : end();
+				break;
 		}
 		// currentTime += shouldUpdate ? 1 : 1;
 		if (currentTime++ >= frame.start + frame.duration) {
@@ -196,10 +199,6 @@ class Show {
 			if (frame.type == RGB_FRAME) {
 				lastColor.set(frame.r, frame.g, frame.b);
 			}
-			if (frame.type == END_FRAME) {
-				end();
-				return false;
-			}
 			frame = next();
 		}
 		return true;
@@ -207,8 +206,8 @@ class Show {
 
 	void setRGB(u8 r, u8 g, u8 b) {
 		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.6);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.6);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.5);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.5);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);
