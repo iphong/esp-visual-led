@@ -44,7 +44,7 @@ class Show {
 	FrameData f;
 	u8 b[16];
 	FrameData next() {
-		if (file.available()) {
+		if (file.available() >= 16) {
 			file.readBytes((char*)b, 16);
 			memcpy(&f, b, 16);
 		}

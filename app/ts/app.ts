@@ -1,4 +1,4 @@
-import '@mdi/font/css/materialdesignicons.min.css'
+
 import { init, set, store, parseAudioFile, parseShowFile, cache, openShowEntry } from './store'
 import { $player, $tracks, renderBeats, renderSerial, renderTracks, renderWaveform, updateSize, updateTime } from './view'
 import { encodeMsg, sendRaw, sendSync } from './serial'

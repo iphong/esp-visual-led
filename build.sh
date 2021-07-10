@@ -3,6 +3,9 @@
 cd app
 webpack -p
 
+cp -R node_modules/@mdi/font/css dist/
+cp -R node_modules/@mdi/font/fonts dist/
+
 zip app.zip dist/* css/* img/* app.html remote.html utils.html manifest.json
 cd ..
 

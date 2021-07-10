@@ -10,7 +10,7 @@ module.exports = {
 		background: './ts/background.ts'
 	},
 	output: {
-		publicPath: '/dist/',
+		publicPath: './dist/',
 		filename: '[name].js',
 		path: __dirname + '/dist'
 	},
