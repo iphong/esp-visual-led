@@ -369,7 +369,7 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 			]
 			break
 		case 4: // flash
-			const dur = period * 10 * ratio
+			const dur = period * (ratio / 100)
 			output = [
 				createLoopFrame(start, duration),
 				createColorFrame(0, dur, 0, ...hex2rgb(color[0])),
@@ -397,7 +397,7 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 				createLoopFrame(start, duration),
 				createColorFrame(0, 1, 0, ...hex2rgb(color[0])),
 				createColorFrame(1, spacing, 0, 0, 0, 0),
-				createEndFrame(spacing * 10 + 1)
+				createEndFrame(spacing + 1)
 			]
 			break
 		case 7: // pulse
@@ -408,8 +408,8 @@ export function convertFrame({ type, color, start, duration, ratio, spacing, per
 				createColorFrame(0, 10, 0, 0, 0, 0),
 				createColorFrame(10, 2, 0, 255, 255, 255),
 				createColorFrame(12, 10, 0, 0, 0, 0),
-				createColorFrame(22, period * 10 - 22, 0, ...hex2rgb(color[0])),
-				createEndFrame(period * 10)
+				createColorFrame(22, period - 22, 0, ...hex2rgb(color[0])),
+				createEndFrame(period)
 			]
 			break
 		default:
