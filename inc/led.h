@@ -107,8 +107,8 @@ class Show {
 		setRGB(0, 0, 0);
 		currentTime = 0;
 		loopTime = 0;
-		running = 0;
-		paused = 0;
+		running = false;
+		paused = false;
 	}
 
 	void pause() {
@@ -130,20 +130,20 @@ class Show {
 #endif
 		if (!paused) {
 			if (offset > 16) {
-				while (frame.start >= time) {
+				while (running && frame.start >= time) {
 					currentTime = frame.start;
 					frame = prev();
 				}
-				while (currentTime < time) {
-					if (!tick(false)) continue;
+				while (running && currentTime < time) {
+					if (!tick(false)) break;
 				}
 			} else if (offset < -16) {
-				while (frame.start + frame.duration < time) {
+				while (running && frame.start + frame.duration < time) {
 					frame = next();
 					currentTime = frame.start;
 				}
-				while (currentTime < time) {
-					if (!tick(false)) continue;
+				while (running && currentTime < time) {
+					if (!tick(false)) break;
 				}
 			}
 		}
@@ -197,6 +197,7 @@ class Show {
 				lastColor.set(frame.r, frame.g, frame.b);
 			}
 			if (frame.type == END_FRAME) {
+				end();
 				return false;
 			}
 			frame = next();
@@ -205,9 +206,9 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		r = map(r, 0, 255, 0, App::data.brightness * 1.00);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.75);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.75);
+		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
+		g = map(g, 0, 255, 0, App::data.brightness * 0.6);
+		b = map(b, 0, 255, 0, App::data.brightness * 0.6);
 		analogWriteMode(r_pin, (int)r, false);
 		analogWriteMode(g_pin, (int)g, false);
 		analogWriteMode(b_pin, (int)b, false);

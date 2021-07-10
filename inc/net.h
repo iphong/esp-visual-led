@@ -45,7 +45,7 @@ void setSync(u8* data, u8 size) {
 		} else if (!state.paused && LED::isPaused()) {
 			LED::resume();
 		}
-		if (!state.ended) {
+		if (!state.ended && LED::isRunning()) {
 			LED::setTime(state.time);
 		}
 	}
