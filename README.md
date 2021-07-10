@@ -62,4 +62,20 @@ UINT8(1) | UINT8(1) | UINT8(1) | UINT8(1) | UINT32(4) | UINT32(4) | UINT32(4)
 
 * 0x01 - RGB FRAME
 * 0x02 - END FRAME
-* 0x03 - LOOP FRAME 
+* 0x03 - LOOP FRAME
+
+## GPIO Pin Mappings
+
+Function | Pin #
+---------|------
+Battery Voltage | ***ADC0***
+Setup Button | ***GPIO0***
+Status LED | ***GPIO2***
+Serial TX | ***GPIO1***
+Serial RX | ***GPIO3***
+Channel 1 Green | ***GPIO12***
+Channel 1 Red | ***GPIO13***
+Channel 1 Blue | ***GPIO14***
+Channel 2 Green | ***GPIO15***
+Channel 2 Red | ***GPIO5***
+Channel 2 Blue | ***GPIO4***
