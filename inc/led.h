@@ -129,28 +129,26 @@ class Show {
 		return currentTime;
 	}
 	void setTime(u32 time) {
-		if (busy) return;
 		busy = true;
-		u32 offset = currentTime - time;
+		int offset = currentTime - time;
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
 #endif
 		if (!paused) {
-			START_TIMER;
 			if (offset > 16) {
-				while (!CHECK_TIMEOUT && frame.start >= time) {
+				while (running && frame.start >= time) {
 					currentTime = frame.start;
 					frame = prev();
 				}
-				while (!CHECK_TIMEOUT && currentTime < time) {
+				while (running && currentTime < time) {
 					if (!tick(false)) break;
 				}
 			} else if (offset < -16) {
-				while (!CHECK_TIMEOUT && frame.start + frame.duration < time) {
+				while (running && frame.start + frame.duration < time) {
 					frame = next();
 					currentTime = frame.start;
 				}
-				while (!CHECK_TIMEOUT && currentTime < time) {
+				while (running && currentTime < time) {
 					if (!tick(false)) break;
 				}
 			}
@@ -174,7 +172,6 @@ class Show {
 				if (shouldUpdate && loopFrame.type == RGB_FRAME) {
 					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
-				// loopTime += shouldUpdate ? 1 : 1;
 				if (loopTime++ >= loopFrame.start + loopFrame.duration) {
 					loopTime = loopFrame.start + loopFrame.duration;
 					// LOGD(" * ");
@@ -194,7 +191,6 @@ class Show {
 				repeat ? begin() : end();
 				break;
 		}
-		// currentTime += shouldUpdate ? 1 : 1;
 		if (currentTime++ >= frame.start + frame.duration) {
 			currentTime = frame.start + frame.duration;
 			// LOGD("\nframe");
@@ -211,15 +207,15 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		analogWrite(r_pin, (int)map(r, 0, 255, 0, App::data.brightness * 1.0));
-		analogWrite(g_pin, (int)map(g, 0, 255, 0, App::data.brightness * 0.66));
-		analogWrite(b_pin, (int)map(b, 0, 255, 0, App::data.brightness * 0.66));
+		analogWrite(r_pin, map(r, 0, 255, 0, App::data.brightness * 1.0));
+		analogWrite(g_pin, map(g, 0, 255, 0, App::data.brightness * 0.66));
+		analogWrite(b_pin, map(b, 0, 255, 0, App::data.brightness * 0.66));
 	}
 
 	void setup() {
-		pinMode(r_pin, OUTPUT);
-		pinMode(g_pin, OUTPUT);
-		pinMode(b_pin, OUTPUT);
+		pinMode(r_pin, OUTPUT_OPEN_DRAIN);
+		pinMode(g_pin, OUTPUT_OPEN_DRAIN);
+		pinMode(b_pin, OUTPUT_OPEN_DRAIN);
 	}
 
 	void begin() {

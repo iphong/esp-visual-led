@@ -132,7 +132,7 @@ export async function uploadFile(file: Blob, path: string) {
 		let req = new XMLHttpRequest();
 		var form = new FormData();
 		form.append("data", file, path);
-		req.timeout = 5000
+		// req.timeout = 5000
 		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
 		req.send(form);
 		// const done = () => setTimeout(() => resolve(null), 500)
