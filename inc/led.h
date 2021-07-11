@@ -6,6 +6,10 @@
 #define __LED_H__
 
 namespace LED {
+
+#define START_TIMER u32 start_time = micros()
+#define CHECK_TIMEOUT (running && micros() - start_time > 900)
+
 class Show {
    protected:
 	const char id;
@@ -28,7 +32,7 @@ class Show {
 	u32 loopEnd;
 
 	float ratio;
-	bool settingTime = false;
+	bool busy = false;
 
    public:
 	bool running = false;
@@ -125,31 +129,33 @@ class Show {
 		return currentTime;
 	}
 	void setTime(u32 time) {
-		settingTime = true;
-		int offset = (int)currentTime - (int)time;
+		if (busy) return;
+		busy = true;
+		u32 offset = currentTime - time;
 #ifdef SYNC_LOGS
 		LOGD("Time offset: %c %i\n", id, offset);
 #endif
 		if (!paused) {
+			START_TIMER;
 			if (offset > 16) {
-				while (running && frame.start >= time) {
+				while (!CHECK_TIMEOUT && frame.start >= time) {
 					currentTime = frame.start;
 					frame = prev();
 				}
-				while (running && currentTime < time) {
+				while (!CHECK_TIMEOUT && currentTime < time) {
 					if (!tick(false)) break;
 				}
 			} else if (offset < -16) {
-				while (running && frame.start + frame.duration < time) {
+				while (!CHECK_TIMEOUT && frame.start + frame.duration < time) {
 					frame = next();
 					currentTime = frame.start;
 				}
-				while (running && currentTime < time) {
+				while (!CHECK_TIMEOUT && currentTime < time) {
 					if (!tick(false)) break;
 				}
 			}
 		}
-		settingTime = false;
+		busy = false;
 	}
 	// true = playing
 	// false = ended
@@ -185,7 +191,7 @@ class Show {
 				break;
 			case END_FRAME:
 				// LOGL("ended");
-				// repeat ? begin() : end();
+				repeat ? begin() : end();
 				break;
 		}
 		// currentTime += shouldUpdate ? 1 : 1;
@@ -205,19 +211,15 @@ class Show {
 	}
 
 	void setRGB(u8 r, u8 g, u8 b) {
-		r = map(r, 0, 255, 0, App::data.brightness * 1.0);
-		g = map(g, 0, 255, 0, App::data.brightness * 0.66);
-		b = map(b, 0, 255, 0, App::data.brightness * 0.66);
-		analogWriteMode(r_pin, (int)r, false);
-		analogWriteMode(g_pin, (int)g, false);
-		analogWriteMode(b_pin, (int)b, false);
+		analogWrite(r_pin, (int)map(r, 0, 255, 0, App::data.brightness * 1.0));
+		analogWrite(g_pin, (int)map(g, 0, 255, 0, App::data.brightness * 0.66));
+		analogWrite(b_pin, (int)map(b, 0, 255, 0, App::data.brightness * 0.66));
 	}
 
 	void setup() {
-		pinMode(r_pin, OUTPUT_OPEN_DRAIN);
-		pinMode(g_pin, OUTPUT_OPEN_DRAIN);
-		pinMode(b_pin, OUTPUT_OPEN_DRAIN);
-		setRGB(0, 0, 0);
+		pinMode(r_pin, OUTPUT);
+		pinMode(g_pin, OUTPUT);
+		pinMode(b_pin, OUTPUT);
 	}
 
 	void begin() {
@@ -234,7 +236,7 @@ class Show {
 		file.setTimeout(0);
 		frame = next();
 		tmr.attach_ms_scheduled_accurate(1, [this]() {
-			if (!paused && !settingTime) tick(true);
+			if (running && !paused && !busy) tick(true);
 		});
 	}
 };
