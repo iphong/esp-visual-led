@@ -1,9 +1,9 @@
 const path = require('path')
 
 module.exports = {
-	devtool: 'source-map',
+	devtool: 'inline-source-map',
 
-	// mode: 'development',
+	mode: 'development',
 	entry: {
 		app: './ts/app.ts',
 		utils: './ts/utils.ts',

@@ -1,7 +1,7 @@
 {
 	"name": "SDC",
 	"description": "Light composer and player",
-	"version": "0.1",
+	"version": "2.1.2",
 	"manifest_version": 2,
 	"app": {
 		"background": {

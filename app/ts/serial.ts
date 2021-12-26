@@ -68,8 +68,10 @@ export async function sendRaw(data: ArrayBuffer, waitResponse = false) {
 	// if (responseHandler) return
 	return new Promise(async (resolve, reject) => {
 		if (store.port && !store.connected) {
-			serialConnect()
-			resolve(null)
+			await serialConnect()
+			if (store.connected) {
+				chrome.serial.send(store.connection, data, resolve)
+			} else resolve(null)
 		}
 		else if (store.connected) {
 			chrome.serial.send(store.connection, data, resolve)
