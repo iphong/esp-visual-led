@@ -31,6 +31,8 @@ class Show {
 	u32 loopStart;
 	u32 loopEnd;
 
+	u32 tickInterval = 2;
+
 	float ratio;
 	bool busy = false;
 
@@ -172,7 +174,8 @@ class Show {
 				if (shouldUpdate && loopFrame.type == RGB_FRAME) {
 					setTransition(&loopFrame, loopTime - loopFrame.start);
 				}
-				if (loopTime++ >= loopFrame.start + loopFrame.duration) {
+				loopTime += tickInterval;
+				if (loopTime >= loopFrame.start + loopFrame.duration) {
 					loopTime = loopFrame.start + loopFrame.duration;
 					// LOGD(" * ");
 					if (loopFrame.type == RGB_FRAME) {
@@ -191,7 +194,8 @@ class Show {
 				repeat ? begin() : end();
 				break;
 		}
-		if (currentTime++ >= frame.start + frame.duration) {
+		currentTime += tickInterval;
+		if (currentTime >= frame.start + frame.duration) {
 			currentTime = frame.start + frame.duration;
 			// LOGD("\nframe");
 			if (frame.type == LOOP_FRAME) {
@@ -231,7 +235,7 @@ class Show {
 		file = App::fs->open(path, "r");
 		file.setTimeout(0);
 		frame = next();
-		tmr.attach_ms_scheduled_accurate(1, [this]() {
+		tmr.attach_ms_scheduled_accurate(tickInterval, [this]() {
 			if (running && !paused && !busy) tick(true);
 		});
 	}

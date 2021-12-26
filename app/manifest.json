@@ -1,12 +1,12 @@
 {
-	"name": "SDC LightMaster",
+	"name": "SDC",
 	"description": "Light composer and player",
 	"version": "0.1",
 	"manifest_version": 2,
 	"app": {
 		"background": {
 			"scripts": [
-				"dist/background.js"
+				"js/background.js"
 			]
 		}
 	},

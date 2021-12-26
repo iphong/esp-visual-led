@@ -1,8 +1,9 @@
 const path = require('path')
 
 module.exports = {
-	devtool: 'inline-source-map',
-	mode: 'development',
+	devtool: 'source-map',
+
+	// mode: 'development',
 	entry: {
 		app: './ts/app.ts',
 		utils: './ts/utils.ts',
@@ -10,9 +11,9 @@ module.exports = {
 		background: './ts/background.ts'
 	},
 	output: {
-		publicPath: './dist/',
+		publicPath: './js/',
 		filename: '[name].js',
-		path: __dirname + '/dist'
+		path: __dirname + '/js'
 	},
 	resolve: {
 		extensions: ['.js', '.ts', '.json'],

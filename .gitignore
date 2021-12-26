@@ -1,5 +1,4 @@
 .pio
-.build
 .idea
 .vscode
 .vscode/.browse.c_cpp.db*
@@ -8,3 +7,4 @@
 .vscode/ipch
 node_modules
 **/dist
+**/build

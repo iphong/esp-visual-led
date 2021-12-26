@@ -135,11 +135,13 @@ export async function uploadFile(file: Blob, path: string) {
 		// req.timeout = 5000
 		req.open("POST", `http://${NODE_ADDR}:${NODE_PORT}/edit`, true);
 		req.send(form);
-		// const done = () => setTimeout(() => resolve(null), 500)
-		// const fail = (err:any) => setTimeout(() => reject(err), 500)
-		req.addEventListener('load', resolve)
-		req.addEventListener('abort', resolve)
-		req.addEventListener('error', reject)
+		const done = () => setTimeout(() => resolve(null), 500)
+		const fail = (err:any) => setTimeout(() => reject(err), 500)
+		req.addEventListener('load', done)
+		req.addEventListener('loadend', done)
+		req.addEventListener('abort', done)
+		req.addEventListener('error', fail)
+		req.addEventListener('timeout', fail)
 		// setTimeout(() => {
 		// 	if (req.readyState !== req.DONE) {
 		// 		req.abort()
