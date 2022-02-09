@@ -32,7 +32,8 @@ let portsList = ''
 export async function renderSerial() {
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
-			const list = devices.filter(dev => dev.path.startsWith('/dev/cu.')).map(dev => dev.path.replace('/dev/cu.', ''))
+			// const list = devices.filter(dev => dev.path.startsWith('/dev/cu.')).map(dev => dev.path.replace('/dev/cu.', ''))
+			const list = devices.map(dev => dev.path)
 			if (list.join() != portsList) {
 				portsList = list.join()
 				console.debug('serial devices', list)
