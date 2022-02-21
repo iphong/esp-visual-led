@@ -33,13 +33,19 @@ export async function renderSerial() {
 	return new Promise(resolve => {
 		chrome.serial.getDevices(devices => {
 			// const list = devices.filter(dev => dev.path.startsWith('/dev/cu.')).map(dev => dev.path.replace('/dev/cu.', ''))
+			// const list = devices
+			// 	.filter(dev => {
+			// 		return dev.path.startsWith('/dev/cu.') || dev.path.matches(/COM[0-9]+/)
+			// 	}).map(dev => {
+			// 		return dev.path.replace('/dev/cu.', '').replace(/^.*(COM[0-9]+)$/, '$1')
+			// 	})
 			const list = devices.map(dev => dev.path)
 			if (list.join() != portsList) {
 				portsList = list.join()
 				console.debug('serial devices', list)
 				$('[data-key="port"]')
 					.html('<option value="">...</option>')
-					.append(list.map(path => $(`<option>`).val('/dev/cu.' + path).html(path)))
+					.append(list.map(path => $(`<option>`).val(path).html(path.replace('/dev/cu.', '').replace(/^.*(COM[0-9]+)$/, '$1'))))
 					.val(store.port)
 				resolve(null)
 			}
