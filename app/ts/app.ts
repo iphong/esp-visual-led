@@ -1,6 +1,6 @@
 
 import { init, set, store, parseAudioFile, parseShowFile, cache, openShowEntry } from './store'
-import { $player, $tracks, renderBeats, renderSerial, renderTracks, renderWaveform, updateSize, updateTime } from './view'
+import { $player, $tracks, renderBeats, renderSerial, renderTimeline, renderTracks, renderWaveform, updateSize, updateTime } from './view'
 import { encodeMsg, sendRaw, sendSync } from './serial'
 import { serialConnect } from './serial'
 import * as actions from './actions'
@@ -76,6 +76,7 @@ addEventListener('load', async () => {
 				if (cache.audio) {
 					$player.src = URL.createObjectURL(cache.audio)
 					console.debug('set player src')
+					await renderTimeline()
 					await renderTracks()
 					await renderWaveform()
 					await renderBeats()

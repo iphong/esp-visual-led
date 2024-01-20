@@ -7,6 +7,7 @@ export const $waveform = $('#waveform').get(0) as HTMLDivElement
 export const $handle = $('#handle').get(0) as HTMLDivElement
 export const $main = $('#main').get(0) as HTMLDivElement
 export const $tracks = $('#tracks').get(0) as HTMLDivElement
+export const $timeline = $('#timeline').get(0) as HTMLDivElement
 
 export async function updateTime() {
 	if (store.duration) {
@@ -99,6 +100,26 @@ export async function renderWaveform() {
 	}
 }
 
+function formatSeconds(num) {
+	const min = Math.floor(num / 60) + ''
+	const sec = num % 60 + ''
+	return `${min.padStart(2, '0')}:${sec.padStart(2, '0')}`
+}
+
+export async function renderTimeline() {
+	if (!$timeline) return
+	if (store.duration) {
+		const width = Math.round(store.duration / 10)
+		const blocks = Math.ceil(width / 100)
+		for (let i = 0; i < blocks; i++) {
+			const $block = document.createElement('span')
+			$block.style.width = '100px'
+			$block.innerHTML = `${formatSeconds(i)}`
+			$timeline.appendChild($block)
+		}
+	}
+}
+
 export async function renderTracks() {
 	if (!$tracks) return
 	updateSize()
@@ -108,8 +129,10 @@ export async function renderTracks() {
 			const $track = document.createElement('div')
 			const { frames, ...params } = track
 			Object.assign($track.dataset, params)
+			$track.dataset.foo = `foo-${index}`
 			$track.dataset.index = `${index}`
 			$track.classList.add('track')
+			$track.innerHTML = `<span class="index">${index+1}</span>`
 			$tracks.appendChild($track)
 			renderLight($track, track)
 		})
